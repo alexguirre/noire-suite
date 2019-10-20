@@ -1,0 +1,35 @@
+name: CI
+
+on: [push]
+
+jobs:
+  check-formatting:
+    name: Check Code Formatting
+    runs-on: windows-2019
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: Check
+        shell: pwsh
+        run: .\tools\codeformat.ps1 -Check
+
+  build:
+    name: Build
+    runs-on: windows-2019
+
+    steps:
+      - uses: actions/checkout@v1
+      - name: CMake
+        run: |
+          cd src
+          mkdir build
+          cd build
+          cmake ..
+      - name: Build Debug
+        run: |
+          cd src/build
+          cmake --build . --config Debug
+      - name: Build Release
+        run: |
+          cd src/build
+          cmake --build . --config Release
