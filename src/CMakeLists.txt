@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(noire)
+project(noire-suite)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
