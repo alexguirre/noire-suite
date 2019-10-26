@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 
 project(noire-suite)
 
+option(GEN_FILE_EXPLORER "Whether to generate build files for noire-file-explorer." ON)
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 
@@ -29,8 +31,17 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+find_path(MSGSL_INCLUDE_DIR gsl/gsl)
+if (MSGSL_INCLUDE_DIR STREQUAL MSGSL_INCLUDE_DIR-NOTFOUND)
+    message(FATAL_ERROR "MS-GSL not found")
+endif()
+
 add_compile_definitions(NOMINMAX)
 
-add_compile_options(/permissive- /W4 /WX)
+add_compile_options(/permissive- /W4 /WX "$<IF:$<CONFIG:Debug>,/MTd,/MT>")
 
 add_subdirectory(hook)
+add_subdirectory(formats)
+if(GEN_FILE_EXPLORER)
+    add_subdirectory(file-explorer)
+endif()

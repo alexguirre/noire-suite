@@ -19,12 +19,21 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
+      - name: Install vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git
+          cd vcpkg
+          .\bootstrap-vcpkg.bat
+      - name: Install dependencies
+        run: |
+          cd vcpkg
+          .\vcpkg --triplet x86-windows-static install ms-gsl wxwidgets
       - name: CMake
         run: |
           cd src
           mkdir build
           cd build
-          cmake ..
+          cmake -A Win32 -DVCPKG_TARGET_TRIPLET=x86-windows-static -DCMAKE_TOOLCHAIN_FILE="../../vcpkg/scripts/buildsystems/vcpkg.cmake" ..
       - name: Build Debug
         run: |
           cd src/build
