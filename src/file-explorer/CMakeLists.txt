@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.12)
 set(FILE_EXPLORER_SOURCES
     "App.cpp"
     "App.h"
+    "FileTreeCtrl.cpp"
+    "FileTreeCtrl.h"
     "MainWindow.cpp"
     "MainWindow.h"
 )
