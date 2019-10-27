@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include "resources/BlankFileIcon.xpm"
+#include "resources/BlueFolderIcon.xpm"
 #include "resources/FolderIcon.xpm"
 #include "resources/NoireIcon.xpm"
 #include <filesystem>
@@ -16,9 +17,10 @@ CMainWindow::CMainWindow()
 		wxImageList* iconList = new wxImageList(17, 17);
 		// clang-format off
 		std::pair<int*, wxIcon> icons[]{
-			{ &mFileTreeNoireIcon,     { NoireIcon }     },
-			{ &mFileTreeFolderIcon,    { FolderIcon }    },
-			{ &mFileTreeBlankFileIcon, { BlankFileIcon } },
+			{ &mFileTreeNoireIcon,      { NoireIcon }      },
+			{ &mFileTreeFolderIcon,     { FolderIcon }     },
+			{ &mFileTreeBlueFolderIcon, { BlueFolderIcon } },
+			{ &mFileTreeBlankFileIcon,  { BlankFileIcon }  },
 		};
 		// clang-format on
 
@@ -34,7 +36,7 @@ CMainWindow::CMainWindow()
 	wxTreeItemId root = mFileTreeCtrl->AddRoot("L.A. Noire", mFileTreeNoireIcon);
 	wxTreeItemId finalItem = mFileTreeCtrl->AppendItem(root, "final", mFileTreeFolderIcon);
 	wxTreeItemId pcItem = mFileTreeCtrl->AppendItem(finalItem, "pc", mFileTreeFolderIcon);
-	wxTreeItemId wadItem = mFileTreeCtrl->AppendItem(pcItem, "out.wad.pc", mFileTreeFolderIcon);
+	wxTreeItemId wadItem = mFileTreeCtrl->AppendItem(pcItem, "out.wad.pc", mFileTreeBlueFolderIcon);
 
 	// hardcoded temporarily
 	std::filesystem::path wadPath{

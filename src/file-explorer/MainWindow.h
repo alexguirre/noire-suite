@@ -12,5 +12,6 @@ private:
 	wxTreeCtrl* mFileTreeCtrl;
 	int mFileTreeNoireIcon;
 	int mFileTreeFolderIcon;
+	int mFileTreeBlueFolderIcon;
 	int mFileTreeBlankFileIcon;
 };
