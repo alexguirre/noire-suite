@@ -1,4 +1,5 @@
 #include "WADFile.h"
+#include <algorithm>
 #include <fstream>
 #include <gsl/gsl>
 #include <string_view>
@@ -107,6 +108,24 @@ namespace noire
 			WADChildDirectory& d = FindOrCreateDirectory(mRoot, e.Path);
 			WADChildFile newFile{ this, i };
 			d.mFiles.emplace_back(std::move(newFile));
+		}
+
+		SortDirectories(mRoot);
+	}
+
+	void WADFile::SortDirectories(WADChildDirectory& root)
+	{
+		std::sort(root.mDirectories.begin(),
+				  root.mDirectories.end(),
+				  [](const auto& a, const auto& b) { return a.Name() < b.Name(); });
+
+		std::sort(root.mFiles.begin(), root.mFiles.end(), [](const auto& a, const auto& b) {
+			return a.Name() < b.Name();
+		});
+
+		for (auto& d : root.mDirectories)
+		{
+			SortDirectories(d);
 		}
 	}
 }

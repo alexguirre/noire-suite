@@ -34,10 +34,16 @@ namespace noire
 		size_t EntryIndex() const { return mEntryIndex; }
 		std::string_view Name() const { return mName; }
 
+		WADChildFile(const WADChildFile&) = delete;
+		WADChildFile& operator=(const WADChildFile&) = delete;
+
+		WADChildFile(WADChildFile&&) = default;
+		WADChildFile& operator=(WADChildFile&&) = default;
+
 	private:
 		WADChildFile(const WADFile* owner, std::size_t entryIndex);
 
-		const WADFile* const mOwner;
+		const WADFile* mOwner;
 		std::size_t mEntryIndex;
 		std::string_view mName; // view of `WADRawFileEntry::Path`
 	};
@@ -54,10 +60,16 @@ namespace noire
 
 		bool IsRoot() const { return mName == ""; }
 
+		WADChildDirectory(const WADChildDirectory&) = delete;
+		WADChildDirectory& operator=(const WADChildDirectory&) = delete;
+
+		WADChildDirectory(WADChildDirectory&&) = default;
+		WADChildDirectory& operator=(WADChildDirectory&&) = default;
+
 	private:
 		WADChildDirectory(const WADFile* owner);
 
-		const WADFile* const mOwner;
+		const WADFile* mOwner;
 		std::string mName;
 		std::vector<WADChildDirectory> mDirectories;
 		std::vector<WADChildFile> mFiles;
@@ -76,6 +88,7 @@ namespace noire
 		void LoadRawEntries();
 		void InitRoot();
 		WADChildDirectory& FindOrCreateDirectory(WADChildDirectory& root, std::string_view path);
+		void SortDirectories(WADChildDirectory& root);
 
 		std::filesystem::path mPath;
 		std::vector<WADRawFileEntry> mEntries;
