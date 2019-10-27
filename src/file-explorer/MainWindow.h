@@ -1,5 +1,6 @@
 #pragma once
 #include <wx/imaglist.h>
+#include <wx/menu.h>
 #include <wx/treectrl.h>
 #include <wx/wx.h>
 
@@ -9,6 +10,7 @@ public:
 	CMainWindow();
 
 private:
+	wxMenuBar* mMenuBar;
 	wxTreeCtrl* mFileTreeCtrl;
 	int mFileTreeNoireIcon;
 	int mFileTreeFolderIcon;
