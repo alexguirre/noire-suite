@@ -36,7 +36,7 @@ if (MSGSL_INCLUDE_DIR STREQUAL MSGSL_INCLUDE_DIR-NOTFOUND)
     message(FATAL_ERROR "MS-GSL not found")
 endif()
 
-add_compile_definitions(NOMINMAX)
+add_compile_definitions(NOMINMAX GSL_THROW_ON_CONTRACT_VIOLATION)
 
 add_compile_options(/permissive- /W4 /WX "$<IF:$<CONFIG:Debug>,/MTd,/MT>")
 

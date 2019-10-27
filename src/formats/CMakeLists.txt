@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 set(FORMATS_SOURCES
+    "File.h"
     "WADFile.cpp"
     "WADFile.h"
 )
