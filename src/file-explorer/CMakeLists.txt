@@ -7,6 +7,7 @@ set(FILE_EXPLORER_SOURCES
     "FileTreeCtrl.h"
     "MainWindow.cpp"
     "MainWindow.h"
+    "Identifiers.h"
 )
 
 add_executable(noire-file-explorer WIN32

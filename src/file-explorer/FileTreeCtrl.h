@@ -17,8 +17,14 @@ private:
 		IconCount,
 	};
 
-	int mIconIds[IconCount];
-
 	void LoadIcons();
 	void LoadDummyData();
+
+public:
+	void OnItemContextMenu(wxTreeEvent& event);
+
+private:
+	void ShowItemContextMenu(wxTreeItemId id, const wxPoint& pos);
+
+	wxDECLARE_EVENT_TABLE();
 };
