@@ -1,14 +1,16 @@
 #pragma once
-#include <string>
 
-template<class T>
-struct TFileTraits
+namespace noire
 {
-	static_assert("Needs TFileTraits specialization");
+	template<class T>
+	struct TFileTraits
+	{
+		static_assert("Needs TFileTraits specialization");
 
-	/* Members
+		/* Members
 
-	static constexpr bool IsCollection{ ... };
-	static constexpr std::uint32_t HeaderMagic{ ... };
-	*/
-};
+		static constexpr bool IsCollection{ ... };
+		static constexpr std::uint32_t HeaderMagic{ ... };
+		*/
+	};
+}

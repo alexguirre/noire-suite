@@ -5,103 +5,108 @@
 
 namespace fs = std::filesystem;
 
-static constexpr char PathSeparator{ '/' };
-
-WADChildFile::WADChildFile(const WADFile* owner, std::size_t entryIndex)
-	: mOwner{ owner }, mEntryIndex{ entryIndex }
+namespace noire
 {
-	Expects(owner != nullptr);
-	Expects(entryIndex < mOwner->Entries().size());
+	static constexpr char PathSeparator{ '/' };
 
-	mName = mOwner->Entries()[mEntryIndex].Path;
-	if (std::size_t fileNameStart = mName.rfind(PathSeparator) + 1;
-		fileNameStart != std::string_view::npos)
+	WADChildFile::WADChildFile(const WADFile* owner, std::size_t entryIndex)
+		: mOwner{ owner }, mEntryIndex{ entryIndex }
 	{
-		mName = mName.substr(fileNameStart);
-	}
-}
+		Expects(owner != nullptr);
+		Expects(entryIndex < mOwner->Entries().size());
 
-WADChildDirectory::WADChildDirectory(const WADFile* owner) : mOwner{ owner }
-{
-	Expects(owner != nullptr);
-}
-
-WADFile::WADFile(const fs::path& path) : mPath{ path }, mEntries{}, mRoot{ this }
-{
-	LoadRawEntries();
-	InitRoot();
-}
-
-void WADFile::LoadRawEntries()
-{
-	std::ifstream f{ mPath, std::ios::binary | std::ios::in };
-
-	std::uint32_t magic;
-	f.read(reinterpret_cast<char*>(&magic), sizeof(magic));
-	Expects(magic == TFileTraits<WADFile>::HeaderMagic);
-
-	std::uint32_t entryCount;
-	f.read(reinterpret_cast<char*>(&entryCount), sizeof(entryCount));
-
-	mEntries.reserve(entryCount);
-
-	// read entries
-	for (std::size_t i = 0; i < entryCount; i++)
-	{
-		std::uint32_t hash, offset, size;
-		f.read(reinterpret_cast<char*>(&hash), sizeof(hash));
-		f.read(reinterpret_cast<char*>(&offset), sizeof(offset));
-		f.read(reinterpret_cast<char*>(&size), sizeof(size));
-
-		mEntries.emplace_back("", hash, offset, size);
-	}
-
-	// read path
-	f.seekg(mEntries.back().Offset + mEntries.back().Size);
-	for (std::size_t i = 0; i < entryCount; i++)
-	{
-		std::uint16_t strLength{ 0 };
-		f.read(reinterpret_cast<char*>(&strLength), sizeof(strLength));
-
-		std::string& str = mEntries[i].Path;
-		str.resize(strLength);
-		f.read(str.data(), strLength);
-	}
-}
-
-WADChildDirectory& WADFile::FindOrCreateDirectory(WADChildDirectory& root, std::string_view path)
-{
-	std::size_t separatorPos = path.find(PathSeparator);
-	if (separatorPos == std::string_view::npos)
-	{
-		return root;
-	}
-
-	std::string_view directoryName = path.substr(0, separatorPos);
-	std::string_view remainingPath = path.substr(separatorPos + 1);
-
-	for (auto& d : root.mDirectories)
-	{
-		if (d.Name() == directoryName)
+		mName = mOwner->Entries()[mEntryIndex].Path;
+		if (std::size_t fileNameStart = mName.rfind(PathSeparator) + 1;
+			fileNameStart != std::string_view::npos)
 		{
-			return FindOrCreateDirectory(d, remainingPath);
+			mName = mName.substr(fileNameStart);
 		}
 	}
 
-	WADChildDirectory newDir{ this };
-	newDir.mName = directoryName;
-	return FindOrCreateDirectory(root.mDirectories.emplace_back(std::move(newDir)), remainingPath);
-}
-
-void WADFile::InitRoot()
-{
-	mRoot.mName = "";
-
-	for (std::size_t i = 0; i < mEntries.size(); i++)
+	WADChildDirectory::WADChildDirectory(const WADFile* owner) : mOwner{ owner }
 	{
-		const WADRawFileEntry& e = mEntries[i];
-		WADChildDirectory& d = FindOrCreateDirectory(mRoot, e.Path);
-		WADChildFile newFile{ this, i };
-		d.mFiles.emplace_back(std::move(newFile));
+		Expects(owner != nullptr);
+	}
+
+	WADFile::WADFile(const fs::path& path) : mPath{ path }, mEntries{}, mRoot{ this }
+	{
+		LoadRawEntries();
+		InitRoot();
+	}
+
+	void WADFile::LoadRawEntries()
+	{
+		std::ifstream f{ mPath, std::ios::binary | std::ios::in };
+
+		std::uint32_t magic;
+		f.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+		Expects(magic == TFileTraits<WADFile>::HeaderMagic);
+
+		std::uint32_t entryCount;
+		f.read(reinterpret_cast<char*>(&entryCount), sizeof(entryCount));
+
+		mEntries.reserve(entryCount);
+
+		// read entries
+		for (std::size_t i = 0; i < entryCount; i++)
+		{
+			std::uint32_t hash, offset, size;
+			f.read(reinterpret_cast<char*>(&hash), sizeof(hash));
+			f.read(reinterpret_cast<char*>(&offset), sizeof(offset));
+			f.read(reinterpret_cast<char*>(&size), sizeof(size));
+
+			mEntries.emplace_back("", hash, offset, size);
+		}
+
+		// read path
+		f.seekg(mEntries.back().Offset + mEntries.back().Size);
+		for (std::size_t i = 0; i < entryCount; i++)
+		{
+			std::uint16_t strLength{ 0 };
+			f.read(reinterpret_cast<char*>(&strLength), sizeof(strLength));
+
+			std::string& str = mEntries[i].Path;
+			str.resize(strLength);
+			f.read(str.data(), strLength);
+		}
+	}
+
+	WADChildDirectory& WADFile::FindOrCreateDirectory(WADChildDirectory& root,
+													  std::string_view path)
+	{
+		std::size_t separatorPos = path.find(PathSeparator);
+		if (separatorPos == std::string_view::npos)
+		{
+			return root;
+		}
+
+		std::string_view directoryName = path.substr(0, separatorPos);
+		std::string_view remainingPath = path.substr(separatorPos + 1);
+
+		for (auto& d : root.mDirectories)
+		{
+			if (d.Name() == directoryName)
+			{
+				return FindOrCreateDirectory(d, remainingPath);
+			}
+		}
+
+		WADChildDirectory newDir{ this };
+		newDir.mName = directoryName;
+		return FindOrCreateDirectory(root.mDirectories.emplace_back(std::move(newDir)),
+									 remainingPath);
+	}
+
+	void WADFile::InitRoot()
+	{
+		mRoot.mName = "";
+
+		for (std::size_t i = 0; i < mEntries.size(); i++)
+		{
+			const WADRawFileEntry& e = mEntries[i];
+			WADChildDirectory& d = FindOrCreateDirectory(mRoot, e.Path);
+			WADChildFile newFile{ this, i };
+			d.mFiles.emplace_back(std::move(newFile));
+		}
 	}
 }

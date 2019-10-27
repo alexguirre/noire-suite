@@ -17,6 +17,8 @@ CMainWindow::CMainWindow()
 		"E:\\Rockstar Games\\L.A. Noire Complete Edition\\final\\pc\\out.wad.pc"
 	};
 
+	using namespace noire;
+
 	WADFile file{ wadPath };
 	const std::function<void(const WADChildDirectory&, const wxTreeItemId&)> addDirectoryToTree =
 		[this, &addDirectoryToTree](const WADChildDirectory& root, const wxTreeItemId& treeParent) {

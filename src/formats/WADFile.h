@@ -5,81 +5,87 @@
 #include <string>
 #include <vector>
 
-struct WADRawFileEntry
+namespace noire
 {
-	std::string Path;
-	std::uint32_t PathHash;
-	std::size_t Offset;
-	std::size_t Size;
-
-	WADRawFileEntry(std::string path, std::uint32_t pathHash, std::size_t offset, std::size_t size)
-		: Path{ path }, PathHash{ pathHash }, Offset{ offset }, Size{ size }
+	struct WADRawFileEntry
 	{
-	}
-};
+		std::string Path;
+		std::uint32_t PathHash;
+		std::size_t Offset;
+		std::size_t Size;
 
-class WADFile;
+		WADRawFileEntry(std::string path,
+						std::uint32_t pathHash,
+						std::size_t offset,
+						std::size_t size)
+			: Path{ path }, PathHash{ pathHash }, Offset{ offset }, Size{ size }
+		{
+		}
+	};
 
-class WADChildFile
-{
-	friend class WADFile;
+	class WADFile;
 
-public:
-	const WADFile& Owner() const { return *mOwner; }
-	size_t EntryIndex() const { return mEntryIndex; }
-	std::string_view Name() const { return mName; }
+	class WADChildFile
+	{
+		friend class WADFile;
 
-private:
-	WADChildFile(const WADFile* owner, std::size_t entryIndex);
+	public:
+		const WADFile& Owner() const { return *mOwner; }
+		size_t EntryIndex() const { return mEntryIndex; }
+		std::string_view Name() const { return mName; }
 
-	const WADFile* const mOwner;
-	std::size_t mEntryIndex;
-	std::string_view mName; // view of `WADRawFileEntry::Path`
-};
+	private:
+		WADChildFile(const WADFile* owner, std::size_t entryIndex);
 
-class WADChildDirectory
-{
-	friend class WADFile;
+		const WADFile* const mOwner;
+		std::size_t mEntryIndex;
+		std::string_view mName; // view of `WADRawFileEntry::Path`
+	};
 
-public:
-	const WADFile& Owner() const { return *mOwner; }
-	const std::string& Name() const { return mName; }
-	const std::vector<WADChildDirectory>& Directories() const { return mDirectories; }
-	const std::vector<WADChildFile>& Files() const { return mFiles; }
+	class WADChildDirectory
+	{
+		friend class WADFile;
 
-	bool IsRoot() const { return mName == ""; }
+	public:
+		const WADFile& Owner() const { return *mOwner; }
+		const std::string& Name() const { return mName; }
+		const std::vector<WADChildDirectory>& Directories() const { return mDirectories; }
+		const std::vector<WADChildFile>& Files() const { return mFiles; }
 
-private:
-	WADChildDirectory(const WADFile* owner);
+		bool IsRoot() const { return mName == ""; }
 
-	const WADFile* const mOwner;
-	std::string mName;
-	std::vector<WADChildDirectory> mDirectories;
-	std::vector<WADChildFile> mFiles;
-};
+	private:
+		WADChildDirectory(const WADFile* owner);
 
-class WADFile
-{
-public:
-	WADFile(const std::filesystem::path& path);
+		const WADFile* const mOwner;
+		std::string mName;
+		std::vector<WADChildDirectory> mDirectories;
+		std::vector<WADChildFile> mFiles;
+	};
 
-	const std::filesystem::path& Path() const { return mPath; }
-	const std::vector<WADRawFileEntry>& Entries() const { return mEntries; }
-	const WADChildDirectory& Root() const { return mRoot; }
+	class WADFile
+	{
+	public:
+		WADFile(const std::filesystem::path& path);
 
-private:
-	void LoadRawEntries();
-	void InitRoot();
-	WADChildDirectory& FindOrCreateDirectory(WADChildDirectory& root, std::string_view path);
+		const std::filesystem::path& Path() const { return mPath; }
+		const std::vector<WADRawFileEntry>& Entries() const { return mEntries; }
+		const WADChildDirectory& Root() const { return mRoot; }
 
-	std::filesystem::path mPath;
-	std::vector<WADRawFileEntry> mEntries;
-	WADChildDirectory mRoot;
-};
+	private:
+		void LoadRawEntries();
+		void InitRoot();
+		WADChildDirectory& FindOrCreateDirectory(WADChildDirectory& root, std::string_view path);
 
-template<>
-struct TFileTraits<WADFile>
-{
-	static constexpr bool IsCollection{ true };
-	static constexpr std::uint32_t HeaderMagic{ 0x01444157 }; // WAD\01
-};
+		std::filesystem::path mPath;
+		std::vector<WADRawFileEntry> mEntries;
+		WADChildDirectory mRoot;
+	};
+
+	template<>
+	struct TFileTraits<WADFile>
+	{
+		static constexpr bool IsCollection{ true };
+		static constexpr std::uint32_t HeaderMagic{ 0x01444157 }; // WAD\01
+	};
+}
