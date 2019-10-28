@@ -1,6 +1,7 @@
 #include "MainWindow.h"
 #include "DirectoryContentsListCtrl.h"
 #include "FileTreeCtrl.h"
+#include <gsl/gsl>
 
 CMainWindow::CMainWindow()
 	: wxFrame(nullptr, wxID_ANY, "noire-suite - File Explorer"),
@@ -23,4 +24,24 @@ CMainWindow::CMainWindow()
 
 	// TODO: change directory in mDirContentsListCtrl when selecting in mFileTreeCtrl
 	mDirContentsListCtrl->SetDirectory(mFileTreeCtrl->File().Root());
+
+	mFileTreeCtrl->Bind(wxEVT_TREE_ITEM_ACTIVATED,
+						&CMainWindow::OnDirectoryTreeItemActivated,
+						this);
+}
+
+void CMainWindow::OnDirectoryTreeItemActivated(wxTreeEvent& event)
+{
+	wxTreeItemId itemId = event.GetItem();
+	Expects(itemId.IsOk());
+
+	const CDirectoryItemData* data =
+		reinterpret_cast<CDirectoryItemData*>(mFileTreeCtrl->GetItemData(itemId));
+
+	if (data)
+	{
+		mDirContentsListCtrl->SetDirectory(data->Directory());
+
+		event.Skip();
+	}
 }

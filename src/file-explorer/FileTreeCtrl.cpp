@@ -2,7 +2,6 @@
 #include "Identifiers.h"
 #include "Images.h"
 #include <filesystem>
-#include <formats/WADFile.h>
 #include <gsl/gsl>
 #include <wx/icon.h>
 #include <wx/imaglist.h>
@@ -15,43 +14,6 @@ wxBEGIN_EVENT_TABLE(CFileTreeCtrl, wxTreeCtrl)
 	EVT_TREE_ITEM_MENU(wxID_ANY, CFileTreeCtrl::OnItemContextMenu)
 wxEND_EVENT_TABLE();
 // clang-format on
-
-class CFileItemData : public wxTreeItemData
-{
-public:
-	CFileItemData(const noire::WADRawFileEntry& entry) : mEntry{ entry } {}
-
-	const noire::WADRawFileEntry& FileEntry() const { return mEntry; }
-
-private:
-	noire::WADRawFileEntry mEntry;
-};
-
-class CFileItemContextMenu : public wxMenu
-{
-public:
-	CFileItemContextMenu(CFileItemData* data) : wxMenu(), mData{ data }
-	{
-		Expects(data != nullptr);
-
-		Append(FileTreeExportMenuId, "Export");
-
-		Connect(wxEVT_COMMAND_MENU_SELECTED,
-				wxCommandEventHandler(CFileItemContextMenu::OnExport),
-				nullptr,
-				this);
-	}
-
-private:
-	CFileItemData* mData;
-
-	void OnExport(wxCommandEvent&)
-	{
-		// TODO: implement file Export
-		const noire::WADRawFileEntry& entry = mData->FileEntry();
-		wxMessageBox("Exporting " + entry.Path);
-	}
-};
 
 CFileTreeCtrl::CFileTreeCtrl(wxWindow* parent,
 							 const wxWindowID id,
@@ -78,17 +40,12 @@ void CFileTreeCtrl::LoadDummyData()
 		[this, &addDirectoryToTree](const WADChildDirectory& root, const wxTreeItemId& treeParent) {
 			for (auto& d : root.Directories())
 			{
-				wxTreeItemId item = AppendItem(treeParent, d.Name(), CImages::IconFolder);
+				wxTreeItemId item = AppendItem(treeParent,
+											   d.Name(),
+											   CImages::IconFolder,
+											   -1,
+											   new CDirectoryItemData(d));
 				addDirectoryToTree(d, item);
-			}
-			for (auto& f : root.Files())
-			{
-				auto name = f.Name();
-				AppendItem(treeParent,
-						   wxString{ name.data(), name.data() + name.size() },
-						   CImages::IconBlankFile,
-						   -1,
-						   new CFileItemData(mFile.Entries()[f.EntryIndex()]));
 			}
 		};
 
@@ -104,12 +61,7 @@ void CFileTreeCtrl::OnItemContextMenu(wxTreeEvent& event)
 	event.Skip();
 }
 
-void CFileTreeCtrl::ShowItemContextMenu(wxTreeItemId id, const wxPoint& pos)
+void CFileTreeCtrl::ShowItemContextMenu(wxTreeItemId, const wxPoint&)
 {
-	CFileItemData* data = reinterpret_cast<CFileItemData*>(GetItemData(id));
-	if (data)
-	{
-		CFileItemContextMenu menu{ data };
-		PopupMenu(&menu, pos);
-	}
+	// nothing
 }

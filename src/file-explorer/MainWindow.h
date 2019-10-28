@@ -5,6 +5,8 @@
 class CFileTreeCtrl;
 class CDirectoryContentsListCtrl;
 
+class wxTreeEvent;
+
 class CMainWindow : public wxFrame
 {
 public:
@@ -14,4 +16,6 @@ private:
 	wxMenuBar* mMenuBar;
 	CFileTreeCtrl* mFileTreeCtrl;
 	CDirectoryContentsListCtrl* mDirContentsListCtrl;
+
+	void OnDirectoryTreeItemActivated(wxTreeEvent& event);
 };

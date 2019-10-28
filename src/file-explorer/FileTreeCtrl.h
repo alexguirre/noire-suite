@@ -2,6 +2,17 @@
 #include <formats/WADFile.h>
 #include <wx/treectrl.h>
 
+class CDirectoryItemData : public wxTreeItemData
+{
+public:
+	CDirectoryItemData(const noire::WADChildDirectory& dir) : mDir{ dir } {}
+
+	const noire::WADChildDirectory& Directory() const { return mDir; }
+
+private:
+	const noire::WADChildDirectory& mDir;
+};
+
 class CFileTreeCtrl : public wxTreeCtrl
 {
 public:
