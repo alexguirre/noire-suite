@@ -1,12 +1,12 @@
 #include "MainWindow.h"
 #include "DirectoryContentsListCtrl.h"
-#include "FileTreeCtrl.h"
+#include "DirectoryTreeCtrl.h"
 #include <gsl/gsl>
 
 CMainWindow::CMainWindow()
 	: wxFrame(nullptr, wxID_ANY, "noire-suite - File Explorer"),
 	  mMenuBar{ new wxMenuBar() },
-	  mFileTreeCtrl{ new CFileTreeCtrl(this, wxID_ANY, { 5, 5 }, { 300, 800 }) },
+	  mFileTreeCtrl{ new CDirectoryTreeCtrl(this, wxID_ANY, { 5, 5 }, { 300, 800 }) },
 	  mDirContentsListCtrl{
 		  new CDirectoryContentsListCtrl(this, wxID_ANY, { 305, 5 }, { 500, 800 }),
 	  }

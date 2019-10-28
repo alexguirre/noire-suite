@@ -13,10 +13,13 @@ private:
 	const noire::WADChildDirectory& mDir;
 };
 
-class CFileTreeCtrl : public wxTreeCtrl
+class CDirectoryTreeCtrl : public wxTreeCtrl
 {
 public:
-	CFileTreeCtrl(wxWindow* parent, const wxWindowID id, const wxPoint& pos, const wxSize& size);
+	CDirectoryTreeCtrl(wxWindow* parent,
+					   const wxWindowID id,
+					   const wxPoint& pos,
+					   const wxSize& size);
 
 	const noire::WADFile& File() const { return mFile; }
 

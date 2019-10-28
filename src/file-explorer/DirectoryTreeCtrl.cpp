@@ -1,4 +1,4 @@
-#include "FileTreeCtrl.h"
+#include "DirectoryTreeCtrl.h"
 #include "Identifiers.h"
 #include "Images.h"
 #include <filesystem>
@@ -9,16 +9,16 @@
 #include <wx/wx.h>
 
 // clang-format off
-wxBEGIN_EVENT_TABLE(CFileTreeCtrl, wxTreeCtrl)
+wxBEGIN_EVENT_TABLE(CDirectoryTreeCtrl, wxTreeCtrl)
 	// for context menu
-	EVT_TREE_ITEM_MENU(wxID_ANY, CFileTreeCtrl::OnItemContextMenu)
+	EVT_TREE_ITEM_MENU(wxID_ANY, CDirectoryTreeCtrl::OnItemContextMenu)
 wxEND_EVENT_TABLE();
 // clang-format on
 
-CFileTreeCtrl::CFileTreeCtrl(wxWindow* parent,
-							 const wxWindowID id,
-							 const wxPoint& pos,
-							 const wxSize& size)
+CDirectoryTreeCtrl::CDirectoryTreeCtrl(wxWindow* parent,
+									   const wxWindowID id,
+									   const wxPoint& pos,
+									   const wxSize& size)
 	: wxTreeCtrl(parent, id, pos, size),
 	  mFile{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\final\\pc\\out.wad.pc" }
 {
@@ -26,7 +26,7 @@ CFileTreeCtrl::CFileTreeCtrl(wxWindow* parent,
 	LoadDummyData();
 }
 
-void CFileTreeCtrl::LoadDummyData()
+void CDirectoryTreeCtrl::LoadDummyData()
 {
 	// initialize tree
 	wxTreeItemId root = AddRoot("L.A. Noire", CImages::IconNoire);
@@ -52,7 +52,7 @@ void CFileTreeCtrl::LoadDummyData()
 	addDirectoryToTree(mFile.Root(), wadItem);
 }
 
-void CFileTreeCtrl::OnItemContextMenu(wxTreeEvent& event)
+void CDirectoryTreeCtrl::OnItemContextMenu(wxTreeEvent& event)
 {
 	wxTreeItemId itemId = event.GetItem();
 	Expects(itemId.IsOk());
@@ -61,7 +61,7 @@ void CFileTreeCtrl::OnItemContextMenu(wxTreeEvent& event)
 	event.Skip();
 }
 
-void CFileTreeCtrl::ShowItemContextMenu(wxTreeItemId, const wxPoint&)
+void CDirectoryTreeCtrl::ShowItemContextMenu(wxTreeItemId, const wxPoint&)
 {
 	// nothing
 }

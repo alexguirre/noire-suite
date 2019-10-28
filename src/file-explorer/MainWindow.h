@@ -2,7 +2,7 @@
 #include <wx/menu.h>
 #include <wx/wx.h>
 
-class CFileTreeCtrl;
+class CDirectoryTreeCtrl;
 class CDirectoryContentsListCtrl;
 
 class wxTreeEvent;
@@ -14,7 +14,7 @@ public:
 
 private:
 	wxMenuBar* mMenuBar;
-	CFileTreeCtrl* mFileTreeCtrl;
+	CDirectoryTreeCtrl* mFileTreeCtrl;
 	CDirectoryContentsListCtrl* mDirContentsListCtrl;
 
 	void OnDirectoryTreeItemActivated(wxTreeEvent& event);
