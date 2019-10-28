@@ -32,7 +32,11 @@ void CDirectoryTreeCtrl::LoadDummyData()
 	wxTreeItemId root = AddRoot("L.A. Noire", CImages::IconNoire);
 	wxTreeItemId finalItem = AppendItem(root, "final", CImages::IconFolder);
 	wxTreeItemId pcItem = AppendItem(finalItem, "pc", CImages::IconFolder);
-	wxTreeItemId wadItem = AppendItem(pcItem, "out.wad.pc", CImages::IconBlueFolder);
+	wxTreeItemId wadItem = AppendItem(pcItem,
+									  "out.wad.pc",
+									  CImages::IconBlueFolder,
+									  -1,
+									  new CDirectoryItemData(mFile.Root()));
 
 	using namespace noire;
 

@@ -17,5 +17,5 @@ private:
 	CDirectoryTreeCtrl* mFileTreeCtrl;
 	CDirectoryContentsListCtrl* mDirContentsListCtrl;
 
-	void OnDirectoryTreeItemActivated(wxTreeEvent& event);
+	void OnDirectoryTreeSelectionChanged(wxTreeEvent& event);
 };

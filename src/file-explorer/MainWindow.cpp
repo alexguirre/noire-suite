@@ -25,12 +25,12 @@ CMainWindow::CMainWindow()
 	// TODO: change directory in mDirContentsListCtrl when selecting in mFileTreeCtrl
 	mDirContentsListCtrl->SetDirectory(mFileTreeCtrl->File().Root());
 
-	mFileTreeCtrl->Bind(wxEVT_TREE_ITEM_ACTIVATED,
-						&CMainWindow::OnDirectoryTreeItemActivated,
+	mFileTreeCtrl->Bind(wxEVT_TREE_SEL_CHANGED,
+						&CMainWindow::OnDirectoryTreeSelectionChanged,
 						this);
 }
 
-void CMainWindow::OnDirectoryTreeItemActivated(wxTreeEvent& event)
+void CMainWindow::OnDirectoryTreeSelectionChanged(wxTreeEvent& event)
 {
 	wxTreeItemId itemId = event.GetItem();
 	Expects(itemId.IsOk());
