@@ -3,6 +3,7 @@
 #include <wx/wx.h>
 
 class CFileTreeCtrl;
+class CDirectoryContentsListCtrl;
 
 class CMainWindow : public wxFrame
 {
@@ -12,4 +13,5 @@ public:
 private:
 	wxMenuBar* mMenuBar;
 	CFileTreeCtrl* mFileTreeCtrl;
+	CDirectoryContentsListCtrl* mDirContentsListCtrl;
 };

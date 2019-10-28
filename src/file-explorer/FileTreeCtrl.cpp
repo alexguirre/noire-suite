@@ -15,7 +15,6 @@
 // clang-format off
 wxBEGIN_EVENT_TABLE(CFileTreeCtrl, wxTreeCtrl)
 	// for context menu
-	//EVT_CONTEXT_MENU(CFileTreeCtrl::OnContextMenu)
 	EVT_TREE_ITEM_MENU(wxID_ANY, CFileTreeCtrl::OnItemContextMenu)
 wxEND_EVENT_TABLE();
 // clang-format on
@@ -61,7 +60,8 @@ CFileTreeCtrl::CFileTreeCtrl(wxWindow* parent,
 							 const wxWindowID id,
 							 const wxPoint& pos,
 							 const wxSize& size)
-	: wxTreeCtrl(parent, id, pos, size)
+	: wxTreeCtrl(parent, id, pos, size),
+	  mFile{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\final\\pc\\out.wad.pc" }
 {
 	LoadIcons();
 	LoadDummyData();
@@ -94,17 +94,10 @@ void CFileTreeCtrl::LoadDummyData()
 	wxTreeItemId pcItem = AppendItem(finalItem, "pc", IconFolder);
 	wxTreeItemId wadItem = AppendItem(pcItem, "out.wad.pc", IconBlueFolder);
 
-	// hardcoded temporarily
-	std::filesystem::path wadPath{
-		"E:\\Rockstar Games\\L.A. Noire Complete Edition\\final\\pc\\out.wad.pc"
-	};
-
 	using namespace noire;
 
-	WADFile file{ wadPath };
 	const std::function<void(const WADChildDirectory&, const wxTreeItemId&)> addDirectoryToTree =
-		[this, &addDirectoryToTree, &file](const WADChildDirectory& root,
-										   const wxTreeItemId& treeParent) {
+		[this, &addDirectoryToTree](const WADChildDirectory& root, const wxTreeItemId& treeParent) {
 			for (auto& d : root.Directories())
 			{
 				wxTreeItemId item = AppendItem(treeParent, d.Name(), IconFolder);
@@ -117,11 +110,11 @@ void CFileTreeCtrl::LoadDummyData()
 						   wxString{ name.data(), name.data() + name.size() },
 						   IconBlankFile,
 						   -1,
-						   new CFileItemData(file.Entries()[f.EntryIndex()]));
+						   new CFileItemData(mFile.Entries()[f.EntryIndex()]));
 			}
 		};
 
-	addDirectoryToTree(file.Root(), wadItem);
+	addDirectoryToTree(mFile.Root(), wadItem);
 }
 
 void CFileTreeCtrl::OnItemContextMenu(wxTreeEvent& event)

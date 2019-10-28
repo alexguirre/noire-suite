@@ -3,11 +3,13 @@ cmake_minimum_required(VERSION 3.12)
 set(FILE_EXPLORER_SOURCES
     "App.cpp"
     "App.h"
+    "DirectoryContentsListCtrl.cpp"
+    "DirectoryContentsListCtrl.h"
     "FileTreeCtrl.cpp"
     "FileTreeCtrl.h"
+    "Identifiers.h"
     "MainWindow.cpp"
     "MainWindow.h"
-    "Identifiers.h"
 )
 
 add_executable(noire-file-explorer WIN32
@@ -33,6 +35,7 @@ endif()
 target_compile_definitions(noire-file-explorer PRIVATE
     wxUSE_GUI=1
     __WXMSW__
+    _CRT_SECURE_NO_WARNINGS
 )
 
 set(WX_LIB_DEBUG_DIR ${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/lib)
