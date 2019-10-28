@@ -23,17 +23,6 @@ public:
 	void OnItemActivated(wxListEvent& event);
 
 private:
-	enum Icon
-	{
-		IconBlankFile,
-		IconBlueFolder,
-		IconFolder,
-		IconNoire,
-
-		IconCount,
-	};
-
-	void LoadIcons();
 	void ShowItemContextMenu();
 	void BuildColumns();
 	void UpdateContents();

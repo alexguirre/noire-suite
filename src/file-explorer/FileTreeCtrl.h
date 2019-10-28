@@ -10,17 +10,6 @@ public:
 	const noire::WADFile& File() const { return mFile; }
 
 private:
-	enum Icon
-	{
-		IconBlankFile,
-		IconBlueFolder,
-		IconFolder,
-		IconNoire,
-
-		IconCount,
-	};
-
-	void LoadIcons();
 	void LoadDummyData();
 
 public:

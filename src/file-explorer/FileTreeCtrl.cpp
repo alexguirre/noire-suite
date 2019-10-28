@@ -1,9 +1,6 @@
 #include "FileTreeCtrl.h"
 #include "Identifiers.h"
-#include "resources/BlankFileIcon.xpm"
-#include "resources/BlueFolderIcon.xpm"
-#include "resources/FolderIcon.xpm"
-#include "resources/NoireIcon.xpm"
+#include "Images.h"
 #include <filesystem>
 #include <formats/WADFile.h>
 #include <gsl/gsl>
@@ -63,36 +60,17 @@ CFileTreeCtrl::CFileTreeCtrl(wxWindow* parent,
 	: wxTreeCtrl(parent, id, pos, size),
 	  mFile{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\final\\pc\\out.wad.pc" }
 {
-	LoadIcons();
+	SetImageList(CImages::Icons());
 	LoadDummyData();
-}
-
-void CFileTreeCtrl::LoadIcons()
-{
-	wxImageList* iconList = new wxImageList(17, 17);
-	// clang-format off
-	wxIcon icons[IconCount];
-	icons[IconBlankFile]  = { BlankFileIcon };
-	icons[IconBlueFolder] = { BlueFolderIcon };
-	icons[IconFolder]     = { FolderIcon };
-	icons[IconNoire]      = { NoireIcon };
-	// clang-format on
-
-	for (std::size_t i = 0; i < IconCount; i++)
-	{
-		iconList->Add(icons[i]);
-	}
-
-	AssignImageList(iconList);
 }
 
 void CFileTreeCtrl::LoadDummyData()
 {
 	// initialize tree
-	wxTreeItemId root = AddRoot("L.A. Noire", IconNoire);
-	wxTreeItemId finalItem = AppendItem(root, "final", IconFolder);
-	wxTreeItemId pcItem = AppendItem(finalItem, "pc", IconFolder);
-	wxTreeItemId wadItem = AppendItem(pcItem, "out.wad.pc", IconBlueFolder);
+	wxTreeItemId root = AddRoot("L.A. Noire", CImages::IconNoire);
+	wxTreeItemId finalItem = AppendItem(root, "final", CImages::IconFolder);
+	wxTreeItemId pcItem = AppendItem(finalItem, "pc", CImages::IconFolder);
+	wxTreeItemId wadItem = AppendItem(pcItem, "out.wad.pc", CImages::IconBlueFolder);
 
 	using namespace noire;
 
@@ -100,7 +78,7 @@ void CFileTreeCtrl::LoadDummyData()
 		[this, &addDirectoryToTree](const WADChildDirectory& root, const wxTreeItemId& treeParent) {
 			for (auto& d : root.Directories())
 			{
-				wxTreeItemId item = AppendItem(treeParent, d.Name(), IconFolder);
+				wxTreeItemId item = AppendItem(treeParent, d.Name(), CImages::IconFolder);
 				addDirectoryToTree(d, item);
 			}
 			for (auto& f : root.Files())
@@ -108,7 +86,7 @@ void CFileTreeCtrl::LoadDummyData()
 				auto name = f.Name();
 				AppendItem(treeParent,
 						   wxString{ name.data(), name.data() + name.size() },
-						   IconBlankFile,
+						   CImages::IconBlankFile,
 						   -1,
 						   new CFileItemData(mFile.Entries()[f.EntryIndex()]));
 			}

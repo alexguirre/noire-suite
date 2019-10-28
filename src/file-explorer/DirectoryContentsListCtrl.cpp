@@ -1,9 +1,6 @@
 #include "DirectoryContentsListCtrl.h"
 #include "Identifiers.h"
-#include "resources/BlankFileIcon.xpm"
-#include "resources/BlueFolderIcon.xpm"
-#include "resources/FolderIcon.xpm"
-#include "resources/NoireIcon.xpm"
+#include "Images.h"
 #include <formats/WADFile.h>
 #include <gsl/gsl>
 #include <wx/msgdlg.h>
@@ -69,28 +66,8 @@ CDirectoryContentsListCtrl::CDirectoryContentsListCtrl(wxWindow* parent,
 	  mCurrentDirectory{ nullptr },
 	  mItemContextMenu{ std::make_unique<CDirectoryItemContextMenu>() }
 {
-	LoadIcons();
+	SetImageList(CImages::Icons(), wxIMAGE_LIST_SMALL);
 	BuildColumns();
-}
-
-void CDirectoryContentsListCtrl::LoadIcons()
-{
-	// TODO: share same wxImageList with CDirectoryContentsListCtrl and CFileTreeCtrl
-	wxImageList* iconList = new wxImageList(17, 17);
-	// clang-format off
-	wxIcon icons[IconCount];
-	icons[IconBlankFile]  = { BlankFileIcon };
-	icons[IconBlueFolder] = { BlueFolderIcon };
-	icons[IconFolder]     = { FolderIcon };
-	icons[IconNoire]      = { NoireIcon };
-	// clang-format on
-
-	for (std::size_t i = 0; i < IconCount; i++)
-	{
-		iconList->Add(icons[i]);
-	}
-
-	AssignImageList(iconList, wxIMAGE_LIST_SMALL);
 }
 
 void CDirectoryContentsListCtrl::SetDirectory(const noire::WADChildDirectory& dir)
@@ -164,8 +141,8 @@ void CDirectoryContentsListCtrl::UpdateContents()
 		SetItemPtrData(idx, reinterpret_cast<wxUIntPtr>(data));
 
 		SetItemImage(idx,
-					 data->Type == SDirectoryItemData::eType::Directory ? IconFolder :
-																		  IconBlankFile);
+					 data->Type == SDirectoryItemData::eType::Directory ? CImages::IconFolder :
+																		  CImages::IconBlankFile);
 	};
 
 	for (auto& d : mCurrentDirectory->Directories())
