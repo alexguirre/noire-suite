@@ -35,6 +35,14 @@ namespace noire
 		InitRoot();
 	}
 
+	void WADFile::Read(std::size_t offset, gsl::span<std::byte> dest) const
+	{
+		// TODO: maintain some kind of cache so we're not reopening the file again and again
+		std::ifstream f{ mPath, std::ios::binary | std::ios::in };
+		f.seekg(offset);
+		f.read(reinterpret_cast<char*>(dest.data()), dest.size_bytes());
+	}
+
 	void WADFile::LoadRawEntries()
 	{
 		std::ifstream f{ mPath, std::ios::binary | std::ios::in };

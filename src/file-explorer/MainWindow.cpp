@@ -2,6 +2,7 @@
 #include "DirectoryContentsListCtrl.h"
 #include "DirectoryTreeCtrl.h"
 #include <gsl/gsl>
+#include <wx/button.h>
 
 CMainWindow::CMainWindow()
 	: wxFrame(nullptr, wxID_ANY, "noire-suite - File Explorer"),

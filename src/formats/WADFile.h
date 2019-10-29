@@ -1,7 +1,9 @@
 #pragma once
 #include "File.h"
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <gsl/span>
 #include <string>
 #include <vector>
 
@@ -83,6 +85,8 @@ namespace noire
 		const std::filesystem::path& Path() const { return mPath; }
 		const std::vector<WADRawFileEntry>& Entries() const { return mEntries; }
 		const WADChildDirectory& Root() const { return mRoot; }
+
+		void Read(std::size_t offset, gsl::span<std::byte> dest) const;
 
 	private:
 		void LoadRawEntries();

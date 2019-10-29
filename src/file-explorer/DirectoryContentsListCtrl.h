@@ -7,6 +7,7 @@ class wxMenu;
 namespace noire
 {
 	class WADChildDirectory;
+	class WADChildFile;
 }
 
 class CDirectoryContentsListCtrl : public wxListCtrl
@@ -26,6 +27,7 @@ private:
 	void ShowItemContextMenu();
 	void BuildColumns();
 	void UpdateContents();
+	void OpenFile(const noire::WADChildFile& file);
 
 	const noire::WADChildDirectory* mCurrentDirectory;
 	std::unique_ptr<wxMenu> mItemContextMenu;

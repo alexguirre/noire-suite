@@ -95,6 +95,11 @@ void CDirectoryContentsListCtrl::OnItemActivated(wxListEvent& event)
 		const noire::WADChildDirectory& dir = *data->Content.Directory;
 		SetDirectory(dir);
 	}
+	else if (data->Type == SDirectoryItemData::eType::File)
+	{
+		const noire::WADChildFile& file = *data->Content.File;
+		OpenFile(file);
+	}
 
 	event.Skip();
 }
@@ -163,5 +168,17 @@ void CDirectoryContentsListCtrl::UpdateContents()
 		size.Printf("%u bytes", f.Owner().Entries()[f.EntryIndex()].Size);
 
 		addItem(name, type, size, new SDirectoryItemData(&f));
+	}
+}
+
+void CDirectoryContentsListCtrl::OpenFile(const noire::WADChildFile& file)
+{
+	std::uint32_t headerMagic;
+	const std::size_t offset = file.Owner().Entries()[file.EntryIndex()].Offset;
+	file.Owner().Read(offset, { reinterpret_cast<std::byte*>(&headerMagic), sizeof(headerMagic) });
+
+	if (headerMagic == 0x20534444) // == 'DDS '
+	{
+		wxMessageBox("DDS File!");
 	}
 }
