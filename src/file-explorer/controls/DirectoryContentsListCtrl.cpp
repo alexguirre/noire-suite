@@ -1,6 +1,7 @@
 #include "DirectoryContentsListCtrl.h"
 #include "Identifiers.h"
 #include "Images.h"
+#include "windows/ImageWindow.h"
 #include <formats/WADFile.h>
 #include <gsl/gsl>
 #include <wx/msgdlg.h>
@@ -179,6 +180,9 @@ void CDirectoryContentsListCtrl::OpenFile(const noire::WADChildFile& file)
 
 	if (headerMagic == 0x20534444) // == 'DDS '
 	{
-		wxMessageBox("DDS File!");
+		const std::string& path = file.Owner().Entries()[file.EntryIndex()].Path;
+		CImageWindow* imgWin =
+			new CImageWindow(this, wxID_ANY, path, { "E:\\Desktop\\test.bmp", wxBITMAP_TYPE_BMP }); // TODO: get wxImage from .dds file
+		imgWin->Show();
 	}
 }
