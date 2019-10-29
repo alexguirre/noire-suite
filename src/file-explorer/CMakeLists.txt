@@ -1,20 +1,21 @@
 cmake_minimum_required(VERSION 3.12)
 
-set(FILE_EXPLORER_SOURCES
+file(GLOB FILE_EXPLORER_SOURCES
     "App.cpp"
     "App.h"
-    "DirectoryContentsListCtrl.cpp"
-    "DirectoryContentsListCtrl.h"
-    "DirectoryTreeCtrl.cpp"
-    "DirectoryTreeCtrl.h"
     "Identifiers.h"
-    "ImagePanel.cpp"
-    "ImagePanel.h"
     "Images.cpp"
     "Images.h"
-    "MainWindow.cpp"
-    "MainWindow.h"
+    "controls/DirectoryContentsListCtrl.cpp"
+    "controls/DirectoryContentsListCtrl.h"
+    "controls/DirectoryTreeCtrl.cpp"
+    "controls/DirectoryTreeCtrl.h"
+    "controls/ImagePanel.cpp"
+    "controls/ImagePanel.h"
+    "windows/MainWindow.cpp"
+    "windows/MainWindow.h"
 )
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${FILE_EXPLORER_SOURCES})
 
 add_executable(noire-file-explorer WIN32
     ${FILE_EXPLORER_SOURCES}
@@ -25,8 +26,11 @@ if (WX_INCLUDE_DIR STREQUAL WX_INCLUDE_DIR-NOTFOUND)
     message(FATAL_ERROR "wxWidgets not found")
 endif()
 
-target_include_directories(noire-file-explorer PRIVATE ${MSGSL_INCLUDE_DIR})
-target_include_directories(noire-file-explorer PRIVATE ${WX_INCLUDE_DIR})
+target_include_directories(noire-file-explorer PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${MSGSL_INCLUDE_DIR}
+    ${WX_INCLUDE_DIR}
+)
 
 get_target_property(FORMATS_INCLUDE_DIR noire-formats SOURCE_DIR)
 get_filename_component(FORMATS_INCLUDE_DIR ${FORMATS_INCLUDE_DIR} DIRECTORY)

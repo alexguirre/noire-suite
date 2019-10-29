@@ -1,6 +1,7 @@
 #include "MainWindow.h"
-#include "DirectoryContentsListCtrl.h"
-#include "DirectoryTreeCtrl.h"
+#include "controls/DirectoryContentsListCtrl.h"
+#include "controls/DirectoryTreeCtrl.h"
+#include "controls/ImagePanel.h"
 #include <gsl/gsl>
 #include <wx/button.h>
 

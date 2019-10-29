@@ -1,5 +1,5 @@
 #pragma once
-#include "MainWindow.h"
+#include "windows/MainWindow.h"
 #include <memory>
 #include <wx/windowptr.h>
 #include <wx/wx.h>
