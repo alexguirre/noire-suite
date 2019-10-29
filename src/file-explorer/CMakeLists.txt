@@ -8,6 +8,8 @@ set(FILE_EXPLORER_SOURCES
     "DirectoryTreeCtrl.cpp"
     "DirectoryTreeCtrl.h"
     "Identifiers.h"
+    "ImagePanel.cpp"
+    "ImagePanel.h"
     "Images.cpp"
     "Images.h"
     "MainWindow.cpp"
