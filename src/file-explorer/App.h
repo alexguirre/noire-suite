@@ -10,6 +10,7 @@ public:
 	CApp();
 
 	virtual bool OnInit();
+	virtual int OnExit();
 
 private:
 	CMainWindow* mMainWindow{ nullptr };

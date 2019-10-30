@@ -2,6 +2,9 @@
 #include "Identifiers.h"
 #include "Images.h"
 #include "windows/ImageWindow.h"
+#include <IL/il.h>
+#include <cstdlib>
+#include <cstring>
 #include <formats/WADFile.h>
 #include <gsl/gsl>
 #include <wx/msgdlg.h>
@@ -172,17 +175,71 @@ void CDirectoryContentsListCtrl::UpdateContents()
 	}
 }
 
+static wxImage CreateImageFromDDS(gsl::span<std::byte> ddsData)
+{
+	ILuint imgId = ilGenImage();
+	ilBindImage(imgId);
+
+	ilLoadL(IL_DDS, ddsData.data(), ddsData.size_bytes());
+
+	ilConvertImage(IL_RGBA, IL_UNSIGNED_BYTE);
+
+	ILint width = ilGetInteger(IL_IMAGE_WIDTH);
+	ILint height = ilGetInteger(IL_IMAGE_HEIGHT);
+	ILubyte* data = ilGetData();
+	ILint dataSize = ilGetInteger(IL_IMAGE_SIZE_OF_DATA);
+	// copies allocated with malloc since wxImage will take ownership of them
+	ILubyte* rgbCopy = reinterpret_cast<ILubyte*>(std::malloc(width * height * 3));
+	ILubyte* alphaCopy = reinterpret_cast<ILubyte*>(std::malloc(width * height * 1));
+
+	Expects(dataSize == (width * height * 4));
+
+	for (ILint y = 0; y < height; y++)
+	{
+		for (ILint x = 0; x < width; x++)
+		{
+			const std::size_t dataOffset = (x + y * width) * 4;
+
+			ILubyte r = data[dataOffset + 0];
+			ILubyte g = data[dataOffset + 1];
+			ILubyte b = data[dataOffset + 2];
+			ILubyte a = data[dataOffset + 3];
+
+			const std::size_t rgbOffset = (x + y * width) * 3;
+			rgbCopy[rgbOffset + 0] = r;
+			rgbCopy[rgbOffset + 1] = g;
+			rgbCopy[rgbOffset + 2] = b;
+
+			const std::size_t alphaOffset = (x + y * width) * 1;
+			alphaCopy[alphaOffset + 0] = a;
+		}
+	}
+
+	// wxImage takes ownership of rgbCopy and alphaCopy
+	wxImage img{ width, height, rgbCopy, alphaCopy };
+
+	ilDeleteImage(imgId);
+	return img;
+}
+
 void CDirectoryContentsListCtrl::OpenFile(const noire::WADChildFile& file)
 {
 	std::uint32_t headerMagic;
-	const std::size_t offset = file.Owner().Entries()[file.EntryIndex()].Offset;
+	const noire::WADRawFileEntry& entry = file.Owner().Entries()[file.EntryIndex()];
+	const std::size_t offset = entry.Offset;
 	file.Owner().Read(offset, { reinterpret_cast<std::byte*>(&headerMagic), sizeof(headerMagic) });
 
 	if (headerMagic == 0x20534444) // == 'DDS '
 	{
-		const std::string& path = file.Owner().Entries()[file.EntryIndex()].Path;
-		CImageWindow* imgWin =
-			new CImageWindow(this, wxID_ANY, path, { "E:\\Desktop\\test.bmp", wxBITMAP_TYPE_BMP }); // TODO: get wxImage from .dds file
+		const std::string& path = entry.Path;
+		const std::size_t size = entry.Size;
+
+		std::unique_ptr<std::byte[]> buffer = std::make_unique<std::byte[]>(size);
+		gsl::span<std::byte> bufferSpan{ buffer.get(), gsl::narrow<std::ptrdiff_t>(size) };
+		file.Owner().Read(offset, bufferSpan);
+
+		const wxImage img = CreateImageFromDDS(bufferSpan);
+		CImageWindow* imgWin = new CImageWindow(this, wxID_ANY, path, img);
 		imgWin->Show();
 	}
 }

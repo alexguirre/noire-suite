@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd vcpkg
-          .\vcpkg --triplet x86-windows-static install ms-gsl wxwidgets
+          .\vcpkg --triplet x86-windows-static install ms-gsl wxwidgets devil
       - name: CMake
         run: |
           cd src
