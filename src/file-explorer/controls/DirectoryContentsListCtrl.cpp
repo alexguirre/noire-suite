@@ -1,6 +1,7 @@
 #include "DirectoryContentsListCtrl.h"
 #include "Identifiers.h"
 #include "Images.h"
+#include "util/Format.h"
 #include "windows/ImageWindow.h"
 #include <IL/il.h>
 #include <cstdlib>
@@ -168,8 +169,7 @@ void CDirectoryContentsListCtrl::UpdateContents()
 	{
 		wxString name{ f.Name().data(), f.Name().data() + f.Name().size() };
 		wxString type{ "File" };
-		wxString size{};
-		size.Printf("%u bytes", f.Owner().Entries()[f.EntryIndex()].Size);
+		wxString size{ BytesToHumanReadable(f.Owner().Entries()[f.EntryIndex()].Size) };
 
 		addItem(name, type, size, new SDirectoryItemData(&f));
 	}
