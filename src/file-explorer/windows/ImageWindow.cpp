@@ -9,7 +9,7 @@ CImageWindow::CImageWindow(wxWindow* parent,
 	  mImgPanel{ new CImagePanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize) }
 {
 	wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
-	sizer->Add(mImgPanel, 1, wxEXPAND);	
+	sizer->Add(mImgPanel, 1, wxEXPAND);
 	SetSizer(sizer);
 
 	mImgPanel->SetImage(img);

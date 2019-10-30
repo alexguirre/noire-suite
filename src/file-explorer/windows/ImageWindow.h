@@ -1,7 +1,7 @@
 #pragma once
+#include <controls/ImagePanel.h>
 #include <wx/frame.h>
 #include <wx/image.h>
-#include <controls/ImagePanel.h>
 
 class CImageWindow : public wxFrame
 {
