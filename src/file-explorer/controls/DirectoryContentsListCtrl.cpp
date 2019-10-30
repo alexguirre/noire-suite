@@ -116,9 +116,9 @@ void CDirectoryContentsListCtrl::ShowItemContextMenu()
 
 void CDirectoryContentsListCtrl::BuildColumns()
 {
-	AppendColumn("Name");
+	AppendColumn("Name", wxLIST_FORMAT_LEFT, 250);
 	AppendColumn("Type");
-	AppendColumn("Size");
+	AppendColumn("Size", wxLIST_FORMAT_RIGHT);
 }
 
 void CDirectoryContentsListCtrl::UpdateContents()
