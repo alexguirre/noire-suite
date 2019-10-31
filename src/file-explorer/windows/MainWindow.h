@@ -13,11 +13,12 @@ class CMainWindow : public wxFrame
 public:
 	CMainWindow();
 
+	wxToolBar* OnCreateToolBar(long style, wxWindowID id, const wxString& name) override;
+
 private:
 	wxMenuBar* mMenuBar;
 	CDirectoryTreeCtrl* mDirTreeCtrl;
 	CDirectoryContentsListCtrl* mDirContentsListCtrl;
-	wxTextCtrl* mDirPathText;
 
 	void OnDirectoryTreeSelectionChanged(wxTreeEvent& event);
 };

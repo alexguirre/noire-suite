@@ -12,6 +12,8 @@ file(GLOB FILE_EXPLORER_SOURCES
     "controls/DirectoryTreeCtrl.h"
     "controls/ImagePanel.cpp"
     "controls/ImagePanel.h"
+    "controls/PathToolBar.cpp"
+    "controls/PathToolBar.h"
     "util/Format.cpp"
     "util/Format.h"
     "windows/ImageWindow.cpp"
