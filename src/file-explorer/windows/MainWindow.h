@@ -21,4 +21,6 @@ private:
 	CDirectoryContentsListCtrl* mDirContentsListCtrl;
 
 	void OnDirectoryTreeSelectionChanged(wxTreeEvent& event);
+
+	void CreateAccelTable();
 };

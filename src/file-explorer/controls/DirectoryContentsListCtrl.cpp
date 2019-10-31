@@ -11,6 +11,21 @@
 #include <wx/msgdlg.h>
 #include <wx/wx.h>
 
+CDirectoryEvent::CDirectoryEvent() : wxEvent(wxID_ANY, EVT_DIRECTORY_CHANGED) {}
+CDirectoryEvent::CDirectoryEvent(const noire::WADChildDirectory& dir, int winId)
+	: wxEvent(winId, EVT_DIRECTORY_CHANGED)
+{
+	SetDirectory(dir);
+}
+
+CDirectoryEvent::CDirectoryEvent(const CDirectoryEvent& e) : wxEvent(e)
+{
+	SetDirectory(e.GetDirectory());
+}
+
+wxIMPLEMENT_DYNAMIC_CLASS(CDirectoryEvent, wxEvent);
+wxDEFINE_EVENT(EVT_DIRECTORY_CHANGED, CDirectoryEvent);
+
 // clang-format off
 wxBEGIN_EVENT_TABLE(CDirectoryContentsListCtrl, wxListCtrl)
 	// for context menu
@@ -77,10 +92,14 @@ CDirectoryContentsListCtrl::CDirectoryContentsListCtrl(wxWindow* parent,
 
 void CDirectoryContentsListCtrl::SetDirectory(const noire::WADChildDirectory& dir)
 {
-	if (mCurrentDirectory != std::addressof(dir))
+	if (mCurrentDirectory != &dir)
 	{
-		mCurrentDirectory = std::addressof(dir);
+		mCurrentDirectory = &dir;
 		UpdateContents();
+
+		CDirectoryEvent event{ dir };
+		event.SetEventObject(this);
+		wxPostEvent(wxGetTopLevelParent(this)->GetEventHandler(), event);
 	}
 }
 

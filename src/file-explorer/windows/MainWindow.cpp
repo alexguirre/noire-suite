@@ -45,7 +45,13 @@ CMainWindow::CMainWindow()
 		SetSizer(mainSizer);
 	}
 
+	CreateAccelTable();
+
 	SetMinSize({ 650, 350 });
+
+	// TODO: giving the tool bar non-const access to mDirContentsListCtrl is a bit dirty
+	reinterpret_cast<CPathToolBar*>(GetToolBar())
+		->SetDirectoryContentsListCtrl(mDirContentsListCtrl);
 
 	mDirContentsListCtrl->SetDirectory(mDirTreeCtrl->File().Root());
 
@@ -71,4 +77,19 @@ void CMainWindow::OnDirectoryTreeSelectionChanged(wxTreeEvent& event)
 
 		event.Skip();
 	}
+}
+
+void CMainWindow::CreateAccelTable()
+{
+	std::array<wxAcceleratorEntry, 4> entries{};
+	std::size_t i = 0;
+
+	// for path tool bar back and forward buttons
+	// TODO: back/forward accelerators for mouse extra buttons, like windows file explorer
+	entries[i++].Set(wxACCEL_ALT, WXK_LEFT, wxID_BACKWARD);
+	entries[i++].Set(wxACCEL_NORMAL, WXK_BROWSER_BACK, wxID_BACKWARD);
+	entries[i++].Set(wxACCEL_ALT, WXK_RIGHT, wxID_FORWARD);
+	entries[i++].Set(wxACCEL_NORMAL, WXK_BROWSER_FORWARD, wxID_FORWARD);
+
+	SetAcceleratorTable({ entries.size(), entries.data() });
 }
