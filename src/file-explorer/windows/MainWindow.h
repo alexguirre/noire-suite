@@ -6,6 +6,7 @@ class CDirectoryTreeCtrl;
 class CDirectoryContentsListCtrl;
 
 class wxTreeEvent;
+class wxTextCtrl;
 
 class CMainWindow : public wxFrame
 {
@@ -16,6 +17,7 @@ private:
 	wxMenuBar* mMenuBar;
 	CDirectoryTreeCtrl* mDirTreeCtrl;
 	CDirectoryContentsListCtrl* mDirContentsListCtrl;
+	wxTextCtrl* mDirPathText;
 
 	void OnDirectoryTreeSelectionChanged(wxTreeEvent& event);
 };
