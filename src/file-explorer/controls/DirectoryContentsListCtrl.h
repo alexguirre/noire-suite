@@ -15,8 +15,8 @@ class CDirectoryContentsListCtrl : public wxListCtrl
 public:
 	CDirectoryContentsListCtrl(wxWindow* parent,
 							   const wxWindowID id,
-							   const wxPoint& pos,
-							   const wxSize& size);
+							   const wxPoint& pos = wxDefaultPosition,
+							   const wxSize& size = wxDefaultSize);
 
 	void SetDirectory(const noire::WADChildDirectory& dir);
 

@@ -14,7 +14,7 @@ public:
 
 private:
 	wxMenuBar* mMenuBar;
-	CDirectoryTreeCtrl* mFileTreeCtrl;
+	CDirectoryTreeCtrl* mDirTreeCtrl;
 	CDirectoryContentsListCtrl* mDirContentsListCtrl;
 
 	void OnDirectoryTreeSelectionChanged(wxTreeEvent& event);

@@ -4,14 +4,10 @@
 #include "controls/ImagePanel.h"
 #include <gsl/gsl>
 #include <wx/button.h>
+#include <wx/splitter.h>
 
 CMainWindow::CMainWindow()
-	: wxFrame(nullptr, wxID_ANY, "noire-suite - File Explorer"),
-	  mMenuBar{ new wxMenuBar() },
-	  mFileTreeCtrl{ new CDirectoryTreeCtrl(this, wxID_ANY, { 5, 5 }, { 300, 800 }) },
-	  mDirContentsListCtrl{
-		  new CDirectoryContentsListCtrl(this, wxID_ANY, { 305, 5 }, { 500, 800 }),
-	  }
+	: wxFrame(nullptr, wxID_ANY, "noire-suite - File Explorer"), mMenuBar{ new wxMenuBar() }
 {
 	// construct menu bar
 	{
@@ -24,12 +20,31 @@ CMainWindow::CMainWindow()
 		SetMenuBar(mMenuBar);
 	}
 
-	// TODO: change directory in mDirContentsListCtrl when selecting in mFileTreeCtrl
-	mDirContentsListCtrl->SetDirectory(mFileTreeCtrl->File().Root());
+	// create main directory tree and contents list within a splitter
+	{
+		wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
+		wxSplitterWindow* splitter = new wxSplitterWindow(this,
+														  wxID_ANY,
+														  wxDefaultPosition,
+														  wxDefaultSize,
+														  wxSP_LIVE_UPDATE);
+		splitter->SetSashGravity(0.0);
+		splitter->SetMinimumPaneSize(50);
+		mainSizer->Add(splitter, 1, wxEXPAND);
 
-	mFileTreeCtrl->Bind(wxEVT_TREE_SEL_CHANGED,
-						&CMainWindow::OnDirectoryTreeSelectionChanged,
-						this);
+		mDirTreeCtrl = { new CDirectoryTreeCtrl(splitter, wxID_ANY) };
+		mDirContentsListCtrl = { new CDirectoryContentsListCtrl(splitter, wxID_ANY) };
+
+		splitter->SplitVertically(mDirTreeCtrl, mDirContentsListCtrl);
+
+		SetSizer(mainSizer);
+	}
+
+	SetMinSize({ 650, 350 });
+
+	mDirContentsListCtrl->SetDirectory(mDirTreeCtrl->File().Root());
+
+	mDirTreeCtrl->Bind(wxEVT_TREE_SEL_CHANGED, &CMainWindow::OnDirectoryTreeSelectionChanged, this);
 }
 
 void CMainWindow::OnDirectoryTreeSelectionChanged(wxTreeEvent& event)
@@ -38,7 +53,7 @@ void CMainWindow::OnDirectoryTreeSelectionChanged(wxTreeEvent& event)
 	Expects(itemId.IsOk());
 
 	const CDirectoryItemData* data =
-		reinterpret_cast<CDirectoryItemData*>(mFileTreeCtrl->GetItemData(itemId));
+		reinterpret_cast<CDirectoryItemData*>(mDirTreeCtrl->GetItemData(itemId));
 
 	if (data)
 	{

@@ -18,8 +18,8 @@ class CDirectoryTreeCtrl : public wxTreeCtrl
 public:
 	CDirectoryTreeCtrl(wxWindow* parent,
 					   const wxWindowID id,
-					   const wxPoint& pos,
-					   const wxSize& size);
+					   const wxPoint& pos = wxDefaultPosition,
+					   const wxSize& size = wxDefaultSize);
 
 	const noire::WADFile& File() const { return mFile; }
 
