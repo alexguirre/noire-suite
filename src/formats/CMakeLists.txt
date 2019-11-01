@@ -4,6 +4,10 @@ file(GLOB FORMATS_SOURCES
     "File.h"
     "WADFile.cpp"
     "WADFile.h"
+    "fs/Device.cpp"
+    "fs/Device.h"
+    "fs/FileSystem.cpp"
+    "fs/FileSystem.h"
 )
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${FORMATS_SOURCES})
 
