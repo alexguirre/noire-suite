@@ -39,6 +39,13 @@ void CDirectoryHistory::GoForward()
 	mForwardStack.pop();
 }
 
+void CDirectoryHistory::GoUp()
+{
+	Expects(CanGoUp());
+
+	Push(*Current().Parent());
+}
+
 bool CDirectoryHistory::CanGoBack() const
 {
 	return mBackStack.size() > 1;
@@ -47,4 +54,9 @@ bool CDirectoryHistory::CanGoBack() const
 bool CDirectoryHistory::CanGoForward() const
 {
 	return mForwardStack.size() > 0;
+}
+
+bool CDirectoryHistory::CanGoUp() const
+{
+	return HasCurrent() && Current().Parent() != nullptr;
 }

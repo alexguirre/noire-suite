@@ -78,7 +78,7 @@ void CPathToolBar::OnDirectoryChanged(CDirectoryEvent& e)
 
 	FindById(wxID_BACKWARD)->Enable(mDirHistory.CanGoBack());
 	FindById(wxID_FORWARD)->Enable(mDirHistory.CanGoForward());
-	FindById(wxID_UP)->Enable(false);
+	FindById(wxID_UP)->Enable(mDirHistory.CanGoUp());
 
 	Realize();
 
@@ -100,7 +100,8 @@ void CPathToolBar::OnTool(wxCommandEvent& event)
 bool CPathToolBar::CanHandleCommand(int id) const
 {
 	return (id == wxID_BACKWARD && mDirHistory.CanGoBack()) ||
-		   (id == wxID_FORWARD && mDirHistory.CanGoForward()) || id == wxID_UP;
+		   (id == wxID_FORWARD && mDirHistory.CanGoForward()) ||
+		   (id == wxID_UP && mDirHistory.CanGoUp());
 }
 
 void CPathToolBar::HandleCommand(int id)
@@ -113,22 +114,21 @@ void CPathToolBar::HandleCommand(int id)
 	{
 		wxLogDebug("> Backward");
 		mDirHistory.GoBack();
-		mDirContentsListCtrl->SetDirectory(mDirHistory.Current());
 	}
 	break;
 	case wxID_FORWARD:
 	{
 		wxLogDebug("> Forward");
 		mDirHistory.GoForward();
-		mDirContentsListCtrl->SetDirectory(mDirHistory.Current());
 	}
 	break;
 	case wxID_UP:
 	{
 		wxLogDebug("> Up");
-		// TODO: implement CDirectoryHistory::GoUp
-		// mDirHistory.GoUp();
+		mDirHistory.GoUp();
 	}
 	break;
 	}
+
+	mDirContentsListCtrl->SetDirectory(mDirHistory.Current());
 }

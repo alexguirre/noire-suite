@@ -12,8 +12,10 @@ public:
 	void Push(const noire::WADChildDirectory& dir);
 	void GoBack();
 	void GoForward();
+	void GoUp();
 	bool CanGoBack() const;
 	bool CanGoForward() const;
+	bool CanGoUp() const;
 
 private:
 	std::stack<const noire::WADChildDirectory*> mBackStack;

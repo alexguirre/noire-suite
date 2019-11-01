@@ -81,7 +81,7 @@ void CMainWindow::OnDirectoryTreeSelectionChanged(wxTreeEvent& event)
 
 void CMainWindow::CreateAccelTable()
 {
-	std::array<wxAcceleratorEntry, 4> entries{};
+	std::array<wxAcceleratorEntry, 5> entries{};
 	std::size_t i = 0;
 
 	// for path tool bar back and forward buttons
@@ -90,6 +90,7 @@ void CMainWindow::CreateAccelTable()
 	entries[i++].Set(wxACCEL_NORMAL, WXK_BROWSER_BACK, wxID_BACKWARD);
 	entries[i++].Set(wxACCEL_ALT, WXK_RIGHT, wxID_FORWARD);
 	entries[i++].Set(wxACCEL_NORMAL, WXK_BROWSER_FORWARD, wxID_FORWARD);
+	entries[i++].Set(wxACCEL_ALT, WXK_UP, wxID_UP);
 
 	SetAcceleratorTable({ entries.size(), entries.data() });
 }
