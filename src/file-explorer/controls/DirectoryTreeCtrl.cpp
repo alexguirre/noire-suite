@@ -15,11 +15,14 @@ wxBEGIN_EVENT_TABLE(CDirectoryTreeCtrl, wxTreeCtrl)
 wxEND_EVENT_TABLE();
 // clang-format on
 
+static constexpr long TreeCtrlStyle = wxTR_HAS_BUTTONS | wxTR_TWIST_BUTTONS | wxTR_NO_LINES |
+									  wxTR_HIDE_ROOT | wxTR_LINES_AT_ROOT | wxTR_SINGLE;
+
 CDirectoryTreeCtrl::CDirectoryTreeCtrl(wxWindow* parent,
 									   const wxWindowID id,
 									   const wxPoint& pos,
 									   const wxSize& size)
-	: wxTreeCtrl(parent, id, pos, size),
+	: wxTreeCtrl(parent, id, pos, size, TreeCtrlStyle),
 	  mFile{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\final\\pc\\out.wad.pc" }
 {
 	SetImageList(CImages::Icons());
@@ -29,8 +32,9 @@ CDirectoryTreeCtrl::CDirectoryTreeCtrl(wxWindow* parent,
 void CDirectoryTreeCtrl::LoadDummyData()
 {
 	// initialize tree
-	wxTreeItemId root = AddRoot("L.A. Noire", CImages::IconNoire);
-	wxTreeItemId finalItem = AppendItem(root, "final", CImages::IconFolder);
+	wxTreeItemId root = AddRoot("ROOT");
+	wxTreeItemId noireItem = AppendItem(root, "L.A. Noire", CImages::IconNoire);
+	wxTreeItemId finalItem = AppendItem(noireItem, "final", CImages::IconFolder);
 	wxTreeItemId pcItem = AppendItem(finalItem, "pc", CImages::IconFolder);
 	wxTreeItemId wadItem = AppendItem(pcItem,
 									  "out.wad.pc",
