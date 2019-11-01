@@ -29,6 +29,41 @@ namespace noire
 		Expects(owner != nullptr);
 	}
 
+	static const WADChildDirectory* FindParent(const WADChildDirectory* current,
+											   const WADChildDirectory* child)
+	{
+		// TODO: this will probably be too slow in some cases
+		if (std::any_of(current->Directories().cbegin(),
+						current->Directories().cend(),
+						[child](auto& d) { return &d == child; }))
+		{
+			return current;
+		}
+		else
+		{
+			const WADChildDirectory* foundDir = nullptr;
+			for (auto& d : current->Directories())
+			{
+				if (foundDir = FindParent(&d, child); foundDir)
+				{
+					break;
+				}
+			}
+			return foundDir;
+		}
+	}
+
+	const WADChildDirectory* WADChildDirectory::Parent() const
+	{
+		return FindParent(&mOwner->Root(), this);
+	}
+
+	std::string WADChildDirectory::Path() const
+	{
+		const WADChildDirectory* parent = Parent();
+		return (parent ? parent->Path() : "") + mName + PathSeparator;
+	}
+
 	WADFile::WADFile(const fs::path& path) : mPath{ path }, mEntries{}, mRoot{ this }
 	{
 		LoadRawEntries();

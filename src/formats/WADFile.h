@@ -59,6 +59,8 @@ namespace noire
 		const std::string& Name() const { return mName; }
 		const std::vector<WADChildDirectory>& Directories() const { return mDirectories; }
 		const std::vector<WADChildFile>& Files() const { return mFiles; }
+		const WADChildDirectory* Parent() const;
+		std::string Path() const;
 
 		bool IsRoot() const { return mName == ""; }
 
