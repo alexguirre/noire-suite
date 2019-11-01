@@ -74,8 +74,7 @@ void CPathToolBar::OnDirectoryChanged(CDirectoryEvent& e)
 		mDirHistory.Push(e.GetDirectory());
 	}
 
-	// TODO: show full path in toolbar
-	mPathText->SetValue(e.GetDirectory().Name());
+	mPathText->SetValue(e.GetDirectory().Path());
 
 	FindById(wxID_BACKWARD)->Enable(mDirHistory.CanGoBack());
 	FindById(wxID_FORWARD)->Enable(mDirHistory.CanGoForward());
