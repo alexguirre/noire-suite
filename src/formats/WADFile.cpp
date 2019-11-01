@@ -64,7 +64,7 @@ namespace noire
 		return (parent ? parent->Path() : "") + mName + PathSeparator;
 	}
 
-	WADFile::WADFile(const fs::path& path) : mPath{ path }, mEntries{}, mRoot{ this }
+	WADFile::WADFile(fs::IFileStream& stream) : mStream{ stream }, mEntries{}, mRoot{ this }
 	{
 		LoadRawEntries();
 		InitRoot();
@@ -72,22 +72,20 @@ namespace noire
 
 	void WADFile::Read(std::size_t offset, gsl::span<std::byte> dest) const
 	{
-		// TODO: maintain some kind of cache so we're not reopening the file again and again
-		std::ifstream f{ mPath, std::ios::binary | std::ios::in };
-		f.seekg(offset);
-		f.read(reinterpret_cast<char*>(dest.data()), dest.size_bytes());
+		mStream.Seek(offset);
+		mStream.Read(dest.data(), dest.size_bytes());
 	}
 
 	void WADFile::LoadRawEntries()
 	{
-		std::ifstream f{ mPath, std::ios::binary | std::ios::in };
+		mStream.Seek(0);
 
 		std::uint32_t magic;
-		f.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+		mStream.Read(&magic, sizeof(magic));
 		Expects(magic == TFileTraits<WADFile>::HeaderMagic);
 
 		std::uint32_t entryCount;
-		f.read(reinterpret_cast<char*>(&entryCount), sizeof(entryCount));
+		mStream.Read(&entryCount, sizeof(entryCount));
 
 		mEntries.reserve(entryCount);
 
@@ -95,23 +93,23 @@ namespace noire
 		for (std::size_t i = 0; i < entryCount; i++)
 		{
 			std::uint32_t hash, offset, size;
-			f.read(reinterpret_cast<char*>(&hash), sizeof(hash));
-			f.read(reinterpret_cast<char*>(&offset), sizeof(offset));
-			f.read(reinterpret_cast<char*>(&size), sizeof(size));
+			mStream.Read(&hash, sizeof(hash));
+			mStream.Read(&offset, sizeof(offset));
+			mStream.Read(&size, sizeof(size));
 
 			mEntries.emplace_back("", hash, offset, size);
 		}
 
 		// read path
-		f.seekg(mEntries.back().Offset + mEntries.back().Size);
+		mStream.Seek(mEntries.back().Offset + mEntries.back().Size);
 		for (std::size_t i = 0; i < entryCount; i++)
 		{
 			std::uint16_t strLength{ 0 };
-			f.read(reinterpret_cast<char*>(&strLength), sizeof(strLength));
+			mStream.Read(&strLength, sizeof(strLength));
 
 			std::string& str = mEntries[i].Path;
 			str.resize(strLength);
-			f.read(str.data(), strLength);
+			mStream.Read(str.data(), strLength);
 		}
 	}
 

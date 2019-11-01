@@ -2,6 +2,7 @@
 #include "Identifiers.h"
 #include "Images.h"
 #include <filesystem>
+#include <formats/fs/NativeDevice.h>
 #include <gsl/gsl>
 #include <wx/icon.h>
 #include <wx/imaglist.h>
@@ -23,7 +24,9 @@ CDirectoryTreeCtrl::CDirectoryTreeCtrl(wxWindow* parent,
 									   const wxPoint& pos,
 									   const wxSize& size)
 	: wxTreeCtrl(parent, id, pos, size, TreeCtrlStyle),
-	  mFile{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\final\\pc\\out.wad.pc" }
+	  mFileStream{ std::make_unique<noire::fs::CNativeFileStream>(
+		  "E:\\Rockstar Games\\L.A. Noire Complete Edition\\final\\pc\\out.wad.pc") },
+	  mFile{ *mFileStream }
 {
 	SetImageList(CImages::Icons());
 	LoadDummyData();

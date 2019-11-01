@@ -1,5 +1,6 @@
 #pragma once
 #include <formats/WADFile.h>
+#include <formats/fs/FileStream.h>
 #include <wx/treectrl.h>
 
 class CDirectoryItemData : public wxTreeItemData
@@ -32,6 +33,7 @@ public:
 private:
 	void ShowItemContextMenu(wxTreeItemId id, const wxPoint& pos);
 
+	std::unique_ptr<noire::fs::IFileStream> mFileStream;
 	noire::WADFile mFile;
 
 	wxDECLARE_EVENT_TABLE();

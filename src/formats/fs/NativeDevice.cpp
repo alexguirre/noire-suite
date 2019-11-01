@@ -1,0 +1,47 @@
+#include "NativeDevice.h"
+#include <gsl/gsl>
+
+namespace noire::fs
+{
+	namespace stdfs = std::filesystem;
+
+	CNativeDevice::CNativeDevice(const stdfs::path& rootDir) : mRootDir{ stdfs::absolute(rootDir) }
+	{
+		Expects(stdfs::exists(mRootDir) && stdfs::is_directory(mRootDir));
+	}
+
+	bool CNativeDevice::PathExists(std::string_view path) const
+	{
+		const stdfs::path fullPath = mRootDir / path;
+		return stdfs::exists(fullPath);
+	}
+
+	std::unique_ptr<IFileStream> CNativeDevice::OpenFile(std::string_view path)
+	{
+		const stdfs::path fullPath = mRootDir / path;
+		return std::make_unique<CNativeFileStream>(fullPath);
+	}
+
+	CNativeFileStream::CNativeFileStream(const stdfs::path& path)
+		: mStream{ path, std::ios::binary | std::ios::in }
+	{
+	}
+
+	void CNativeFileStream::Read(void* destBuffer, std::size_t count)
+	{
+		mStream.read(reinterpret_cast<char*>(destBuffer), count);
+	}
+
+	void CNativeFileStream::Seek(std::size_t offset) { mStream.seekg(offset); }
+
+	std::size_t CNativeFileStream::Tell() { return gsl::narrow_cast<std::size_t>(mStream.tellg()); }
+
+	std::size_t CNativeFileStream::Size()
+	{
+		const std::streampos pos = mStream.tellg();
+		mStream.seekg(0, std::ios::end);
+		const std::streampos size = mStream.tellg();
+		mStream.seekg(pos);
+		return gsl::narrow_cast<std::size_t>(size);
+	};
+}

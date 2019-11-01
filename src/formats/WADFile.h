@@ -1,5 +1,6 @@
 #pragma once
 #include "File.h"
+#include "fs/FileStream.h"
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -82,9 +83,8 @@ namespace noire
 	class WADFile
 	{
 	public:
-		WADFile(const std::filesystem::path& path);
+		WADFile(fs::IFileStream& stream);
 
-		const std::filesystem::path& Path() const { return mPath; }
 		const std::vector<WADRawFileEntry>& Entries() const { return mEntries; }
 		const WADChildDirectory& Root() const { return mRoot; }
 
@@ -96,7 +96,7 @@ namespace noire
 		WADChildDirectory& FindOrCreateDirectory(WADChildDirectory& root, std::string_view path);
 		void SortDirectories(WADChildDirectory& root);
 
-		std::filesystem::path mPath;
+		fs::IFileStream& mStream;
 		std::vector<WADRawFileEntry> mEntries;
 		WADChildDirectory mRoot;
 	};

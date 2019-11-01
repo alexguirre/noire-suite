@@ -1,8 +1,10 @@
 #pragma once
 #include "Device.h"
+#include "FileStream.h"
 #include <memory>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 namespace noire::fs
 {
@@ -28,6 +30,7 @@ namespace noire::fs
 		void Unmount(std::string_view path);
 
 		bool PathExists(std::string_view path);
+		std::unique_ptr<IFileStream> OpenFile(std::string_view path);
 
 		IDevice* FindDevice(std::string_view path, std::string_view& outMountPath);
 		IDevice* FindDevice(std::string_view path)
