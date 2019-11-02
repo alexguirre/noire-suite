@@ -9,6 +9,7 @@ namespace noire::fs
 	{
 	public:
 		virtual bool PathExists(std::string_view path) const = 0;
+		virtual bool FileExists(std::string_view filePath) const = 0;
 		virtual std::unique_ptr<IFileStream> OpenFile(std::string_view path) = 0;
 	};
 }

@@ -19,6 +19,7 @@ namespace noire::fs
 		CWADDevice& operator=(CWADDevice&&) = default;
 
 		bool PathExists(std::string_view path) const override;
+		bool FileExists(std::string_view filePath) const override;
 		std::unique_ptr<IFileStream> OpenFile(std::string_view path) override;
 
 	private:

@@ -18,6 +18,7 @@ namespace noire::fs
 		CNativeDevice& operator=(CNativeDevice&&) = default;
 
 		bool PathExists(std::string_view path) const override;
+		bool FileExists(std::string_view filePath) const override;
 		std::unique_ptr<IFileStream> OpenFile(std::string_view path) override;
 
 		const std::filesystem::path& RootDirectory() const { return mRootDir; }

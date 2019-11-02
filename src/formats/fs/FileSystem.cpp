@@ -43,6 +43,14 @@ namespace noire::fs
 		return dev != nullptr && dev->PathExists(path.substr(mountPath.size()));
 	}
 
+	bool CFileSystem::FileExists(std::string_view filePath)
+	{
+		std::string_view mountPath{};
+		IDevice* dev = FindDevice(filePath, mountPath);
+		// pass path relative to device to FileExists
+		return dev != nullptr && dev->FileExists(filePath.substr(mountPath.size()));
+	}
+
 	std::unique_ptr<IFileStream> CFileSystem::OpenFile(std::string_view path)
 	{
 		std::string_view mountPath{};

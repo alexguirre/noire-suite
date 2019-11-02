@@ -7,7 +7,7 @@ namespace noire::fs
 
 	CWADDevice::CWADDevice(IDevice& parentDevice, std::string_view wadFilePath)
 		: mParent{ parentDevice },
-		  mWADFilePath{ (Expects(mParent.PathExists(wadFilePath)), wadFilePath) },
+		  mWADFilePath{ (Expects(mParent.FileExists(wadFilePath)), wadFilePath) },
 		  mWADFileStream{ mParent.OpenFile(mWADFilePath) },
 		  mWADFile{ *mWADFileStream }
 	{
@@ -21,6 +21,13 @@ namespace noire::fs
 							   return path.size() <= e.Path.size() &&
 									  std::string_view{ e.Path.c_str(), path.size() } == path;
 						   });
+	}
+
+	bool CWADDevice::FileExists(std::string_view filePath) const
+	{
+		return std::any_of(mWADFile.Entries().begin(),
+						   mWADFile.Entries().end(),
+						   [filePath](const WADRawFileEntry& e) { return e.Path == filePath; });
 	}
 
 	std::unique_ptr<IFileStream> CWADDevice::OpenFile(std::string_view path)

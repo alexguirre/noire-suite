@@ -16,6 +16,12 @@ namespace noire::fs
 		return stdfs::exists(fullPath);
 	}
 
+	bool CNativeDevice::FileExists(std::string_view filePath) const
+	{
+		const stdfs::path fullPath = mRootDir / filePath;
+		return stdfs::is_regular_file(fullPath);
+	}
+
 	std::unique_ptr<IFileStream> CNativeDevice::OpenFile(std::string_view path)
 	{
 		const stdfs::path fullPath = mRootDir / path;

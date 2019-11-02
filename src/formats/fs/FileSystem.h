@@ -30,6 +30,7 @@ namespace noire::fs
 		void Unmount(std::string_view path);
 
 		bool PathExists(std::string_view path);
+		bool FileExists(std::string_view filePath);
 		std::unique_ptr<IFileStream> OpenFile(std::string_view path);
 
 		IDevice* FindDevice(std::string_view path, std::string_view& outMountPath);
