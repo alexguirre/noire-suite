@@ -1,5 +1,8 @@
 #pragma once
+#include <formats/fs/FileSystem.h>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <wx/event.h>
 #include <wx/listctrl.h>
 
@@ -15,16 +18,16 @@ class CDirectoryEvent : public wxEvent
 {
 public:
 	CDirectoryEvent();
-	CDirectoryEvent(const noire::WADChildDirectory& dir, int winId = wxID_ANY);
+	CDirectoryEvent(std::string_view dirPath, int winId = wxID_ANY);
 	CDirectoryEvent(const CDirectoryEvent& e);
 
 	wxEvent* Clone() const override { return new CDirectoryEvent(*this); }
 
-	void SetDirectory(const noire::WADChildDirectory& dir) { mDir = &dir; }
-	const noire::WADChildDirectory& GetDirectory() const { return *mDir; }
+	void SetDirectory(std::string_view dirPath) { mDirPath = dirPath; }
+	const std::string& GetDirectory() const { return mDirPath; }
 
 private:
-	const noire::WADChildDirectory* mDir;
+	std::string mDirPath;
 
 	wxDECLARE_DYNAMIC_CLASS(CDirectoryEvent);
 };
@@ -39,7 +42,8 @@ public:
 							   const wxPoint& pos = wxDefaultPosition,
 							   const wxSize& size = wxDefaultSize);
 
-	void SetDirectory(const noire::WADChildDirectory& dir);
+	void SetFileSystem(noire::fs::CFileSystem* fileSystem);
+	void SetDirectory(std::string_view dirPath);
 
 	void OnItemContextMenu(wxListEvent& event);
 	void OnItemActivated(wxListEvent& event);
@@ -48,9 +52,10 @@ private:
 	void ShowItemContextMenu();
 	void BuildColumns();
 	void UpdateContents();
-	void OpenFile(const noire::WADChildFile& file);
+	void OpenFile(std::string_view filePath);
 
-	const noire::WADChildDirectory* mCurrentDirectory;
+	noire::fs::CFileSystem* mFileSystem;
+	std::string mDirPath;
 	std::unique_ptr<wxMenu> mItemContextMenu;
 
 	wxDECLARE_EVENT_TABLE();

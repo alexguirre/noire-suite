@@ -1,15 +1,14 @@
 #include "DirectoryHistory.h"
+#include <formats/fs/FileSystem.h>
 #include <gsl/gsl>
-
-using namespace noire;
 
 CDirectoryHistory::CDirectoryHistory() {}
 
-const WADChildDirectory& CDirectoryHistory::Current() const
+const std::string& CDirectoryHistory::Current() const
 {
 	Expects(HasCurrent());
 
-	return *mBackStack.top();
+	return mBackStack.top();
 }
 
 bool CDirectoryHistory::HasCurrent() const
@@ -17,9 +16,9 @@ bool CDirectoryHistory::HasCurrent() const
 	return mBackStack.size() > 0;
 }
 
-void CDirectoryHistory::Push(const noire::WADChildDirectory& dir)
+void CDirectoryHistory::Push(std::string_view dir)
 {
-	mBackStack.push(&dir);
+	mBackStack.emplace(dir);
 	mForwardStack = {}; // clear the forward stack
 }
 
@@ -43,7 +42,12 @@ void CDirectoryHistory::GoUp()
 {
 	Expects(CanGoUp());
 
-	Push(*Current().Parent());
+	const std::string& path = Current();
+	std::size_t parentPos = path.rfind(noire::fs::CFileSystem::DirectorySeparator, path.size() - 2);
+	if (parentPos != std::string_view::npos)
+	{
+		Push(path.substr(0, parentPos + 1));
+	}
 }
 
 bool CDirectoryHistory::CanGoBack() const
@@ -58,5 +62,13 @@ bool CDirectoryHistory::CanGoForward() const
 
 bool CDirectoryHistory::CanGoUp() const
 {
-	return HasCurrent() && Current().Parent() != nullptr;
+	if (HasCurrent())
+	{
+		auto& curr = Current();
+		return std::count(curr.begin(), curr.end(), noire::fs::CFileSystem::DirectorySeparator) > 1;
+	}
+	else
+	{
+		return false;
+	}
 }

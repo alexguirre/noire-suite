@@ -12,10 +12,10 @@
 #include <wx/wx.h>
 
 CDirectoryEvent::CDirectoryEvent() : wxEvent(wxID_ANY, EVT_DIRECTORY_CHANGED) {}
-CDirectoryEvent::CDirectoryEvent(const noire::WADChildDirectory& dir, int winId)
+CDirectoryEvent::CDirectoryEvent(std::string_view dirPath, int winId)
 	: wxEvent(winId, EVT_DIRECTORY_CHANGED)
 {
-	SetDirectory(dir);
+	SetDirectory(dirPath);
 }
 
 CDirectoryEvent::CDirectoryEvent(const CDirectoryEvent& e) : wxEvent(e)
@@ -36,25 +36,10 @@ wxEND_EVENT_TABLE();
 
 struct SDirectoryItemData
 {
-	enum class eType
-	{
-		Unknown = 0,
-		File = 1,
-		Directory = 2,
-	};
+	std::string Path;
+	bool IsFile;
 
-	union
-	{
-		const noire::WADChildFile* File;
-		const noire::WADChildDirectory* Directory;
-	} Content;
-	eType Type;
-
-	SDirectoryItemData(const noire::WADChildFile* file) : Content{ file }, Type{ eType::File } {}
-	SDirectoryItemData(const noire::WADChildDirectory* dir) : Type{ eType::Directory }
-	{
-		Content.Directory = dir;
-	}
+	SDirectoryItemData(std::string_view path, bool isFile) : Path{ path }, IsFile{ isFile } {}
 };
 
 class CDirectoryItemContextMenu : public wxMenu
@@ -82,22 +67,30 @@ CDirectoryContentsListCtrl::CDirectoryContentsListCtrl(wxWindow* parent,
 													   const wxWindowID id,
 													   const wxPoint& pos,
 													   const wxSize& size)
-	: wxListCtrl(parent, id, pos, size, wxLC_REPORT),
-	  mCurrentDirectory{ nullptr },
-	  mItemContextMenu{ std::make_unique<CDirectoryItemContextMenu>() }
+	: wxListCtrl(parent, id, pos, size, wxLC_REPORT), mFileSystem{ nullptr }, mDirPath{}
 {
 	SetImageList(CImages::Icons(), wxIMAGE_LIST_SMALL);
 	BuildColumns();
 }
 
-void CDirectoryContentsListCtrl::SetDirectory(const noire::WADChildDirectory& dir)
+void CDirectoryContentsListCtrl::SetFileSystem(noire::fs::CFileSystem* fileSystem)
 {
-	if (mCurrentDirectory != &dir)
+	if (fileSystem != mFileSystem)
 	{
-		mCurrentDirectory = &dir;
+		mFileSystem = fileSystem;
+		mDirPath = "";
+		SetDirectory("/");
+	}
+}
+
+void CDirectoryContentsListCtrl::SetDirectory(std::string_view dirPath)
+{
+	if (mDirPath != dirPath)
+	{
+		mDirPath = dirPath;
 		UpdateContents();
 
-		CDirectoryEvent event{ dir };
+		CDirectoryEvent event{ mDirPath };
 		event.SetEventObject(this);
 		wxPostEvent(wxGetTopLevelParent(this)->GetEventHandler(), event);
 	}
@@ -114,15 +107,14 @@ void CDirectoryContentsListCtrl::OnItemActivated(wxListEvent& event)
 	SDirectoryItemData* data = reinterpret_cast<SDirectoryItemData*>(event.GetItem().GetData());
 	Expects(data != nullptr);
 
-	if (data->Type == SDirectoryItemData::eType::Directory)
+	std::string_view path = data->Path;
+	if (data->IsFile)
 	{
-		const noire::WADChildDirectory& dir = *data->Content.Directory;
-		SetDirectory(dir);
+		OpenFile(path);
 	}
-	else if (data->Type == SDirectoryItemData::eType::File)
+	else
 	{
-		const noire::WADChildFile& file = *data->Content.File;
-		OpenFile(file);
+		SetDirectory(path);
 	}
 
 	event.Skip();
@@ -149,7 +141,7 @@ void CDirectoryContentsListCtrl::UpdateContents()
 	}
 	DeleteAllItems();
 
-	if (!mCurrentDirectory)
+	if (mFileSystem == nullptr || mDirPath.empty())
 	{
 		return;
 	}
@@ -169,28 +161,56 @@ void CDirectoryContentsListCtrl::UpdateContents()
 
 		SetItemPtrData(idx, reinterpret_cast<wxUIntPtr>(data));
 
-		SetItemImage(idx,
-					 data->Type == SDirectoryItemData::eType::Directory ? CImages::IconFolder :
-																		  CImages::IconBlankFile);
+		SetItemImage(idx, data->IsFile ? CImages::IconBlankFile : CImages::IconFolder);
 	};
 
-	for (auto& d : mCurrentDirectory->Directories())
-	{
-		wxString name{ d.Name() };
-		wxString type{ "Folder" };
-		wxString size{};
-		size.Printf("%u items", d.Files().size() + d.Directories().size());
+	const auto getNameFromPath = [](std::string_view path) {
+		std::size_t namePos =
+			path.rfind(noire::fs::CFileSystem::DirectorySeparator, path.size() - 2);
+		if (namePos != std::string_view::npos)
+		{
+			path = path.substr(namePos + 1);
+			return path[path.size() - 1] == noire::fs::CFileSystem::DirectorySeparator ?
+					   path.substr(0, path.size() - 1) :
+					   path;
+		}
+		else
+		{
+			return path;
+		}
+	};
 
-		addItem(name, type, size, new SDirectoryItemData(&d));
+	auto entries = mFileSystem->GetEntries(mDirPath);
+	// add directories first
+	for (auto& d : entries)
+	{
+		if (!d.IsFile)
+		{
+			std::string_view nameView = getNameFromPath(d.Path);
+
+			wxString name{ nameView.data(), nameView.size() };
+			wxString type{ "Folder" };
+			wxString size{ "TBD" };
+			// size.Printf("%u items", d.Files().size() + d.Directories().size());
+
+			addItem(name, type, size, new SDirectoryItemData(d.Path, false));
+		}
 	}
 
-	for (auto& f : mCurrentDirectory->Files())
+	// add files
+	for (auto& d : entries)
 	{
-		wxString name{ f.Name().data(), f.Name().data() + f.Name().size() };
-		wxString type{ "File" };
-		wxString size{ BytesToHumanReadable(f.Owner().Entries()[f.EntryIndex()].Size) };
+		if (d.IsFile)
+		{
+			std::string_view nameView = getNameFromPath(d.Path);
 
-		addItem(name, type, size, new SDirectoryItemData(&f));
+			wxString name{ nameView.data(), nameView.size() };
+			wxString type{ "File" };
+			wxString size{ "TBD" };
+			/*BytesToHumanReadable(f.Owner().Entries()[f.EntryIndex()].Size)*/
+
+			addItem(name, type, size, new SDirectoryItemData(d.Path, true));
+		}
 	}
 }
 
@@ -241,24 +261,23 @@ static wxImage CreateImageFromDDS(gsl::span<std::byte> ddsData)
 	return img;
 }
 
-void CDirectoryContentsListCtrl::OpenFile(const noire::WADChildFile& file)
+void CDirectoryContentsListCtrl::OpenFile(std::string_view filePath)
 {
 	std::uint32_t headerMagic;
-	const noire::WADRawFileEntry& entry = file.Owner().Entries()[file.EntryIndex()];
-	const std::size_t offset = entry.Offset;
-	file.Owner().Read(offset, { reinterpret_cast<std::byte*>(&headerMagic), sizeof(headerMagic) });
+	std::unique_ptr<noire::fs::IFileStream> file = mFileSystem->OpenFile(filePath);
+	file->Read(&headerMagic, sizeof(headerMagic));
 
 	if (headerMagic == 0x20534444) // == 'DDS '
 	{
-		const std::string& path = entry.Path;
-		const std::size_t size = entry.Size;
+		const std::size_t size = file->Size();
 
 		std::unique_ptr<std::byte[]> buffer = std::make_unique<std::byte[]>(size);
-		gsl::span<std::byte> bufferSpan{ buffer.get(), gsl::narrow<std::ptrdiff_t>(size) };
-		file.Owner().Read(offset, bufferSpan);
+		file->Seek(0);
+		file->Read(buffer.get(), size);
 
-		const wxImage img = CreateImageFromDDS(bufferSpan);
-		CImageWindow* imgWin = new CImageWindow(this, wxID_ANY, path, img);
+		const wxImage img = CreateImageFromDDS({ buffer.get(), gsl::narrow<std::ptrdiff_t>(size) });
+		CImageWindow* imgWin =
+			new CImageWindow(this, wxID_ANY, { filePath.data(), filePath.size() }, img);
 		imgWin->Show();
 	}
 }

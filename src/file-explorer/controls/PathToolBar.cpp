@@ -74,7 +74,7 @@ void CPathToolBar::OnDirectoryChanged(CDirectoryEvent& e)
 		mDirHistory.Push(e.GetDirectory());
 	}
 
-	mPathText->SetValue(e.GetDirectory().Path());
+	mPathText->SetValue(e.GetDirectory());
 
 	FindById(wxID_BACKWARD)->Enable(mDirHistory.CanGoBack());
 	FindById(wxID_FORWARD)->Enable(mDirHistory.CanGoForward());

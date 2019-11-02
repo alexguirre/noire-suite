@@ -1,17 +1,19 @@
 #pragma once
 #include <formats/WADFile.h>
-#include <formats/fs/FileStream.h>
+#include <formats/fs/FileSystem.h>
+#include <string>
+#include <string_view>
 #include <wx/treectrl.h>
 
 class CDirectoryItemData : public wxTreeItemData
 {
 public:
-	CDirectoryItemData(const noire::WADChildDirectory& dir) : mDir{ dir } {}
+	CDirectoryItemData(std::string_view path) : mPath{ path } {}
 
-	const noire::WADChildDirectory& Directory() const { return mDir; }
+	const std::string& Path() const { return mPath; }
 
 private:
-	const noire::WADChildDirectory& mDir;
+	std::string mPath;
 };
 
 class CDirectoryTreeCtrl : public wxTreeCtrl
@@ -22,19 +24,14 @@ public:
 					   const wxPoint& pos = wxDefaultPosition,
 					   const wxSize& size = wxDefaultSize);
 
-	const noire::WADFile& File() const { return mFile; }
+	void SetFileSystem(noire::fs::CFileSystem* fileSystem);
 
 private:
-	void LoadDummyData();
-
-public:
+	void Refresh();
 	void OnItemContextMenu(wxTreeEvent& event);
-
-private:
 	void ShowItemContextMenu(wxTreeItemId id, const wxPoint& pos);
 
-	std::unique_ptr<noire::fs::IFileStream> mFileStream;
-	noire::WADFile mFile;
+	noire::fs::CFileSystem* mFileSystem;
 
 	wxDECLARE_EVENT_TABLE();
 };

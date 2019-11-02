@@ -1,15 +1,15 @@
 #pragma once
-#include <formats/WADFile.h>
 #include <stack>
+#include <string>
 
 class CDirectoryHistory
 {
 public:
 	CDirectoryHistory();
 
-	const noire::WADChildDirectory& Current() const;
+	const std::string& Current() const;
 	bool HasCurrent() const;
-	void Push(const noire::WADChildDirectory& dir);
+	void Push(std::string_view dir);
 	void GoBack();
 	void GoForward();
 	void GoUp();
@@ -18,6 +18,6 @@ public:
 	bool CanGoUp() const;
 
 private:
-	std::stack<const noire::WADChildDirectory*> mBackStack;
-	std::stack<const noire::WADChildDirectory*> mForwardStack;
+	std::stack<std::string> mBackStack;
+	std::stack<std::string> mForwardStack;
 };

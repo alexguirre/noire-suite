@@ -3,6 +3,8 @@
 #include "controls/DirectoryTreeCtrl.h"
 #include "controls/ImagePanel.h"
 #include "controls/PathToolBar.h"
+#include <formats/fs/NativeDevice.h>
+#include <formats/fs/WADDevice.h>
 #include <gsl/gsl>
 #include <wx/artprov.h>
 #include <wx/button.h>
@@ -10,8 +12,24 @@
 #include <wx/textctrl.h>
 
 CMainWindow::CMainWindow()
-	: wxFrame(nullptr, wxID_ANY, "noire-suite - File Explorer"), mMenuBar{ new wxMenuBar() }
+	: wxFrame(nullptr, wxID_ANY, "noire-suite - File Explorer"),
+	  mFileSystem{ std::make_unique<noire::fs::CFileSystem>() },
+	  mMenuBar{ new wxMenuBar() }
 {
+	// mount devices to filesystem
+	{
+		// hardcoded paths for now
+		mFileSystem->Mount("/",
+						   std::make_unique<noire::fs::CNativeDevice>(
+							   "E:\\Rockstar Games\\L.A. Noire Complete Edition\\"));
+
+		noire::fs::IDevice* rootDevice = mFileSystem->FindDevice("/");
+
+		mFileSystem->Mount(
+			"/final/pc/out.wad.pc/",
+			std::make_unique<noire::fs::CWADDevice>(*rootDevice, "final/pc/out.wad.pc"));
+	}
+
 	// construct menu bar
 	{
 		wxMenu* fileMenu = new wxMenu();
@@ -40,6 +58,9 @@ CMainWindow::CMainWindow()
 		mDirTreeCtrl = { new CDirectoryTreeCtrl(splitter, wxID_ANY) };
 		mDirContentsListCtrl = { new CDirectoryContentsListCtrl(splitter, wxID_ANY) };
 
+		mDirTreeCtrl->SetFileSystem(mFileSystem.get());
+		mDirContentsListCtrl->SetFileSystem(mFileSystem.get());
+
 		splitter->SplitVertically(mDirTreeCtrl, mDirContentsListCtrl);
 
 		SetSizer(mainSizer);
@@ -52,8 +73,6 @@ CMainWindow::CMainWindow()
 	// TODO: giving the tool bar non-const access to mDirContentsListCtrl is a bit dirty
 	reinterpret_cast<CPathToolBar*>(GetToolBar())
 		->SetDirectoryContentsListCtrl(mDirContentsListCtrl);
-
-	mDirContentsListCtrl->SetDirectory(mDirTreeCtrl->File().Root());
 
 	mDirTreeCtrl->Bind(wxEVT_TREE_SEL_CHANGED, &CMainWindow::OnDirectoryTreeSelectionChanged, this);
 }
@@ -73,7 +92,7 @@ void CMainWindow::OnDirectoryTreeSelectionChanged(wxTreeEvent& event)
 
 	if (data)
 	{
-		mDirContentsListCtrl->SetDirectory(data->Directory());
+		mDirContentsListCtrl->SetDirectory(data->Path());
 
 		event.Skip();
 	}
