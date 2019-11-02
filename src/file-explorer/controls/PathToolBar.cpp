@@ -69,7 +69,7 @@ void CPathToolBar::OnDirectoryChanged(CDirectoryEvent& e)
 {
 	wxLogDebug("OnDirectoryChanged");
 
-	if (!mDirHistory.HasCurrent() || &mDirHistory.Current() != &e.GetDirectory())
+	if (!mDirHistory.HasCurrent() || mDirHistory.Current() != e.GetDirectory())
 	{
 		mDirHistory.Push(e.GetDirectory());
 	}
