@@ -46,4 +46,28 @@ namespace noire::fs
 			return nullptr;
 		}
 	}
+
+	static void GetEntries(CWADDevice* device,
+						   const WADChildDirectory& dir,
+						   std::vector<SDirectoryEntry>& entries)
+	{
+		entries.emplace_back(device, dir.Path(), false);
+		for (auto& f : dir.Files())
+		{
+			const std::string& path = f.Owner().Entries()[f.EntryIndex()].Path;
+			entries.emplace_back(device, path, true);
+		}
+
+		for (auto& d : dir.Directories())
+		{
+			GetEntries(device, d, entries);
+		}
+	}
+
+	std::vector<SDirectoryEntry> CWADDevice::GetAllEntries()
+	{
+		std::vector<SDirectoryEntry> entries{};
+		GetEntries(this, mWADFile.Root(), entries);
+		return entries;
+	}
 }

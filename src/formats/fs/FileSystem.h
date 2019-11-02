@@ -32,6 +32,7 @@ namespace noire::fs
 		bool PathExists(std::string_view path);
 		bool FileExists(std::string_view filePath);
 		std::unique_ptr<IFileStream> OpenFile(std::string_view path);
+		std::vector<SDirectoryEntry> GetAllEntries();
 
 		IDevice* FindDevice(std::string_view path, std::string_view& outMountPath);
 		IDevice* FindDevice(std::string_view path)

@@ -59,6 +59,22 @@ namespace noire::fs
 		return dev != nullptr ? dev->OpenFile(path.substr(mountPath.size())) : nullptr;
 	}
 
+	std::vector<SDirectoryEntry> CFileSystem::GetAllEntries()
+	{
+		// TODO: this is probably really memory inefficient
+		std::vector<SDirectoryEntry> dir{};
+		for (auto& mount : mMounts)
+		{
+			auto deviceEntries = mount.Device->GetAllEntries();
+			dir.reserve(dir.size() + deviceEntries.size());
+			for (auto& entry : deviceEntries)
+			{
+				dir.emplace_back(entry.Device, mount.Path + entry.Path, entry.IsFile);
+			}
+		}
+		return dir;
+	}
+
 	IDevice* CFileSystem::FindDevice(std::string_view path, std::string_view& outMountPath)
 	{
 		auto it = std::find_if(mMounts.begin(), mMounts.end(), [path](auto& m) {

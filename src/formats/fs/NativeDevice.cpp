@@ -1,4 +1,6 @@
 #include "NativeDevice.h"
+#include "FileSystem.h"
+#include <algorithm>
 #include <gsl/gsl>
 
 namespace noire::fs
@@ -26,6 +28,26 @@ namespace noire::fs
 	{
 		const stdfs::path fullPath = mRootDir / path;
 		return std::make_unique<CNativeFileStream>(fullPath);
+	}
+
+	std::vector<SDirectoryEntry> CNativeDevice::GetAllEntries()
+	{
+		std::vector<SDirectoryEntry> entries{};
+
+		for (auto& p : stdfs::recursive_directory_iterator(mRootDir))
+		{
+			const bool isFile = p.is_regular_file();
+			std::string path = p.path().lexically_relative(mRootDir).string();
+			std::replace(path.begin(), path.end(), '\\', CFileSystem::DirectorySeparator);
+			if (!isFile)
+			{
+				path += CFileSystem::DirectorySeparator;
+			}
+
+			entries.emplace_back(this, path, isFile);
+		}
+
+		return entries;
 	}
 
 	CNativeFileStream::CNativeFileStream(const stdfs::path& path)
