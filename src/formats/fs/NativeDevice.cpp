@@ -30,6 +30,15 @@ namespace noire::fs
 		return stdfs::is_directory(fullPath);
 	}
 
+	std::size_t CNativeDevice::FileSize(std::string_view filePath)
+	{
+		Expects(FileExists(filePath));
+
+		const stdfs::path fullPath = mRootDir / filePath;
+		const std::uintmax_t s = stdfs::file_size(fullPath);
+		return gsl::narrow_cast<std::size_t>(s);
+	}
+
 	std::unique_ptr<IFileStream> CNativeDevice::OpenFile(std::string_view path)
 	{
 		const stdfs::path fullPath = mRootDir / path;

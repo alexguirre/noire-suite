@@ -44,6 +44,16 @@ namespace noire::fs
 						   });
 	}
 
+	std::size_t CWADDevice::FileSize(std::string_view filePath)
+	{
+		Expects(FileExists(filePath));
+
+		auto it = std::find_if(mWADFile.Entries().begin(),
+							   mWADFile.Entries().end(),
+							   [filePath](const WADRawFileEntry& e) { return e.Path == filePath; });
+		return it->Size;
+	}
+
 	std::unique_ptr<IFileStream> CWADDevice::OpenFile(std::string_view path)
 	{
 		auto it = std::find_if(mWADFile.Entries().begin(),

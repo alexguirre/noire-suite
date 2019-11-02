@@ -206,8 +206,7 @@ void CDirectoryContentsListCtrl::UpdateContents()
 
 			wxString name{ nameView.data(), nameView.size() };
 			wxString type{ "File" };
-			wxString size{ "TBD" };
-			/*BytesToHumanReadable(f.Owner().Entries()[f.EntryIndex()].Size)*/
+			wxString size{ BytesToHumanReadable(mFileSystem->FileSize(d.Path)) };
 
 			addItem(name, type, size, new SDirectoryItemData(d.Path, true));
 		}

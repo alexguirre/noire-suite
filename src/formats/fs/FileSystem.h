@@ -32,6 +32,7 @@ namespace noire::fs
 		bool PathExists(std::string_view path);
 		bool FileExists(std::string_view filePath);
 		bool DirectoryExists(std::string_view filePath);
+		std::size_t FileSize(std::string_view filePath);
 		std::unique_ptr<IFileStream> OpenFile(std::string_view path);
 		std::vector<SDirectoryEntry> GetAllEntries();
 		std::vector<SDirectoryEntry> GetEntries(std::string_view dirPath);
