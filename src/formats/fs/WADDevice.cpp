@@ -75,11 +75,14 @@ namespace noire::fs
 								   const WADChildDirectory& dir,
 								   std::vector<SDirectoryEntry>& entries)
 	{
-		entries.emplace_back(device, dir.Path(), false);
+		entries.emplace_back(device,
+							 dir.Path(),
+							 dir.IsRoot() ? EDirectoryEntryType::Collection :
+											EDirectoryEntryType::Directory);
 		for (auto& f : dir.Files())
 		{
 			const std::string& path = f.Owner().Entries()[f.EntryIndex()].Path;
-			entries.emplace_back(device, path, true);
+			entries.emplace_back(device, path, EDirectoryEntryType::File);
 		}
 
 		for (auto& d : dir.Directories())
@@ -128,12 +131,12 @@ namespace noire::fs
 		std::vector<SDirectoryEntry> entries;
 		for (auto& d : dir->Directories())
 		{
-			entries.emplace_back(this, d.Path(), false);
+			entries.emplace_back(this, d.Path(), EDirectoryEntryType::Directory);
 		}
 		for (auto& f : dir->Files())
 		{
 			const std::string& path = f.Owner().Entries()[f.EntryIndex()].Path;
-			entries.emplace_back(this, path, true);
+			entries.emplace_back(this, path, EDirectoryEntryType::File);
 		}
 
 		return entries;

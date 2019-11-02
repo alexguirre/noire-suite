@@ -86,7 +86,7 @@ namespace noire::fs
 			dir.reserve(dir.size() + deviceEntries.size());
 			for (auto& entry : deviceEntries)
 			{
-				dir.emplace_back(entry.Device, mount.Path + entry.Path, entry.IsFile);
+				dir.emplace_back(entry.Device, mount.Path + entry.Path, entry.Type);
 			}
 		}
 		return dir;
@@ -106,7 +106,26 @@ namespace noire::fs
 		entries.reserve(deviceEntries.size());
 		for (auto& entry : deviceEntries)
 		{
-			entries.emplace_back(entry.Device, std::string{ mountPath } + entry.Path, entry.IsFile);
+			std::string entryFullPath = std::string{ mountPath } + entry.Path;
+
+			if (entry.Type == EDirectoryEntryType::File)
+			{
+				if (auto it = std::find_if(mMounts.begin(),
+										   mMounts.end(),
+										   [&entryFullPath](auto& mount) {
+											   return mount.Path ==
+													  (entryFullPath + DirectorySeparator);
+										   });
+					it != mMounts.end())
+				{
+					// found a mount with the same path as a file entry, convert it to a collection
+					// entry
+					entryFullPath += DirectorySeparator;
+					entry.Type = EDirectoryEntryType::Collection;
+				}
+			}
+
+			entries.emplace_back(entry.Device, entryFullPath, entry.Type);
 		}
 
 		return entries;

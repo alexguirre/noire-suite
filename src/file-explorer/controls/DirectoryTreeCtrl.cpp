@@ -11,6 +11,8 @@
 #include <wx/msgdlg.h>
 #include <wx/wx.h>
 
+using namespace noire::fs;
+
 // clang-format off
 wxBEGIN_EVENT_TABLE(CDirectoryTreeCtrl, wxTreeCtrl)
 	// for context menu
@@ -30,7 +32,7 @@ CDirectoryTreeCtrl::CDirectoryTreeCtrl(wxWindow* parent,
 	SetImageList(CImages::Icons());
 }
 
-void CDirectoryTreeCtrl::SetFileSystem(noire::fs::CFileSystem* fileSystem)
+void CDirectoryTreeCtrl::SetFileSystem(CFileSystem* fileSystem)
 {
 	if (fileSystem != mFileSystem)
 	{
@@ -53,7 +55,7 @@ void CDirectoryTreeCtrl::Refresh()
 	wxTreeItemId noireItem =
 		AppendItem(root, "L.A. Noire", CImages::IconNoire, -1, new CDirectoryItemData("/"));
 
-	std::vector<noire::fs::SDirectoryEntry> entries = mFileSystem->GetAllEntries();
+	std::vector<SDirectoryEntry> entries = mFileSystem->GetAllEntries();
 	// string_view key points to the path of a SDirectoryEntry
 	std::unordered_map<std::string_view, wxTreeItemId> items{};
 
@@ -78,12 +80,11 @@ void CDirectoryTreeCtrl::Refresh()
 	};
 
 	const auto getNameFromPath = [](std::string_view path) {
-		std::size_t namePos =
-			path.rfind(noire::fs::CFileSystem::DirectorySeparator, path.size() - 2);
+		std::size_t namePos = path.rfind(CFileSystem::DirectorySeparator, path.size() - 2);
 		if (namePos != std::string_view::npos)
 		{
-			return path.substr(
-				namePos + (path[namePos] == noire::fs::CFileSystem::DirectorySeparator ? 1 : 0));
+			return path.substr(namePos +
+							   (path[namePos] == CFileSystem::DirectorySeparator ? 1 : 0));
 		}
 		else
 		{
@@ -91,7 +92,7 @@ void CDirectoryTreeCtrl::Refresh()
 		}
 	};
 
-	const auto addDirectoryToTree = [&](std::string_view path) {
+	const auto addDirectoryToTree = [&](std::string_view path, EDirectoryEntryType type) {
 		std::string_view origPath = path;
 		path = path.substr(1, path.size() - 2); // remove first and last '/'
 
@@ -109,9 +110,8 @@ void CDirectoryTreeCtrl::Refresh()
 			else
 			{
 				std::string_view name = getNameFromPath(p);
-				std::string normalizedPath =
-					std::string{ noire::fs::CFileSystem::DirectorySeparator } + std::string{ p } +
-					noire::fs::CFileSystem::DirectorySeparator;
+				std::string normalizedPath = std::string{ CFileSystem::DirectorySeparator } +
+											 std::string{ p } + CFileSystem::DirectorySeparator;
 				parent = AppendItem(parent,
 									{ name.data(), name.size() },
 									CImages::IconFolder,
@@ -120,13 +120,21 @@ void CDirectoryTreeCtrl::Refresh()
 				items.emplace(p, parent);
 			}
 		}
+
+		if (type == EDirectoryEntryType::Collection)
+		{
+			if (auto it = items.find(path); it != items.end())
+			{
+				SetItemImage(it->second, CImages::IconBlueFolder);
+			}
+		}
 	};
 
 	for (auto& entry : entries)
 	{
-		if (!entry.IsFile)
+		if (entry.Type != EDirectoryEntryType::File)
 		{
-			addDirectoryToTree(entry.Path);
+			addDirectoryToTree(entry.Path, entry.Type);
 		}
 	}
 }

@@ -59,7 +59,10 @@ namespace noire::fs
 				path += CFileSystem::DirectorySeparator;
 			}
 
-			entries.emplace_back(this, path, isFile);
+			entries.emplace_back(this,
+								 path,
+								 isFile ? EDirectoryEntryType::File :
+										  EDirectoryEntryType::Directory);
 		}
 
 		return entries;
@@ -83,7 +86,10 @@ namespace noire::fs
 				path += CFileSystem::DirectorySeparator;
 			}
 
-			entries.emplace_back(this, path, isFile);
+			entries.emplace_back(this,
+								 path,
+								 isFile ? EDirectoryEntryType::File :
+										  EDirectoryEntryType::Directory);
 		}
 
 		return entries;

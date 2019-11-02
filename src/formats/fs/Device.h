@@ -9,14 +9,21 @@ namespace noire::fs
 {
 	class IDevice;
 
+	enum class EDirectoryEntryType
+	{
+		File = 0,
+		Directory,
+		Collection, // a file that acts like a directory
+	};
+
 	struct SDirectoryEntry
 	{
 		IDevice* Device;
 		std::string Path;
-		bool IsFile;
+		EDirectoryEntryType Type;
 
-		SDirectoryEntry(IDevice* device, std::string_view path, bool isFile) noexcept
-			: Device{ device }, Path{ path }, IsFile{ isFile }
+		SDirectoryEntry(IDevice* device, std::string_view path, EDirectoryEntryType type) noexcept
+			: Device{ device }, Path{ path }, Type{ type }
 		{
 		}
 	};
