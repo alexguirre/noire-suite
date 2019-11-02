@@ -59,7 +59,7 @@ namespace noire::fs
 		return dev != nullptr && dev->DirectoryExists(dirPath.substr(mountPath.size()));
 	}
 
-	std::size_t CFileSystem::FileSize(std::string_view filePath)
+	FileStreamSize CFileSystem::FileSize(std::string_view filePath)
 	{
 		std::string_view mountPath{};
 		IDevice* dev = FindDevice(filePath, mountPath);

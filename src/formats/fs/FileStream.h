@@ -4,29 +4,31 @@
 
 namespace noire::fs
 {
+	using FileStreamSize = std::uintmax_t;
+
 	class IFileStream
 	{
 	public:
-		virtual void Read(void* destBuffer, std::size_t count) = 0;
-		virtual void Seek(std::size_t offset) = 0;
-		virtual std::size_t Tell() = 0;
-		virtual std::size_t Size() = 0;
+		virtual void Read(void* destBuffer, FileStreamSize count) = 0;
+		virtual void Seek(FileStreamSize offset) = 0;
+		virtual FileStreamSize Tell() = 0;
+		virtual FileStreamSize Size() = 0;
 	};
 
 	class CSubFileStream : public IFileStream
 	{
 	public:
-		CSubFileStream(IFileStream* baseStream, std::size_t offset, std::size_t size);
+		CSubFileStream(IFileStream* baseStream, FileStreamSize offset, FileStreamSize size);
 
-		void Read(void* destBuffer, std::size_t count) override;
-		void Seek(std::size_t offset) override;
-		std::size_t Tell() override;
-		std::size_t Size() override;
+		void Read(void* destBuffer, FileStreamSize count) override;
+		void Seek(FileStreamSize offset) override;
+		FileStreamSize Tell() override;
+		FileStreamSize Size() override;
 
 	private:
 		IFileStream* mBaseStream;
-		std::size_t mOffset;
-		std::size_t mSize;
-		std::size_t mReadingOffset;
+		FileStreamSize mOffset;
+		FileStreamSize mSize;
+		FileStreamSize mReadingOffset;
 	};
 }

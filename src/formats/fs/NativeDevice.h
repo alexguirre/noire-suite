@@ -20,7 +20,7 @@ namespace noire::fs
 		bool PathExists(std::string_view path) const override;
 		bool FileExists(std::string_view filePath) const override;
 		bool DirectoryExists(std::string_view dirPath) const override;
-		std::size_t FileSize(std::string_view filePath) override;
+		FileStreamSize FileSize(std::string_view filePath) override;
 		std::unique_ptr<IFileStream> OpenFile(std::string_view path) override;
 		std::vector<SDirectoryEntry> GetAllEntries() override;
 		std::vector<SDirectoryEntry> GetEntries(std::string_view dirPath) override;
@@ -36,10 +36,10 @@ namespace noire::fs
 	public:
 		CNativeFileStream(const std::filesystem::path& path);
 
-		void Read(void* destBuffer, std::size_t count) override;
-		void Seek(std::size_t offset) override;
-		std::size_t Tell() override;
-		std::size_t Size() override;
+		void Read(void* destBuffer, FileStreamSize count) override;
+		void Seek(FileStreamSize offset) override;
+		FileStreamSize Tell() override;
+		FileStreamSize Size() override;
 
 	private:
 		std::ifstream mStream;

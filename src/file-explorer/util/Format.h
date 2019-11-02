@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <string>
 
-std::string BytesToHumanReadable(std::size_t numBytes);
+std::string BytesToHumanReadable(std::uintmax_t numBytes);

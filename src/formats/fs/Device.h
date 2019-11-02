@@ -27,7 +27,7 @@ namespace noire::fs
 		virtual bool PathExists(std::string_view path) const = 0;
 		virtual bool FileExists(std::string_view filePath) const = 0;
 		virtual bool DirectoryExists(std::string_view dirPath) const = 0;
-		virtual std::size_t FileSize(std::string_view filePath) = 0;
+		virtual FileStreamSize FileSize(std::string_view filePath) = 0;
 		virtual std::unique_ptr<IFileStream> OpenFile(std::string_view path) = 0;
 		virtual std::vector<SDirectoryEntry> GetAllEntries() = 0;
 		virtual std::vector<SDirectoryEntry> GetEntries(std::string_view dirPath) = 0;

@@ -30,13 +30,12 @@ namespace noire::fs
 		return stdfs::is_directory(fullPath);
 	}
 
-	std::size_t CNativeDevice::FileSize(std::string_view filePath)
+	FileStreamSize CNativeDevice::FileSize(std::string_view filePath)
 	{
 		Expects(FileExists(filePath));
 
 		const stdfs::path fullPath = mRootDir / filePath;
-		const std::uintmax_t s = stdfs::file_size(fullPath);
-		return gsl::narrow_cast<std::size_t>(s);
+		return gsl::narrow<FileStreamSize>(stdfs::file_size(fullPath));
 	}
 
 	std::unique_ptr<IFileStream> CNativeDevice::OpenFile(std::string_view path)
@@ -95,21 +94,24 @@ namespace noire::fs
 	{
 	}
 
-	void CNativeFileStream::Read(void* destBuffer, std::size_t count)
+	void CNativeFileStream::Read(void* destBuffer, FileStreamSize count)
 	{
 		mStream.read(reinterpret_cast<char*>(destBuffer), count);
 	}
 
-	void CNativeFileStream::Seek(std::size_t offset) { mStream.seekg(offset); }
+	void CNativeFileStream::Seek(FileStreamSize offset) { mStream.seekg(offset); }
 
-	std::size_t CNativeFileStream::Tell() { return gsl::narrow_cast<std::size_t>(mStream.tellg()); }
+	FileStreamSize CNativeFileStream::Tell()
+	{
+		return gsl::narrow<FileStreamSize>(mStream.tellg());
+	}
 
-	std::size_t CNativeFileStream::Size()
+	FileStreamSize CNativeFileStream::Size()
 	{
 		const std::streampos pos = mStream.tellg();
 		mStream.seekg(0, std::ios::end);
 		const std::streampos size = mStream.tellg();
 		mStream.seekg(pos);
-		return gsl::narrow_cast<std::size_t>(size);
+		return gsl::narrow<FileStreamSize>(size);
 	};
 }

@@ -44,7 +44,7 @@ namespace noire::fs
 						   });
 	}
 
-	std::size_t CWADDevice::FileSize(std::string_view filePath)
+	FileStreamSize CWADDevice::FileSize(std::string_view filePath)
 	{
 		Expects(FileExists(filePath));
 
