@@ -77,6 +77,11 @@ CDirectoryContentsListCtrl::CDirectoryContentsListCtrl(wxWindow* parent,
 	BuildColumns();
 }
 
+CDirectoryContentsListCtrl::~CDirectoryContentsListCtrl()
+{
+	DeleteAllItemsData();
+}
+
 void CDirectoryContentsListCtrl::SetFileSystem(CFileSystem* fileSystem)
 {
 	if (fileSystem != mFileSystem)
@@ -138,11 +143,7 @@ void CDirectoryContentsListCtrl::BuildColumns()
 
 void CDirectoryContentsListCtrl::UpdateContents()
 {
-	for (int i = 0; i < GetItemCount(); i++)
-	{
-		SDirectoryItemData* d = reinterpret_cast<SDirectoryItemData*>(GetItemData(i));
-		delete d;
-	}
+	DeleteAllItemsData();
 	DeleteAllItems();
 
 	if (mFileSystem == nullptr || mDirPath.empty())
@@ -220,6 +221,18 @@ void CDirectoryContentsListCtrl::UpdateContents()
 			wxString size{ BytesToHumanReadable(mFileSystem->FileSize(f.Path)) };
 
 			addItem(name, type, size, new SDirectoryItemData(f.Path, f.Type));
+		}
+	}
+}
+
+void CDirectoryContentsListCtrl::DeleteAllItemsData()
+{
+	for (int i = 0; i < GetItemCount(); i++)
+	{
+		SDirectoryItemData* d = reinterpret_cast<SDirectoryItemData*>(GetItemData(i));
+		if (d)
+		{
+			delete d;
 		}
 	}
 }

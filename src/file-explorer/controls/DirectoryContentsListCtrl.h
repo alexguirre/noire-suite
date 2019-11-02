@@ -41,6 +41,7 @@ public:
 							   const wxWindowID id,
 							   const wxPoint& pos = wxDefaultPosition,
 							   const wxSize& size = wxDefaultSize);
+	~CDirectoryContentsListCtrl() override;
 
 	void SetFileSystem(noire::fs::CFileSystem* fileSystem);
 	void SetDirectory(std::string_view dirPath);
@@ -52,6 +53,7 @@ private:
 	void ShowItemContextMenu();
 	void BuildColumns();
 	void UpdateContents();
+	void DeleteAllItemsData();
 	void OpenFile(std::string_view filePath);
 
 	noire::fs::CFileSystem* mFileSystem;
