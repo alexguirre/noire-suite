@@ -1,15 +1,11 @@
 #include "WADFile.h"
+#include "fs/FileSystem.h"
 #include <algorithm>
-#include <fstream>
 #include <gsl/gsl>
 #include <string_view>
 
-namespace fs = std::filesystem;
-
 namespace noire
 {
-	static constexpr char PathSeparator{ '/' };
-
 	WADChildFile::WADChildFile(const WADFile* owner, std::size_t entryIndex)
 		: mOwner{ owner }, mEntryIndex{ entryIndex }
 	{
@@ -17,7 +13,7 @@ namespace noire
 		Expects(entryIndex < mOwner->Entries().size());
 
 		mName = mOwner->Entries()[mEntryIndex].Path;
-		if (std::size_t fileNameStart = mName.rfind(PathSeparator) + 1;
+		if (std::size_t fileNameStart = mName.rfind(fs::CFileSystem::DirectorySeparator) + 1;
 			fileNameStart != std::string_view::npos)
 		{
 			mName = mName.substr(fileNameStart);
@@ -61,7 +57,8 @@ namespace noire
 	std::string WADChildDirectory::Path() const
 	{
 		const WADChildDirectory* parent = Parent();
-		return (parent ? parent->Path() : "") + mName + PathSeparator;
+		return (parent ? parent->Path() : "") + mName +
+			   (mName.size() > 0 ? std::string{ fs::CFileSystem::DirectorySeparator } : "");
 	}
 
 	WADFile::WADFile(fs::IFileStream& stream) : mStream{ stream }, mEntries{}, mRoot{ this }
@@ -116,7 +113,7 @@ namespace noire
 	WADChildDirectory& WADFile::FindOrCreateDirectory(WADChildDirectory& root,
 													  std::string_view path)
 	{
-		std::size_t separatorPos = path.find(PathSeparator);
+		std::size_t separatorPos = path.find(fs::CFileSystem::DirectorySeparator);
 		if (separatorPos == std::string_view::npos)
 		{
 			return root;
