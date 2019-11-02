@@ -24,17 +24,20 @@ CPathToolBar::CPathToolBar(wxWindow* parent,
 			wxEmptyString,
 			wxArtProvider::GetBitmap(wxART_GO_BACK),
 			wxEmptyString,
-			wxITEM_NORMAL);
+			wxITEM_NORMAL)
+		->Enable(false);
 	AddTool(wxID_FORWARD,
 			wxEmptyString,
 			wxArtProvider::GetBitmap(wxART_GO_FORWARD),
 			wxEmptyString,
-			wxITEM_NORMAL);
+			wxITEM_NORMAL)
+		->Enable(false);
 	AddTool(wxID_UP,
 			wxEmptyString,
 			wxArtProvider::GetBitmap(wxART_GO_UP),
 			wxEmptyString,
-			wxITEM_NORMAL);
+			wxITEM_NORMAL)
+		->Enable(false);
 	AddControl(mPathText);
 	AddSeparator();
 
