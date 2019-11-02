@@ -51,6 +51,14 @@ namespace noire::fs
 		return dev != nullptr && dev->FileExists(filePath.substr(mountPath.size()));
 	}
 
+	bool CFileSystem::DirectoryExists(std::string_view dirPath)
+	{
+		std::string_view mountPath{};
+		IDevice* dev = FindDevice(dirPath, mountPath);
+		// pass path relative to device to FileExists
+		return dev != nullptr && dev->DirectoryExists(dirPath.substr(mountPath.size()));
+	}
+
 	std::unique_ptr<IFileStream> CFileSystem::OpenFile(std::string_view path)
 	{
 		std::string_view mountPath{};
@@ -73,6 +81,26 @@ namespace noire::fs
 			}
 		}
 		return dir;
+	}
+
+	std::vector<SDirectoryEntry> CFileSystem::GetEntries(std::string_view dirPath)
+	{
+		std::string_view mountPath{};
+		IDevice* dev = FindDevice(dirPath, mountPath);
+		Expects(dev != nullptr);
+
+		// pass path relative to device to GetEntries
+		auto deviceEntries = dev->GetEntries(dirPath.substr(mountPath.size()));
+
+		// prepend mountPath to entries
+		std::vector<SDirectoryEntry> entries;
+		entries.reserve(deviceEntries.size());
+		for (auto& entry : deviceEntries)
+		{
+			entries.emplace_back(entry.Device, std::string{ mountPath } + entry.Path, entry.IsFile);
+		}
+
+		return entries;
 	}
 
 	IDevice* CFileSystem::FindDevice(std::string_view path, std::string_view& outMountPath)

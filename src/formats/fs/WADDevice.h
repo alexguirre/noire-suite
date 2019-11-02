@@ -20,8 +20,10 @@ namespace noire::fs
 
 		bool PathExists(std::string_view path) const override;
 		bool FileExists(std::string_view filePath) const override;
+		bool DirectoryExists(std::string_view dirPath) const override;
 		std::unique_ptr<IFileStream> OpenFile(std::string_view path) override;
 		std::vector<SDirectoryEntry> GetAllEntries() override;
+		std::vector<SDirectoryEntry> GetEntries(std::string_view dirPath) override;
 
 	private:
 		IDevice& mParent;
