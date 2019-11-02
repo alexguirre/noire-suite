@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "Identifiers.h"
 #include "controls/DirectoryContentsListCtrl.h"
 #include "controls/DirectoryTreeCtrl.h"
 #include "controls/ImagePanel.h"
@@ -33,11 +34,11 @@ CMainWindow::CMainWindow()
 	// construct menu bar
 	{
 		wxMenu* fileMenu = new wxMenu();
-		fileMenu->Append(wxID_ANY, "Open folder...");
+		fileMenu->Append(MenuBarOpenFolderId, "&Open folder...");
 		fileMenu->AppendSeparator();
-		fileMenu->Append(wxID_ANY, "Exit");
+		fileMenu->Append(wxID_EXIT, "E&xit\tAlt+F4");
 
-		mMenuBar->Append(fileMenu, "File");
+		mMenuBar->Append(fileMenu, "&File");
 		SetMenuBar(mMenuBar);
 	}
 
@@ -75,6 +76,9 @@ CMainWindow::CMainWindow()
 		->SetDirectoryContentsListCtrl(mDirContentsListCtrl);
 
 	mDirTreeCtrl->Bind(wxEVT_TREE_SEL_CHANGED, &CMainWindow::OnDirectoryTreeSelectionChanged, this);
+
+	Bind(wxEVT_MENU, &CMainWindow::OnOpenFolder, this, MenuBarOpenFolderId);
+	Bind(wxEVT_MENU, &CMainWindow::OnExit, this, wxID_EXIT);
 }
 
 wxToolBar* CMainWindow::OnCreateToolBar(long style, wxWindowID id, const wxString& name)
@@ -96,6 +100,16 @@ void CMainWindow::OnDirectoryTreeSelectionChanged(wxTreeEvent& event)
 
 		event.Skip();
 	}
+}
+
+void CMainWindow::OnOpenFolder(wxCommandEvent&)
+{
+	wxMessageBox("Not implemented yet.");
+}
+
+void CMainWindow::OnExit(wxCommandEvent&)
+{
+	Close(true);
 }
 
 void CMainWindow::CreateAccelTable()
