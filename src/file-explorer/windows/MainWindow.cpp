@@ -14,22 +14,15 @@
 
 CMainWindow::CMainWindow()
 	: wxFrame(nullptr, wxID_ANY, "noire-suite - File Explorer"),
-	  mFileSystem{ std::make_unique<noire::fs::CFileSystem>() },
-	  mMenuBar{ new wxMenuBar() }
+	  mFileSystem{ nullptr },
+	  mMenuBar{ new wxMenuBar() },
+	  mDirTreeCtrl{ nullptr },
+	  mDirContentsListCtrl{ nullptr }
 {
-	// mount devices to filesystem
-	{
-		// hardcoded paths for now
-		mFileSystem->Mount("/",
-						   std::make_unique<noire::fs::CNativeDevice>(
-							   "E:\\Rockstar Games\\L.A. Noire Complete Edition\\"));
-
-		noire::fs::IDevice* rootDevice = mFileSystem->FindDevice("/");
-
-		mFileSystem->Mount(
-			"/final/pc/out.wad.pc/",
-			std::make_unique<noire::fs::CWADDevice>(*rootDevice, "final/pc/out.wad.pc"));
-	}
+#if _DEBUG
+	// hardcoded path to aid in development as the last opened folder is not saved yet
+	ChangeRootPath("E:\\Rockstar Games\\L.A. Noire Complete Edition\\");
+#endif
 
 	// construct menu bar
 	{
@@ -104,12 +97,48 @@ void CMainWindow::OnDirectoryTreeSelectionChanged(wxTreeEvent& event)
 
 void CMainWindow::OnOpenFolder(wxCommandEvent&)
 {
-	wxMessageBox("Not implemented yet.");
+	wxDirDialog dlg(this,
+					"Select the game folder:",
+					wxEmptyString, // TODO: try to find game folder (looking in registry?)
+					wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
+
+	if (dlg.ShowModal() != wxID_OK)
+	{
+		return;
+	}
+
+	std::filesystem::path rootPath = dlg.GetPath().c_str().AsChar();
+	ChangeRootPath(rootPath);
 }
 
 void CMainWindow::OnExit(wxCommandEvent&)
 {
 	Close(true);
+}
+
+void CMainWindow::ChangeRootPath(const std::filesystem::path& path)
+{
+	// TODO: remember last opened folder after closing the application
+
+	mFileSystem = std::make_unique<noire::fs::CFileSystem>();
+
+	mFileSystem->Mount("/", std::make_unique<noire::fs::CNativeDevice>(path));
+	noire::fs::IDevice* rootDevice = mFileSystem->FindDevice("/");
+
+	// TODO: scan the directory automatically for possible IDevices as this WAD file may not exist
+	// if the user opens a folder different from the regular game installation
+	mFileSystem->Mount("/final/pc/out.wad.pc/",
+					   std::make_unique<noire::fs::CWADDevice>(*rootDevice, "final/pc/out.wad.pc"));
+
+	if (mDirTreeCtrl)
+	{
+		mDirTreeCtrl->SetFileSystem(mFileSystem.get());
+	}
+
+	if (mDirContentsListCtrl)
+	{
+		mDirContentsListCtrl->SetFileSystem(mFileSystem.get());
+	}
 }
 
 void CMainWindow::CreateAccelTable()

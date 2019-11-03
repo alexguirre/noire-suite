@@ -1,4 +1,5 @@
 #pragma once
+#include <filesystem>
 #include <formats/fs/FileSystem.h>
 #include <memory>
 #include <wx/menu.h>
@@ -26,6 +27,8 @@ private:
 	void OnDirectoryTreeSelectionChanged(wxTreeEvent& event);
 	void OnOpenFolder(wxCommandEvent& event);
 	void OnExit(wxCommandEvent& event);
+
+	void ChangeRootPath(const std::filesystem::path& path);
 
 	void CreateAccelTable();
 };
