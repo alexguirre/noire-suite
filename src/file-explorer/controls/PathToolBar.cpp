@@ -24,24 +24,25 @@ CPathToolBar::CPathToolBar(wxWindow* parent,
 			wxEmptyString,
 			wxArtProvider::GetBitmap(wxART_GO_BACK),
 			wxEmptyString,
-			wxITEM_NORMAL)
-		->Enable(false);
+			wxITEM_NORMAL);
 	AddTool(wxID_FORWARD,
 			wxEmptyString,
 			wxArtProvider::GetBitmap(wxART_GO_FORWARD),
 			wxEmptyString,
-			wxITEM_NORMAL)
-		->Enable(false);
+			wxITEM_NORMAL);
 	AddTool(wxID_UP,
 			wxEmptyString,
 			wxArtProvider::GetBitmap(wxART_GO_UP),
 			wxEmptyString,
-			wxITEM_NORMAL)
-		->Enable(false);
+			wxITEM_NORMAL);
 	AddControl(mPathText);
 	AddSeparator();
 
 	Realize();
+
+	EnableTool(wxID_BACKWARD, false);
+	EnableTool(wxID_FORWARD, false);
+	EnableTool(wxID_UP, false);
 
 	parent->Bind(wxEVT_SIZE, &CPathToolBar::OnWindowResize, this);
 	parent->Bind(EVT_DIRECTORY_CHANGED, &CPathToolBar::OnDirectoryChanged, this);
@@ -79,11 +80,9 @@ void CPathToolBar::OnDirectoryChanged(CDirectoryEvent& e)
 
 	mPathText->SetValue(e.GetDirectory());
 
-	FindById(wxID_BACKWARD)->Enable(mDirHistory.CanGoBack());
-	FindById(wxID_FORWARD)->Enable(mDirHistory.CanGoForward());
-	FindById(wxID_UP)->Enable(mDirHistory.CanGoUp());
-
-	Realize();
+	EnableTool(wxID_BACKWARD, mDirHistory.CanGoBack());
+	EnableTool(wxID_FORWARD, mDirHistory.CanGoForward());
+	EnableTool(wxID_UP, mDirHistory.CanGoUp());
 
 	e.Skip();
 }
