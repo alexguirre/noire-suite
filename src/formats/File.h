@@ -2,15 +2,21 @@
 
 namespace noire
 {
+	namespace fs
+	{
+		class IFileStream;
+	}
+
 	template<class T>
 	struct TFileTraits
 	{
-		static_assert("Needs TFileTraits specialization");
+		static_assert(sizeof(T) != sizeof(T), "Needs TFileTraits specialization");
 
-		/* Members
+		// Gets whether the file type acts like a directory.
+		static constexpr bool IsCollection{ false };
 
-		static constexpr bool IsCollection{ ... };
-		static constexpr std::uint32_t HeaderMagic{ ... };
-		*/
+		// Gets whether the file stream contains this file type. Before returning, the stream's
+		// reading offset is set to 0, a.k.a. IFileStream::Seek(0).
+		static bool IsValid(fs::IFileStream& stream) { return false; }
 	};
 }

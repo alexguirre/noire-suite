@@ -79,7 +79,7 @@ namespace noire
 
 		std::uint32_t magic;
 		mStream.Read(&magic, sizeof(magic));
-		Expects(magic == TFileTraits<WADFile>::HeaderMagic);
+		Expects(magic == HeaderMagic);
 
 		std::uint32_t entryCount;
 		mStream.Read(&entryCount, sizeof(entryCount));
@@ -165,5 +165,18 @@ namespace noire
 		{
 			SortDirectories(d);
 		}
+	}
+
+	bool WADFile::IsValid(fs::IFileStream& stream)
+	{
+		if (stream.Size() <= 8) // min required bytes
+		{
+			return false;
+		}
+
+		stream.Seek(0);
+		const std::uint32_t magic = stream.Read<std::uint32_t>();
+		stream.Seek(0);
+		return magic == HeaderMagic;
 	}
 }

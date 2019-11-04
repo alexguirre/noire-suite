@@ -4,6 +4,10 @@
 #include "controls/DirectoryTreeCtrl.h"
 #include "controls/ImagePanel.h"
 #include "controls/PathToolBar.h"
+#include <formats/ContainerFile.h>
+#include <formats/File.h>
+#include <formats/WADFile.h>
+#include <formats/fs/ContainerDevice.h>
 #include <formats/fs/NativeDevice.h>
 #include <formats/fs/WADDevice.h>
 #include <gsl/gsl>
@@ -123,12 +127,37 @@ void CMainWindow::ChangeRootPath(const std::filesystem::path& path)
 	mFileSystem = std::make_unique<noire::fs::CFileSystem>();
 
 	mFileSystem->Mount("/", std::make_unique<noire::fs::CNativeDevice>(path));
-	noire::fs::IDevice* rootDevice = mFileSystem->FindDevice("/");
 
-	// TODO: scan the directory automatically for possible IDevices as this WAD file may not exist
-	// if the user opens a folder different from the regular game installation
-	mFileSystem->Mount("/final/pc/out.wad.pc/",
-					   std::make_unique<noire::fs::CWADDevice>(*rootDevice, "final/pc/out.wad.pc"));
+	// TODO: this scan is way too slow, we should scan lazily, for example only when the users
+	// selects the folder
+	for (auto& e : mFileSystem->GetAllEntries())
+	{
+		if (e.Type != noire::fs::EDirectoryEntryType::File)
+		{
+			continue;
+		}
+
+		auto f = mFileSystem->OpenFile(e.Path);
+
+		if (noire::TFileTraits<noire::CContainerFile>::IsValid(*f))
+		{
+			const std::string mountPath = e.Path + noire::fs::CFileSystem::DirectorySeparator;
+			const std::string_view relPath = { e.Path.c_str() + 1,
+											   e.Path.size() - 1 }; // remove first '/'
+
+			mFileSystem->Mount(mountPath,
+							   std::make_unique<noire::fs::CContainerDevice>(*e.Device, relPath));
+		}
+		else if (noire::TFileTraits<noire::WADFile>::IsValid(*f))
+		{
+			const std::string mountPath = e.Path + noire::fs::CFileSystem::DirectorySeparator;
+			const std::string_view relPath = { e.Path.c_str() + 1,
+											   e.Path.size() - 1 }; // remove first '/'
+
+			mFileSystem->Mount(mountPath,
+							   std::make_unique<noire::fs::CWADDevice>(*e.Device, relPath));
+		}
+	}
 
 	if (mDirTreeCtrl)
 	{

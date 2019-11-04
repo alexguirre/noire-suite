@@ -1,9 +1,13 @@
 cmake_minimum_required(VERSION 3.12)
 
 file(GLOB FORMATS_SOURCES
+    "ContainerFile.cpp"
+    "ContainerFile.h"
     "File.h"
     "WADFile.cpp"
     "WADFile.h"
+    "fs/ContainerDevice.cpp"
+    "fs/ContainerDevice.h"
     "fs/Device.h"
     "fs/FileStream.cpp"
     "fs/FileStream.h"

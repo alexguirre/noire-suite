@@ -99,12 +99,16 @@ namespace noire
 		fs::IFileStream& mStream;
 		std::vector<WADRawFileEntry> mEntries;
 		WADChildDirectory mRoot;
+
+	public:
+		static bool IsValid(fs::IFileStream& stream);
+		static constexpr std::uint32_t HeaderMagic{ 0x01444157 }; // WAD\01
 	};
 
 	template<>
 	struct TFileTraits<WADFile>
 	{
 		static constexpr bool IsCollection{ true };
-		static constexpr std::uint32_t HeaderMagic{ 0x01444157 }; // WAD\01
+		static bool IsValid(fs::IFileStream& stream) { return WADFile::IsValid(stream); }
 	};
 }

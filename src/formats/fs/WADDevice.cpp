@@ -4,8 +4,6 @@
 
 namespace noire::fs
 {
-	namespace stdfs = std::filesystem;
-
 	CWADDevice::CWADDevice(IDevice& parentDevice, std::string_view wadFilePath)
 		: mParent{ parentDevice },
 		  mWADFilePath{ (Expects(mParent.FileExists(wadFilePath)), wadFilePath) },

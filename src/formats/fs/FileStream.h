@@ -1,6 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 
 namespace noire::fs
 {
@@ -13,6 +14,16 @@ namespace noire::fs
 		virtual void Seek(FileStreamSize offset) = 0;
 		virtual FileStreamSize Tell() = 0;
 		virtual FileStreamSize Size() = 0;
+
+		template<class T>
+		T Read()
+		{
+			static_assert(std::is_pod_v<T>, "Expected a POD type for T");
+
+			T tmp;
+			Read(&tmp, sizeof(tmp));
+			return tmp;
+		}
 	};
 
 	class CSubFileStream : public IFileStream
