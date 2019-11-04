@@ -151,6 +151,9 @@ void CDirectoryContentsListCtrl::UpdateContents()
 		return;
 	}
 
+	Freeze();
+	SetCursor(wxCursor{ wxCURSOR_ARROWWAIT });
+
 	long itemId = 0;
 	const auto addItem = [this, &itemId](const wxString& name,
 										 const wxString& type,
@@ -223,6 +226,9 @@ void CDirectoryContentsListCtrl::UpdateContents()
 			addItem(name, type, size, new SDirectoryItemData(f.Path, f.Type));
 		}
 	}
+
+	Thaw();
+	SetCursor(wxCursor{ wxCURSOR_DEFAULT });
 }
 
 void CDirectoryContentsListCtrl::DeleteAllItemsData()
