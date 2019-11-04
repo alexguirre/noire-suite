@@ -205,7 +205,10 @@ void CDirectoryContentsListCtrl::UpdateContents()
 
 			wxString name{ nameView.data(), nameView.size() };
 			wxString type{ "Folder" };
-			wxString size{ "TBD" };
+			wxString size{ d.Type == EDirectoryEntryType::Collection ?
+							   BytesToHumanReadable(mFileSystem->FileSize(
+								   std::string_view{ d.Path.c_str(), d.Path.size() - 1 })) :
+							   "TBD" };
 			// size.Printf("%u items", d.Files().size() + d.Directories().size());
 
 			addItem(name, type, size, new SDirectoryItemData(d.Path, d.Type));
