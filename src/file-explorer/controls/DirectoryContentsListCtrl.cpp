@@ -131,7 +131,7 @@ void CDirectoryContentsListCtrl::OnItemActivated(wxListEvent& event)
 
 void CDirectoryContentsListCtrl::ShowItemContextMenu()
 {
-	PopupMenu(mItemContextMenu.get());
+	//PopupMenu(mItemContextMenu.get());
 }
 
 void CDirectoryContentsListCtrl::BuildColumns()

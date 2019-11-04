@@ -58,7 +58,6 @@ private:
 
 	noire::fs::CFileSystem* mFileSystem;
 	std::string mDirPath;
-	std::unique_ptr<wxMenu> mItemContextMenu;
 
 	wxDECLARE_EVENT_TABLE();
 };
