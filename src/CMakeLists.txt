@@ -6,13 +6,6 @@ option(GEN_FILE_EXPLORER "Whether to generate build files for noire-file-explore
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-
-if (CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_CONFIGURATION_TYPES Debug Release)
-    set(CMAKE_CONFIGURATION_TYPES ${CMAKE_CONFIGURATION_TYPES} CACHE STRING "Configs" FORCE)
-endif()
-
-
 set(LIB_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(BIN_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
