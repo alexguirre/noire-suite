@@ -4,6 +4,7 @@
 #include "controls/DirectoryTreeCtrl.h"
 #include "controls/ImagePanel.h"
 #include "controls/PathToolBar.h"
+#include "controls/StatusBar.h"
 #include <formats/ContainerFile.h>
 #include <formats/File.h>
 #include <formats/WADFile.h>
@@ -40,6 +41,8 @@ CMainWindow::CMainWindow()
 	}
 
 	CreateToolBar();
+
+	CreateStatusBar();
 
 	// create main directory tree and contents list within a splitter
 	{
@@ -81,6 +84,13 @@ CMainWindow::CMainWindow()
 wxToolBar* CMainWindow::OnCreateToolBar(long style, wxWindowID id, const wxString& name)
 {
 	return new CPathToolBar(this, id, wxDefaultPosition, wxDefaultSize, style, name);
+}
+
+wxStatusBar* CMainWindow::OnCreateStatusBar(int, long style, wxWindowID id, const wxString& name)
+{
+	CStatusBar* statusBar = new CStatusBar(this, id, style, name);
+	statusBar->SetFileSystem(mFileSystem.get());
+	return statusBar;
 }
 
 void CMainWindow::OnDirectoryTreeSelectionChanged(wxTreeEvent& event)
@@ -167,6 +177,11 @@ void CMainWindow::ChangeRootPath(const std::filesystem::path& path)
 	if (mDirContentsListCtrl)
 	{
 		mDirContentsListCtrl->SetFileSystem(mFileSystem.get());
+	}
+
+	if (CStatusBar* statusBar = reinterpret_cast<CStatusBar*>(GetStatusBar()); statusBar)
+	{
+		statusBar->SetFileSystem(mFileSystem.get());
 	}
 }
 

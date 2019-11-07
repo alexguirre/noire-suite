@@ -17,6 +17,7 @@ public:
 	CMainWindow();
 
 	wxToolBar* OnCreateToolBar(long style, wxWindowID id, const wxString& name) override;
+	wxStatusBar* OnCreateStatusBar(int, long style, wxWindowID id, const wxString& name) override;
 
 private:
 	std::unique_ptr<noire::fs::CFileSystem> mFileSystem;
