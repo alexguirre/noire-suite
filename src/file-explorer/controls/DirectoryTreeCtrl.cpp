@@ -60,70 +60,47 @@ void CDirectoryTreeCtrl::Refresh()
 	std::unordered_map<std::string_view, wxTreeItemId> items{};
 
 	// get the path of each directory in the input path in order
-	// for example "some/deep/folder" returns { "some/", "some/deep", "some/deep/folder" }
-	const auto getDirectoriesFromPath = [](std::string_view path,
-										   std::vector<std::string_view>& directories) {
-		std::size_t pos = 0;
-		do
+	// for example "/some/deep/folder/" returns { "/some/deep/folder/", "/some/deep/", "/some/" }
+	const auto getDirectoriesFromPath = [](SPathView path, std::vector<SPathView>& directories) {
+		SPathView p = path;
+		while (!p.IsEmpty() && !p.IsRoot())
 		{
-			pos = path.find('/', pos + 1);
-			if (pos != std::string_view::npos)
-			{
-				directories.emplace_back(path.substr(0, pos));
-			}
-			else
-			{
-				directories.emplace_back(path);
-			}
-
-		} while (pos != std::string_view::npos);
-	};
-
-	const auto getNameFromPath = [](std::string_view path) {
-		std::size_t namePos = path.rfind(CFileSystem::DirectorySeparator, path.size() - 2);
-		if (namePos != std::string_view::npos)
-		{
-			return path.substr(namePos +
-							   (path[namePos] == CFileSystem::DirectorySeparator ? 1 : 0));
-		}
-		else
-		{
-			return path;
+			directories.emplace_back(p);
+			p = p.Parent();
 		}
 	};
 
-	const auto addDirectoryToTree = [&](std::string_view path, EDirectoryEntryType type) {
-		std::string_view origPath = path;
-		path = path.substr(1, path.size() - 2); // remove first and last '/'
+	const auto addDirectoryToTree = [&](SPathView path, EDirectoryEntryType type) {
+		SPathView origPath = path;
 
-		std::vector<std::string_view> dirs{};
+		std::vector<SPathView> dirs{};
 		getDirectoriesFromPath(path, dirs);
 
 		wxTreeItemId parent = noireItem;
-		for (auto& p : dirs)
+		// iterate in reverse order so top-most parent is processed first
+		for (auto dirIt = dirs.rbegin(); dirIt != dirs.rend(); dirIt++)
 		{
-			if (auto it = items.find(p); it != items.end())
+			SPathView& p = *dirIt;
+			if (auto it = items.find(p.String()); it != items.end())
 			{
 				// already added
 				parent = it->second;
 			}
 			else
 			{
-				std::string_view name = getNameFromPath(p);
-				std::string normalizedPath = std::string{ CFileSystem::DirectorySeparator } +
-											 std::string{ p } + CFileSystem::DirectorySeparator;
+				std::string_view name = p.Name();
 				parent = AppendItem(parent,
 									{ name.data(), name.size() },
 									CImages::IconFolder,
 									-1,
-									new CDirectoryItemData(normalizedPath));
-				items.emplace(p, parent);
+									new CDirectoryItemData(p));
+				items.emplace(p.String(), parent);
 			}
 		}
 
 		if (type == EDirectoryEntryType::Collection)
 		{
-			if (auto it = items.find(path); it != items.end())
+			if (auto it = items.find(path.String()); it != items.end())
 			{
 				SetItemImage(it->second, CImages::IconBlueFolder);
 			}

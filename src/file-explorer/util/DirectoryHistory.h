@@ -1,15 +1,15 @@
 #pragma once
+#include <formats/fs/Path.h>
 #include <stack>
-#include <string>
 
 class CDirectoryHistory
 {
 public:
 	CDirectoryHistory();
 
-	const std::string& Current() const;
+	noire::fs::SPathView Current() const;
 	bool HasCurrent() const;
-	void Push(std::string_view dir);
+	void Push(noire::fs::SPathView dir);
 	void GoBack();
 	void GoForward();
 	void GoUp();
@@ -18,6 +18,6 @@ public:
 	bool CanGoUp() const;
 
 private:
-	std::stack<std::string> mBackStack;
-	std::stack<std::string> mForwardStack;
+	std::stack<noire::fs::SPath> mBackStack;
+	std::stack<noire::fs::SPath> mForwardStack;
 };

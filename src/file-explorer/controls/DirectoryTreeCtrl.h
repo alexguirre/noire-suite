@@ -8,12 +8,12 @@
 class CDirectoryItemData : public wxTreeItemData
 {
 public:
-	CDirectoryItemData(std::string_view path) : mPath{ path } {}
+	CDirectoryItemData(noire::fs::SPathView path) : mPath{ path } {}
 
-	const std::string& Path() const { return mPath; }
+	noire::fs::SPathView Path() const { return mPath; }
 
 private:
-	std::string mPath;
+	noire::fs::SPath mPath;
 };
 
 class CDirectoryTreeCtrl : public wxTreeCtrl

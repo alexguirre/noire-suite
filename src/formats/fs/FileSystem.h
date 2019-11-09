@@ -1,6 +1,7 @@
 #pragma once
 #include "Device.h"
 #include "FileStream.h"
+#include "Path.h"
 #include <memory>
 #include <string_view>
 #include <utility>
@@ -10,10 +11,10 @@ namespace noire::fs
 {
 	struct SMountPoint
 	{
-		std::string Path;
+		SPath Path;
 		std::unique_ptr<IDevice> Device;
 
-		SMountPoint(std::string_view path, std::unique_ptr<IDevice> device)
+		SMountPoint(SPathView path, std::unique_ptr<IDevice> device)
 			: Path{ path }, Device{ std::move(device) }
 		{
 		}
@@ -22,27 +23,28 @@ namespace noire::fs
 	class CFileSystem
 	{
 	public:
-		static constexpr char DirectorySeparator{ '/' };
+		static constexpr char DirectorySeparator{ SPath::DirectorySeparator };
 
 		CFileSystem() {}
 
-		void Mount(std::string_view path, std::unique_ptr<IDevice> device);
-		void Unmount(std::string_view path);
+		void Mount(SPathView path, std::unique_ptr<IDevice> device);
+		void Unmount(SPathView path);
 
-		bool PathExists(std::string_view path);
-		bool FileExists(std::string_view filePath);
-		bool DirectoryExists(std::string_view filePath);
-		FileStreamSize FileSize(std::string_view filePath);
-		std::unique_ptr<IFileStream> OpenFile(std::string_view path);
+		bool PathExists(SPathView path);
+		bool FileExists(SPathView filePath);
+		bool DirectoryExists(SPathView filePath);
+		FileStreamSize FileSize(SPathView filePath);
+		std::unique_ptr<IFileStream> OpenFile(SPathView path);
 		std::vector<SDirectoryEntry> GetAllEntries();
-		std::vector<SDirectoryEntry> GetEntries(std::string_view dirPath);
+		std::vector<SDirectoryEntry> GetEntries(SPathView dirPath);
 
-		IDevice* FindDevice(std::string_view path, std::string_view& outMountPath);
-		IDevice* FindDevice(std::string_view path)
+		IDevice* FindDevice(SPathView path, SPathView& outMountPath);
+		IDevice* FindDevice(SPathView path)
 		{
-			std::string_view tmp{};
+			SPathView tmp{};
 			return FindDevice(path, tmp);
 		}
+		SPathView GetDeviceMountPath(const IDevice* device) const;
 
 	private:
 		std::vector<SMountPoint> mMounts;

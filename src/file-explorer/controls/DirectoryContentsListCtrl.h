@@ -1,5 +1,6 @@
 #pragma once
 #include <formats/fs/FileSystem.h>
+#include <formats/fs/Path.h>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -18,16 +19,16 @@ class CDirectoryEvent : public wxEvent
 {
 public:
 	CDirectoryEvent();
-	CDirectoryEvent(std::string_view dirPath, int winId = wxID_ANY);
+	CDirectoryEvent(noire::fs::SPathView dirPath, int winId = wxID_ANY);
 	CDirectoryEvent(const CDirectoryEvent& e);
 
 	wxEvent* Clone() const override { return new CDirectoryEvent(*this); }
 
-	void SetDirectory(std::string_view dirPath) { mDirPath = dirPath; }
-	const std::string& GetDirectory() const { return mDirPath; }
+	void SetDirectory(noire::fs::SPathView dirPath) { mDirPath = dirPath; }
+	noire::fs::SPathView GetDirectory() const { return mDirPath; }
 
 private:
-	std::string mDirPath;
+	noire::fs::SPath mDirPath;
 
 	wxDECLARE_DYNAMIC_CLASS(CDirectoryEvent);
 };
@@ -44,7 +45,7 @@ public:
 	~CDirectoryContentsListCtrl() override;
 
 	void SetFileSystem(noire::fs::CFileSystem* fileSystem);
-	void SetDirectory(std::string_view dirPath);
+	void SetDirectory(noire::fs::SPathView dirPath);
 
 	void OnItemContextMenu(wxListEvent& event);
 	void OnItemActivated(wxListEvent& event);
@@ -54,10 +55,10 @@ private:
 	void BuildColumns();
 	void UpdateContents();
 	void DeleteAllItemsData();
-	void OpenFile(std::string_view filePath);
+	void OpenFile(noire::fs::SPathView filePath);
 
 	noire::fs::CFileSystem* mFileSystem;
-	std::string mDirPath;
+	noire::fs::SPath mDirPath;
 
 	wxDECLARE_EVENT_TABLE();
 };

@@ -151,18 +151,18 @@ void CMainWindow::ChangeRootPath(const std::filesystem::path& path)
 
 		if (noire::TFileTraits<noire::CContainerFile>::IsValid(*f))
 		{
-			const std::string mountPath = e.Path + noire::fs::CFileSystem::DirectorySeparator;
-			const std::string_view relPath = { e.Path.c_str() + 1,
-											   e.Path.size() - 1 }; // remove first '/'
+			const noire::fs::SPath mountPath = e.Path + noire::fs::CFileSystem::DirectorySeparator;
+			const noire::fs::SPathView parentDevicePath = mFileSystem->GetDeviceMountPath(e.Device);
+			const noire::fs::SPathView relPath = e.Path.RelativeTo(parentDevicePath);
 
 			mFileSystem->Mount(mountPath,
 							   std::make_unique<noire::fs::CContainerDevice>(*e.Device, relPath));
 		}
 		else if (noire::TFileTraits<noire::WADFile>::IsValid(*f))
 		{
-			const std::string mountPath = e.Path + noire::fs::CFileSystem::DirectorySeparator;
-			const std::string_view relPath = { e.Path.c_str() + 1,
-											   e.Path.size() - 1 }; // remove first '/'
+			const noire::fs::SPath mountPath = e.Path + noire::fs::CFileSystem::DirectorySeparator;
+			const noire::fs::SPathView parentDevicePath = mFileSystem->GetDeviceMountPath(e.Device);
+			const noire::fs::SPathView relPath = e.Path.RelativeTo(parentDevicePath);
 
 			mFileSystem->Mount(mountPath,
 							   std::make_unique<noire::fs::CWADDevice>(*e.Device, relPath));

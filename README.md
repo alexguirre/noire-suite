@@ -27,7 +27,7 @@ Prerequisites:
 1. Install the dependencies:
 
     ```console
-    > .\vcpkg --triplet x86-windows-static install ms-gsl wxwidgets
+    > .\vcpkg --triplet x86-windows-static install ms-gsl doctest wxwidgets
     ```
 
 1. Run CMake:

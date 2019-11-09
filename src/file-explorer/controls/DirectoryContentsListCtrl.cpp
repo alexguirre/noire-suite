@@ -14,7 +14,7 @@
 using namespace noire::fs;
 
 CDirectoryEvent::CDirectoryEvent() : wxEvent(wxID_ANY, EVT_DIRECTORY_CHANGED) {}
-CDirectoryEvent::CDirectoryEvent(std::string_view dirPath, int winId)
+CDirectoryEvent::CDirectoryEvent(noire::fs::SPathView dirPath, int winId)
 	: wxEvent(winId, EVT_DIRECTORY_CHANGED)
 {
 	SetDirectory(dirPath);
@@ -38,12 +38,10 @@ wxEND_EVENT_TABLE();
 
 struct SDirectoryItemData
 {
-	std::string Path;
+	SPath Path;
 	EDirectoryEntryType Type;
 
-	SDirectoryItemData(std::string_view path, EDirectoryEntryType type) : Path{ path }, Type{ type }
-	{
-	}
+	SDirectoryItemData(SPathView path, EDirectoryEntryType type) : Path{ path }, Type{ type } {}
 };
 
 class CDirectoryItemContextMenu : public wxMenu
@@ -87,13 +85,15 @@ void CDirectoryContentsListCtrl::SetFileSystem(CFileSystem* fileSystem)
 	if (fileSystem != mFileSystem)
 	{
 		mFileSystem = fileSystem;
-		mDirPath = "";
-		SetDirectory("/");
+		mDirPath = SPathView{};
+		SetDirectory({ "/" });
 	}
 }
 
-void CDirectoryContentsListCtrl::SetDirectory(std::string_view dirPath)
+void CDirectoryContentsListCtrl::SetDirectory(noire::fs::SPathView dirPath)
 {
+	Expects(dirPath.IsDirectory());
+
 	if (mDirPath != dirPath)
 	{
 		mDirPath = dirPath;
@@ -116,7 +116,7 @@ void CDirectoryContentsListCtrl::OnItemActivated(wxListEvent& event)
 	SDirectoryItemData* data = reinterpret_cast<SDirectoryItemData*>(event.GetItem().GetData());
 	Expects(data != nullptr);
 
-	std::string_view path = data->Path;
+	SPathView path = data->Path;
 	if (data->Type == EDirectoryEntryType::File)
 	{
 		OpenFile(path);
@@ -131,7 +131,7 @@ void CDirectoryContentsListCtrl::OnItemActivated(wxListEvent& event)
 
 void CDirectoryContentsListCtrl::ShowItemContextMenu()
 {
-	//PopupMenu(mItemContextMenu.get());
+	// PopupMenu(mItemContextMenu.get());
 }
 
 void CDirectoryContentsListCtrl::BuildColumns()
@@ -146,7 +146,7 @@ void CDirectoryContentsListCtrl::UpdateContents()
 	DeleteAllItemsData();
 	DeleteAllItems();
 
-	if (mFileSystem == nullptr || mDirPath.empty())
+	if (mFileSystem == nullptr || mDirPath.IsEmpty())
 	{
 		return;
 	}
@@ -180,35 +180,23 @@ void CDirectoryContentsListCtrl::UpdateContents()
 		SetItemImage(idx, icon);
 	};
 
-	const auto getNameFromPath = [](std::string_view path) {
-		std::size_t namePos = path.rfind(CFileSystem::DirectorySeparator, path.size() - 2);
-		if (namePos != std::string_view::npos)
-		{
-			path = path.substr(namePos + 1);
-			return path[path.size() - 1] == CFileSystem::DirectorySeparator ?
-					   path.substr(0, path.size() - 1) :
-					   path;
-		}
-		else
-		{
-			return path;
-		}
-	};
-
 	auto entries = mFileSystem->GetEntries(mDirPath);
 	// add directories first
 	for (auto& d : entries)
 	{
 		if (d.Type != EDirectoryEntryType::File)
 		{
-			std::string_view nameView = getNameFromPath(d.Path);
+			std::string_view nameView = d.Path.Name();
 
 			wxString name{ nameView.data(), nameView.size() };
 			wxString type{ "Folder" };
-			wxString size{ d.Type == EDirectoryEntryType::Collection ?
-							   BytesToHumanReadable(mFileSystem->FileSize(
-								   std::string_view{ d.Path.c_str(), d.Path.size() - 1 })) :
-							   "TBD" };
+			wxString size{
+				d.Type == EDirectoryEntryType::Collection ?
+					// remove last '/' and pass it to FileSize
+					BytesToHumanReadable(mFileSystem->FileSize(
+						std::string_view{ d.Path.String().data(), d.Path.String().size() - 1 })) :
+					"TBD"
+			};
 			// size.Printf("%u items", d.Files().size() + d.Directories().size());
 
 			addItem(name, type, size, new SDirectoryItemData(d.Path, d.Type));
@@ -220,7 +208,7 @@ void CDirectoryContentsListCtrl::UpdateContents()
 	{
 		if (f.Type == EDirectoryEntryType::File)
 		{
-			std::string_view nameView = getNameFromPath(f.Path);
+			std::string_view nameView = f.Path.Name();
 
 			wxString name{ nameView.data(), nameView.size() };
 			wxString type{ "File" };
@@ -293,7 +281,7 @@ static wxImage CreateImageFromDDS(gsl::span<std::byte> ddsData)
 	return img;
 }
 
-void CDirectoryContentsListCtrl::OpenFile(std::string_view filePath)
+void CDirectoryContentsListCtrl::OpenFile(noire::fs::SPathView filePath)
 {
 	std::uint32_t headerMagic;
 	std::unique_ptr<IFileStream> file = mFileSystem->OpenFile(filePath);
@@ -309,7 +297,10 @@ void CDirectoryContentsListCtrl::OpenFile(std::string_view filePath)
 
 		const wxImage img = CreateImageFromDDS({ buffer.get(), gsl::narrow<std::ptrdiff_t>(size) });
 		CImageWindow* imgWin =
-			new CImageWindow(this, wxID_ANY, { filePath.data(), filePath.size() }, img);
+			new CImageWindow(this,
+							 wxID_ANY,
+							 { filePath.String().data(), filePath.String().size() },
+							 img);
 		imgWin->Show();
 	}
 }

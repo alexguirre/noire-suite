@@ -86,6 +86,10 @@ set(DEVIL_LIBS
     optimized ${VCPKG_LIBS_DIR}/lzma.lib debug ${VCPKG_LIBS_DEBUG_DIR}/lzmad.lib
 )
 
+add_dependencies(noire-file-explorer
+    noire-formats
+)
+
 target_link_libraries(noire-file-explorer PRIVATE
     noire-formats
     ${WX_LIBS}

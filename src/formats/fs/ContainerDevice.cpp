@@ -9,7 +9,7 @@ namespace noire::fs
 {
 	// TODO: reverse name hashes
 
-	CContainerDevice::CContainerDevice(IDevice& parentDevice, std::string_view containerFilePath)
+	CContainerDevice::CContainerDevice(IDevice& parentDevice, SPathView containerFilePath)
 		: mParent{ parentDevice },
 		  mContainerFilePath{ (Expects(mParent.FileExists(containerFilePath)), containerFilePath) },
 		  mContainerFileStream{ mParent.OpenFile(mContainerFilePath) },
@@ -17,10 +17,13 @@ namespace noire::fs
 	{
 	}
 
-	bool CContainerDevice::PathExists(std::string_view path) const
+	bool CContainerDevice::PathExists(SPathView path) const
 	{
 		std::uint32_t nameHash;
-		const auto [_, ec] = std::from_chars(path.data(), path.data() + path.size(), nameHash, 16);
+		const auto [_, ec] = std::from_chars(path.String().data(),
+											 path.String().data() + path.String().size(),
+											 nameHash,
+											 16);
 		Expects(ec == std::errc{});
 
 		// check if any entry path is equal to the path or contains it
@@ -30,23 +33,19 @@ namespace noire::fs
 			[nameHash](const SContainerChunkEntry& e) { return e.NameHash == nameHash; });
 	}
 
-	bool CContainerDevice::FileExists(std::string_view filePath) const
-	{
-		return PathExists(filePath);
-	}
+	bool CContainerDevice::FileExists(SPathView filePath) const { return PathExists(filePath); }
 
-	bool CContainerDevice::DirectoryExists(std::string_view dirPath) const
-	{
-		return dirPath.empty();
-	}
+	bool CContainerDevice::DirectoryExists(SPathView dirPath) const { return dirPath.IsEmpty(); }
 
-	FileStreamSize CContainerDevice::FileSize(std::string_view filePath)
+	FileStreamSize CContainerDevice::FileSize(SPathView filePath)
 	{
 		Expects(FileExists(filePath));
 
 		std::uint32_t nameHash;
-		const auto [_, ec] =
-			std::from_chars(filePath.data(), filePath.data() + filePath.size(), nameHash, 16);
+		const auto [_, ec] = std::from_chars(filePath.String().data(),
+											 filePath.String().data() + filePath.String().size(),
+											 nameHash,
+											 16);
 		Expects(ec == std::errc{});
 
 		auto it = std::find_if(
@@ -56,10 +55,13 @@ namespace noire::fs
 		return it->Size();
 	}
 
-	std::unique_ptr<IFileStream> CContainerDevice::OpenFile(std::string_view path)
+	std::unique_ptr<IFileStream> CContainerDevice::OpenFile(SPathView path)
 	{
 		std::uint32_t nameHash;
-		const auto [_, ec] = std::from_chars(path.data(), path.data() + path.size(), nameHash, 16);
+		const auto [_, ec] = std::from_chars(path.String().data(),
+											 path.String().data() + path.String().size(),
+											 nameHash,
+											 16);
 		Expects(ec == std::errc{});
 
 		auto it = std::find_if(
@@ -84,7 +86,7 @@ namespace noire::fs
 	{
 		std::vector<SDirectoryEntry> entries{};
 		entries.reserve(mContainerFile.Entries().size() + 1);
-		entries.emplace_back(this, "", EDirectoryEntryType::Collection); // root
+		entries.emplace_back(this, SPathView{}, EDirectoryEntryType::Collection); // root
 		for (auto& e : mContainerFile.Entries())
 		{
 			std::array<char, 16> buffer{};
@@ -100,7 +102,7 @@ namespace noire::fs
 		return entries;
 	}
 
-	std::vector<SDirectoryEntry> CContainerDevice::GetEntries(std::string_view dirPath)
+	std::vector<SDirectoryEntry> CContainerDevice::GetEntries(SPathView dirPath)
 	{
 		Expects(DirectoryExists(dirPath));
 

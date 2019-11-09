@@ -73,12 +73,13 @@ void CPathToolBar::OnDirectoryChanged(CDirectoryEvent& e)
 {
 	wxLogDebug("OnDirectoryChanged");
 
-	if (!mDirHistory.HasCurrent() || mDirHistory.Current() != e.GetDirectory())
+	noire::fs::SPathView dir = e.GetDirectory();
+	if (!mDirHistory.HasCurrent() || mDirHistory.Current() != dir)
 	{
-		mDirHistory.Push(e.GetDirectory());
+		mDirHistory.Push(dir);
 	}
 
-	mPathText->SetValue(e.GetDirectory());
+	mPathText->SetValue({ dir.String().data(), dir.String().size() });
 
 	EnableTool(wxID_BACKWARD, mDirHistory.CanGoBack());
 	EnableTool(wxID_FORWARD, mDirHistory.CanGoForward());

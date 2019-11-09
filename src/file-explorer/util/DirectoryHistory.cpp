@@ -4,7 +4,7 @@
 
 CDirectoryHistory::CDirectoryHistory() {}
 
-const std::string& CDirectoryHistory::Current() const
+noire::fs::SPathView CDirectoryHistory::Current() const
 {
 	Expects(HasCurrent());
 
@@ -16,8 +16,10 @@ bool CDirectoryHistory::HasCurrent() const
 	return mBackStack.size() > 0;
 }
 
-void CDirectoryHistory::Push(std::string_view dir)
+void CDirectoryHistory::Push(noire::fs::SPathView dir)
 {
+	Expects(dir.IsDirectory());
+
 	mBackStack.emplace(dir);
 	mForwardStack = {}; // clear the forward stack
 }
@@ -42,12 +44,7 @@ void CDirectoryHistory::GoUp()
 {
 	Expects(CanGoUp());
 
-	const std::string& path = Current();
-	std::size_t parentPos = path.rfind(noire::fs::CFileSystem::DirectorySeparator, path.size() - 2);
-	if (parentPos != std::string_view::npos)
-	{
-		Push(path.substr(0, parentPos + 1));
-	}
+	Push(Current().Parent());
 }
 
 bool CDirectoryHistory::CanGoBack() const
@@ -64,8 +61,7 @@ bool CDirectoryHistory::CanGoUp() const
 {
 	if (HasCurrent())
 	{
-		auto& curr = Current();
-		return std::count(curr.begin(), curr.end(), noire::fs::CFileSystem::DirectorySeparator) > 1;
+		return Current().HasParent();
 	}
 	else
 	{

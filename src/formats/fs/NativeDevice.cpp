@@ -12,35 +12,35 @@ namespace noire::fs
 		Expects(stdfs::exists(mRootDir) && stdfs::is_directory(mRootDir));
 	}
 
-	bool CNativeDevice::PathExists(std::string_view path) const
+	bool CNativeDevice::PathExists(SPathView path) const
 	{
-		const stdfs::path fullPath = mRootDir / path;
+		const stdfs::path fullPath = mRootDir / path.String();
 		return stdfs::exists(fullPath);
 	}
 
-	bool CNativeDevice::FileExists(std::string_view filePath) const
+	bool CNativeDevice::FileExists(SPathView filePath) const
 	{
-		const stdfs::path fullPath = mRootDir / filePath;
+		const stdfs::path fullPath = mRootDir / filePath.String();
 		return stdfs::is_regular_file(fullPath);
 	}
 
-	bool CNativeDevice::DirectoryExists(std::string_view dirPath) const
+	bool CNativeDevice::DirectoryExists(SPathView dirPath) const
 	{
-		const stdfs::path fullPath = mRootDir / dirPath;
+		const stdfs::path fullPath = mRootDir / dirPath.String();
 		return stdfs::is_directory(fullPath);
 	}
 
-	FileStreamSize CNativeDevice::FileSize(std::string_view filePath)
+	FileStreamSize CNativeDevice::FileSize(SPathView filePath)
 	{
 		Expects(FileExists(filePath));
 
-		const stdfs::path fullPath = mRootDir / filePath;
+		const stdfs::path fullPath = mRootDir / filePath.String();
 		return gsl::narrow<FileStreamSize>(stdfs::file_size(fullPath));
 	}
 
-	std::unique_ptr<IFileStream> CNativeDevice::OpenFile(std::string_view path)
+	std::unique_ptr<IFileStream> CNativeDevice::OpenFile(SPathView path)
 	{
-		const stdfs::path fullPath = mRootDir / path;
+		const stdfs::path fullPath = mRootDir / path.String();
 		return std::make_unique<CNativeFileStream>(fullPath);
 	}
 
@@ -51,12 +51,11 @@ namespace noire::fs
 		for (auto& p : stdfs::recursive_directory_iterator(mRootDir))
 		{
 			const bool isFile = p.is_regular_file();
-			// normalize path
-			std::string path = p.path().lexically_relative(mRootDir).string();
-			std::replace(path.begin(), path.end(), '\\', CFileSystem::DirectorySeparator);
+			SPath path{ p.path().lexically_relative(mRootDir).string() };
+			path.Normalize();
 			if (!isFile)
 			{
-				path += CFileSystem::DirectorySeparator;
+				path += SPath::DirectorySeparator;
 			}
 
 			entries.emplace_back(this,
@@ -68,9 +67,9 @@ namespace noire::fs
 		return entries;
 	}
 
-	std::vector<SDirectoryEntry> CNativeDevice::GetEntries(std::string_view dirPath)
+	std::vector<SDirectoryEntry> CNativeDevice::GetEntries(SPathView dirPath)
 	{
-		const stdfs::path fullPath = mRootDir / dirPath;
+		const stdfs::path fullPath = mRootDir / dirPath.String();
 		Expects(stdfs::is_directory(fullPath));
 
 		std::vector<SDirectoryEntry> entries{};
@@ -78,12 +77,11 @@ namespace noire::fs
 		for (auto& e : stdfs::directory_iterator(fullPath))
 		{
 			const bool isFile = e.is_regular_file();
-			// normalize path
-			std::string path = e.path().lexically_relative(mRootDir).string();
-			std::replace(path.begin(), path.end(), '\\', CFileSystem::DirectorySeparator);
+			SPath path{ e.path().lexically_relative(mRootDir).string() };
+			path.Normalize();
 			if (!isFile)
 			{
-				path += CFileSystem::DirectorySeparator;
+				path += SPath::DirectorySeparator;
 			}
 
 			entries.emplace_back(this,
