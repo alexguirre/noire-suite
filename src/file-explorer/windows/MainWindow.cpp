@@ -10,6 +10,7 @@
 #include <formats/WADFile.h>
 #include <formats/fs/ContainerDevice.h>
 #include <formats/fs/NativeDevice.h>
+#include <formats/fs/TrunkDevice.h>
 #include <formats/fs/WADDevice.h>
 #include <gsl/gsl>
 #include <wx/artprov.h>
@@ -166,6 +167,29 @@ void CMainWindow::ChangeRootPath(const std::filesystem::path& path)
 
 			mFileSystem->Mount(mountPath,
 							   std::make_unique<noire::fs::CWADDevice>(*e.Device, relPath));
+		}
+	}
+
+	// TODO: remove harcoded path
+	noire::fs::IDevice* wadDevice = mFileSystem->FindDevice("/final/pc/out.wad.pc/");
+	const noire::fs::SPathView wadDevicePath = mFileSystem->GetDeviceMountPath(wadDevice);
+	for (auto& e : wadDevice->GetAllEntries())
+	{
+		if (e.Type != noire::fs::EDirectoryEntryType::File)
+		{
+			continue;
+		}
+
+		auto f = wadDevice->OpenFile(e.Path);
+
+		if (noire::TFileTraits<noire::CTrunkFile>::IsValid(*f))
+		{
+			const noire::fs::SPath mountPath =
+				(wadDevicePath / e.Path) + noire::fs::CFileSystem::DirectorySeparator;
+			const noire::fs::SPathView relPath = e.Path;
+
+			mFileSystem->Mount(mountPath,
+							   std::make_unique<noire::fs::CTrunkDevice>(*e.Device, relPath));
 		}
 	}
 

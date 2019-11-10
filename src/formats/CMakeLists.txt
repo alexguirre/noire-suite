@@ -4,6 +4,8 @@ file(GLOB FORMATS_SOURCES
     "ContainerFile.cpp"
     "ContainerFile.h"
     "File.h"
+    "TrunkFile.cpp"
+    "TrunkFile.h"
     "WADFile.cpp"
     "WADFile.h"
     "fs/ContainerDevice.cpp"
@@ -17,6 +19,8 @@ file(GLOB FORMATS_SOURCES
     "fs/NativeDevice.h"
     "fs/Path.cpp"
     "fs/Path.h"
+    "fs/TrunkDevice.cpp"
+    "fs/TrunkDevice.h"
     "fs/WADDevice.cpp"
     "fs/WADDevice.h"
 )
