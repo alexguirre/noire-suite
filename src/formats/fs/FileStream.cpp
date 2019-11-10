@@ -9,7 +9,7 @@ namespace noire::fs
 		: mBaseStream{ baseStream }, mOffset{ offset }, mSize{ size }, mReadingOffset{ 0 }
 	{
 		Expects(baseStream);
-		Expects(offset + size < baseStream->Size());
+		Expects(offset + size <= baseStream->Size());
 	}
 
 	void CSubFileStream::Read(void* destBuffer, FileStreamSize count)
