@@ -13,12 +13,18 @@ public:
 	const wxImage& GetImage() const { return mImageOrig; }
 	void SetImage(const wxImage& img);
 
+	wxImageResizeQuality GetResizeQuality() const { return mResizeQuality; }
+	void SetResizeQuality(wxImageResizeQuality quality);
+
 private:
 	wxSize GetImageIdealSize() const;
 	void Render(wxDC& dc);
+	void RenderNow();
 	void OnPaint(wxPaintEvent& event);
 	void OnSize(wxSizeEvent& event);
 
 	wxImage mImageOrig;
 	wxBitmap mImageResized;
+	wxImageResizeQuality mResizeQuality;
+	bool mForceResize;
 };

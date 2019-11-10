@@ -7,7 +7,11 @@ CImagePanel::CImagePanel(wxWindow* parent,
 						 const wxWindowID id,
 						 const wxPoint& pos,
 						 const wxSize& size)
-	: wxPanel(parent, id, pos, size), mImageOrig{}, mImageResized{}
+	: wxPanel(parent, id, pos, size, wxTAB_TRAVERSAL | wxBORDER_SIMPLE),
+	  mImageOrig{},
+	  mImageResized{},
+	  mResizeQuality{ wxIMAGE_QUALITY_NORMAL },
+	  mForceResize{ false }
 {
 	Bind(wxEVT_PAINT, &CImagePanel::OnPaint, this);
 	Bind(wxEVT_SIZE, &CImagePanel::OnSize, this);
@@ -17,6 +21,16 @@ void CImagePanel::SetImage(const wxImage& img)
 {
 	mImageOrig = img.Copy();
 	mImageResized = mImageOrig;
+}
+
+void CImagePanel::SetResizeQuality(wxImageResizeQuality quality)
+{
+	if (mResizeQuality != quality)
+	{
+		mResizeQuality = quality;
+		mForceResize = true;
+		RenderNow();
+	}
 }
 
 wxSize CImagePanel::GetImageIdealSize() const
@@ -41,10 +55,11 @@ void CImagePanel::Render(wxDC& dc)
 	}
 
 	const wxSize idealSize = GetImageIdealSize();
-	if (mImageResized.GetSize() != idealSize)
+	if (mImageResized.GetSize() != idealSize || mForceResize)
 	{
 		mImageResized =
-			mImageOrig.Scale(idealSize.GetWidth(), idealSize.GetHeight(), wxIMAGE_QUALITY_HIGH);
+			mImageOrig.Scale(idealSize.GetWidth(), idealSize.GetHeight(), mResizeQuality);
+		mForceResize = false;
 	}
 
 	const wxSize thisSize = GetSize();
@@ -55,6 +70,12 @@ void CImagePanel::Render(wxDC& dc)
 	dc.DrawBitmap(mImageResized, pos);
 }
 
+void CImagePanel::RenderNow()
+{
+	wxClientDC dc{ this };
+	Render(dc);
+}
+
 void CImagePanel::OnPaint(wxPaintEvent&)
 {
 	wxPaintDC dc{ this };
@@ -63,6 +84,5 @@ void CImagePanel::OnPaint(wxPaintEvent&)
 
 void CImagePanel::OnSize(wxSizeEvent&)
 {
-	wxClientDC dc{ this };
-	Render(dc);
+	RenderNow();
 }
