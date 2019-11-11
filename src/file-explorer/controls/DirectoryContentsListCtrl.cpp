@@ -158,13 +158,13 @@ void CDirectoryContentsListCtrl::OnBeginDrag(wxListEvent& event)
 
 		wxFileDataObject dataObj{};
 		dataObj.AddFile(fullPath.c_str());
-		wxLogDebug("> Dragging '%ls'", fullPath.c_str());
+		wxLogDebug("> Dragging native file '%ls'", fullPath.c_str());
 		wxDropSource src{ dataObj, this };
 		src.DoDragDrop(wxDrag_CopyOnly);
 	}
 	else
 	{
-		wxLogDebug("> Dragging unsupported file '%.*s'",
+		wxLogDebug("> Dragging virtual file '%.*s'",
 				   path.String().size(),
 				   path.String().data());
 

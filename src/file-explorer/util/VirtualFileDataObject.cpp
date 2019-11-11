@@ -160,9 +160,13 @@ IMPLEMENT_IUNKNOWN_METHODS(CComFileStream);
 STDMETHODIMP CComFileStream::Read(void* pv, ULONG cb, ULONG* pcbRead)
 {
 	wxLogDebug(__FUNCTION__ "(%p, %lu, %p)", pv, cb, pcbRead);
-	noire::fs::FileStreamSize toRead =
+	const noire::fs::FileStreamSize toRead =
 		std::min<noire::fs::FileStreamSize>(cb, mFileStream->Size() - mFileStream->Tell());
-	mFileStream->Read(pv, toRead);
+	if (toRead != 0)
+	{
+		mFileStream->Read(pv, toRead);
+	}
+
 	if (pcbRead)
 	{
 		*pcbRead = toRead;
