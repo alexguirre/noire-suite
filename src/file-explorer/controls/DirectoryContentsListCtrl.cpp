@@ -2,12 +2,16 @@
 #include "Identifiers.h"
 #include "Images.h"
 #include "util/Format.h"
+#include "util/VirtualFileDataObject.h"
 #include "windows/ImageWindow.h"
 #include <IL/il.h>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <formats/WADFile.h>
+#include <formats/fs/NativeDevice.h>
 #include <gsl/gsl>
+#include <wx/dnd.h>
 #include <wx/msgdlg.h>
 #include <wx/wx.h>
 
@@ -73,6 +77,8 @@ CDirectoryContentsListCtrl::CDirectoryContentsListCtrl(wxWindow* parent,
 {
 	SetImageList(CImages::Icons(), wxIMAGE_LIST_SMALL);
 	BuildColumns();
+
+	Bind(wxEVT_LIST_BEGIN_DRAG, &CDirectoryContentsListCtrl::OnBeginDrag, this);
 }
 
 CDirectoryContentsListCtrl::~CDirectoryContentsListCtrl()
@@ -126,6 +132,47 @@ void CDirectoryContentsListCtrl::OnItemActivated(wxListEvent& event)
 		SetDirectory(path);
 	}
 
+	event.Skip();
+}
+
+void CDirectoryContentsListCtrl::OnBeginDrag(wxListEvent& event)
+{
+	wxLogDebug("CDirectoryContentsListCtrl::OnBeginDrag");
+
+	SDirectoryItemData* data = reinterpret_cast<SDirectoryItemData*>(event.GetItem().GetData());
+	Expects(data != nullptr);
+
+	if (data->Type != EDirectoryEntryType::File)
+	{
+		wxLogDebug("> Trying to drag non-file");
+		return;
+	}
+
+	SPathView path = data->Path;
+	IDevice* device = mFileSystem->FindDevice(path);
+	if (device == mFileSystem->FindDevice("/"))
+	{
+		SPathView relPath = path.RelativeTo("/");
+		std::filesystem::path fullPath =
+			reinterpret_cast<noire::fs::CNativeDevice*>(device)->RootDirectory() / relPath.String();
+
+		wxFileDataObject dataObj{};
+		dataObj.AddFile(fullPath.c_str());
+		wxLogDebug("> Dragging '%ls'", fullPath.c_str());
+		wxDropSource src{ dataObj, this };
+		src.DoDragDrop(wxDrag_CopyOnly);
+	}
+	else
+	{
+		wxLogDebug("> Dragging unsupported file '%.*s'",
+				   path.String().size(),
+				   path.String().data());
+
+		CVirtualFileDataObject dataObj{ mFileSystem, path };
+
+		wxDropSource src{ dataObj, this };
+		src.DoDragDrop(wxDrag_CopyOnly);
+	}
 	event.Skip();
 }
 

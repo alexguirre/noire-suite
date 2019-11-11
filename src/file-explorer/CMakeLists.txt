@@ -20,6 +20,8 @@ file(GLOB FILE_EXPLORER_SOURCES
     "util/DirectoryHistory.h"
     "util/Format.cpp"
     "util/Format.h"
+    "util/VirtualFileDataObject.cpp"
+    "util/VirtualFileDataObject.h"
     "windows/ImageWindow.cpp"
     "windows/ImageWindow.h"
     "windows/MainWindow.cpp"

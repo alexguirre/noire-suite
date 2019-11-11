@@ -49,6 +49,7 @@ public:
 
 	void OnItemContextMenu(wxListEvent& event);
 	void OnItemActivated(wxListEvent& event);
+	void OnBeginDrag(wxListEvent& event);
 
 private:
 	void ShowItemContextMenu();
