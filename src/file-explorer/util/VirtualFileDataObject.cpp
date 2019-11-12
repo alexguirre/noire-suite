@@ -2,10 +2,12 @@
 #include <ObjIdl.h>
 #include <ShlObj.h>
 #include <Shlwapi.h>
-#include <array>
+#include <algorithm>
+#include <cstddef>
 #include <formats/fs/FileStream.h>
 #include <formats/fs/FileSystem.h>
 #include <gsl/gsl>
+#include <iterator>
 #include <memory>
 #include <strsafe.h>
 #include <wx/log.h>
@@ -358,7 +360,7 @@ class CVirtualFileComDataObject : public wxIDataObjectImposter
 public:
 	CVirtualFileComDataObject(wxDataObject* obj,
 							  noire::fs::CFileSystem* fileSystem,
-							  noire::fs::SPathView path);
+							  const std::vector<noire::fs::SPathView>& paths);
 
 	// IDataObject
 	STDMETHODIMP GetData(FORMATETC* pformatetcIn, STGMEDIUM* pmedium) override;
@@ -371,22 +373,16 @@ public:
 	STDMETHODIMP DUnadvise(DWORD dwConnection) override;
 	STDMETHODIMP EnumDAdvise(IEnumSTATDATA** ppenumAdvise) override;
 
-	enum Data
-	{
-		FileGroupDescriptor = 0,
-		FileContents0,
+	static constexpr std::size_t InvalidIndex{ static_cast<std::size_t>(-1) };
 
-		Num,
+	std::size_t GetDataCount();
+	std::size_t GetDataIndex(const FORMATETC* pfetc);
 
-		Invalid = -1,
-	};
+	HRESULT CreateFileGroupDescriptor(HGLOBAL* outGlobal);
 
-	int GetDataIndex(const FORMATETC* pfetc);
-
-	std::array<FORMATETC, Data::Num> mFormats;
-
+	std::vector<FORMATETC> mFormats;
 	noire::fs::CFileSystem* mFileSystem;
-	noire::fs::SPath mPath;
+	std::vector<noire::fs::SPath> mPaths;
 };
 
 static void SetFORMATETC(FORMATETC& pfe,
@@ -405,44 +401,76 @@ static void SetFORMATETC(FORMATETC& pfe,
 
 CVirtualFileComDataObject::CVirtualFileComDataObject(wxDataObject* obj,
 													 noire::fs::CFileSystem* fileSystem,
-													 noire::fs::SPathView path)
-	: wxIDataObjectImposter(obj), mFileSystem{ fileSystem }, mPath{ path }
+													 const std::vector<noire::fs::SPathView>& paths)
+	: wxIDataObjectImposter(obj), mFileSystem{ fileSystem }, mPaths{}
 {
 	Expects(fileSystem != nullptr);
-	Expects(fileSystem->FileExists(path));
+	Expects(std::all_of(paths.begin(), paths.end(), [fileSystem](auto p) {
+		return fileSystem->FileExists(p);
+	}));
 
-	SetFORMATETC(mFormats[Data::FileGroupDescriptor],
-				 RegisterClipboardFormat(CFSTR_FILEDESCRIPTOR));
-	SetFORMATETC(mFormats[Data::FileContents0],
-				 RegisterClipboardFormat(CFSTR_FILECONTENTS),
-				 TYMED_HGLOBAL,
-				 0);
+	mPaths.reserve(paths.size());
+	std::transform(paths.begin(), paths.end(), std::back_inserter(mPaths), [](auto p) {
+		return noire::fs::SPath{ p };
+	});
+
+	mFormats.resize(GetDataCount());
+	SetFORMATETC(mFormats[0], RegisterClipboardFormat(CFSTR_FILEDESCRIPTOR));
+	for (std::size_t i = 1; i < mFormats.size(); i++)
+	{
+		SetFORMATETC(mFormats[i],
+					 RegisterClipboardFormat(CFSTR_FILECONTENTS),
+					 TYMED_HGLOBAL,
+					 i - 1);
+	}
 }
 
-int CVirtualFileComDataObject::GetDataIndex(const FORMATETC* pfetc)
+std::size_t CVirtualFileComDataObject::GetDataCount()
+{
+	return 1 + mPaths.size(); // one CFSTR_FILEDESCRIPTOR + (one CFSTR_FILECONTENTS for each file);
+}
+
+std::size_t CVirtualFileComDataObject::GetDataIndex(const FORMATETC* pfetc)
 {
 	for (std::size_t i = 0; i < mFormats.size(); i++)
 	{
 		if (pfetc->cfFormat == mFormats[i].cfFormat && (pfetc->tymed & mFormats[i].tymed) &&
 			pfetc->dwAspect == mFormats[i].dwAspect && pfetc->lindex == mFormats[i].lindex)
 		{
-			return gsl::narrow_cast<int>(i);
+			return i;
 		}
 	}
 
-	return Data::Invalid;
+	return InvalidIndex;
 }
 
-static HRESULT
-CreateHGlobalFromBlob(const void* pvData, SIZE_T cbData, UINT uFlags, HGLOBAL* phglob)
+HRESULT CVirtualFileComDataObject::CreateFileGroupDescriptor(HGLOBAL* outGlobal)
 {
-	HGLOBAL hglob = GlobalAlloc(uFlags, cbData);
+	const std::size_t bufferSize =
+		sizeof(FILEGROUPDESCRIPTOR) + sizeof(FILEDESCRIPTOR) * (mPaths.size() - 1);
+
+	HGLOBAL hglob = GlobalAlloc(GMEM_MOVEABLE, bufferSize);
 	if (hglob)
 	{
-		void* pvAlloc = GlobalLock(hglob);
-		if (pvAlloc)
+		FILEGROUPDESCRIPTOR* fgd = reinterpret_cast<FILEGROUPDESCRIPTOR*>(GlobalLock(hglob));
+		if (fgd)
 		{
-			CopyMemory(pvAlloc, pvData, cbData);
+			std::memset(fgd, 0, bufferSize);
+			fgd->cItems = gsl::narrow_cast<UINT>(mPaths.size());
+			for (std::size_t i = 0; i < mPaths.size(); i++)
+			{
+				noire::fs::SPath& path = mPaths[i];
+				FILEDESCRIPTOR& f = fgd->fgd[i];
+
+				std::string_view name = path.Name();
+				MultiByteToWideChar(CP_UTF8,
+									0,
+									name.data(),
+									name.size(),
+									f.cFileName,
+									ARRAYSIZE(f.cFileName));
+			}
+
 			GlobalUnlock(hglob);
 		}
 		else
@@ -451,35 +479,30 @@ CreateHGlobalFromBlob(const void* pvData, SIZE_T cbData, UINT uFlags, HGLOBAL* p
 			hglob = NULL;
 		}
 	}
-	*phglob = hglob;
+
+	*outGlobal = hglob;
 	return hglob ? S_OK : E_OUTOFMEMORY;
 }
 
 STDMETHODIMP CVirtualFileComDataObject::GetData(FORMATETC* pfe, STGMEDIUM* pmed)
 {
 	ZeroMemory(pmed, sizeof(*pmed));
-	switch (GetDataIndex(pfe))
+	switch (std::size_t i = GetDataIndex(pfe); i)
 	{
-	case Data::FileGroupDescriptor:
+	case 0: // CFSTR_FILEDESCRIPTOR
 	{
-		FILEGROUPDESCRIPTOR fgd;
-		ZeroMemory(&fgd, sizeof(fgd));
-		fgd.cItems = 1;
-		std::string_view name = mPath.Name();
-		MultiByteToWideChar(CP_UTF8,
-							0,
-							name.data(),
-							name.size(),
-							fgd.fgd[0].cFileName,
-							ARRAYSIZE(fgd.fgd[0].cFileName));
 		pmed->tymed = TYMED_HGLOBAL;
-		return CreateHGlobalFromBlob(&fgd, sizeof(fgd), GMEM_MOVEABLE, &pmed->hGlobal);
+		return CreateFileGroupDescriptor(&pmed->hGlobal);
 	}
-	case Data::FileContents0:
-		Expects(mFileSystem->FileExists(mPath));
+	default:
+	{
+		if (i < 1 || i > mPaths.size())
+		{
+			return DV_E_FORMATETC;
+		}
 
 		pmed->tymed = TYMED_ISTREAM;
-		pmed->pstm = new CComFileStream(mFileSystem->OpenFile(mPath));
+		pmed->pstm = new CComFileStream(mFileSystem->OpenFile(mPaths[i - 1]));
 		if (pmed->pstm)
 		{
 			pmed->pstm->AddRef();
@@ -490,7 +513,7 @@ STDMETHODIMP CVirtualFileComDataObject::GetData(FORMATETC* pfe, STGMEDIUM* pmed)
 		}
 		return pmed->pstm ? S_OK : E_FAIL;
 	}
-	return DV_E_FORMATETC;
+	}
 }
 
 STDMETHODIMP CVirtualFileComDataObject::GetDataHere(FORMATETC*, STGMEDIUM*)
@@ -500,7 +523,7 @@ STDMETHODIMP CVirtualFileComDataObject::GetDataHere(FORMATETC*, STGMEDIUM*)
 
 STDMETHODIMP CVirtualFileComDataObject::QueryGetData(FORMATETC* pfe)
 {
-	return GetDataIndex(pfe) == Data::Invalid ? S_FALSE : S_OK;
+	return GetDataIndex(pfe) == InvalidIndex ? S_FALSE : S_OK;
 }
 
 STDMETHODIMP CVirtualFileComDataObject::GetCanonicalFormatEtc(FORMATETC* In, FORMATETC* Out)
@@ -542,7 +565,7 @@ STDMETHODIMP CVirtualFileComDataObject::EnumDAdvise(IEnumSTATDATA**)
 }
 
 CVirtualFileDataObject::CVirtualFileDataObject(noire::fs::CFileSystem* fileSystem,
-											   noire::fs::SPathView path)
+											   const std::vector<noire::fs::SPathView>& paths)
 	: wxDataObject()
 {
 	static_assert(sizeof(wxDataObject) == sizeof(void*) * 2,
@@ -550,7 +573,7 @@ CVirtualFileDataObject::CVirtualFileDataObject(noire::fs::CFileSystem* fileSyste
 
 	IDataObject* origDataObj = GetInterface();
 
-	CVirtualFileComDataObject* newDataObj = new CVirtualFileComDataObject(this, fileSystem, path);
+	CVirtualFileComDataObject* newDataObj = new CVirtualFileComDataObject(this, fileSystem, paths);
 	newDataObj->AddRef();
 
 	// Really hacky workaround:

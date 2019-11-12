@@ -11,6 +11,7 @@
 #include <formats/WADFile.h>
 #include <formats/fs/NativeDevice.h>
 #include <gsl/gsl>
+#include <vector>
 #include <wx/dnd.h>
 #include <wx/msgdlg.h>
 #include <wx/wx.h>
@@ -137,38 +138,53 @@ void CDirectoryContentsListCtrl::OnItemActivated(wxListEvent& event)
 
 void CDirectoryContentsListCtrl::OnBeginDrag(wxListEvent& event)
 {
-	wxLogDebug("CDirectoryContentsListCtrl::OnBeginDrag");
+	wxLogDebug(__FUNCTION__);
 
-	SDirectoryItemData* data = reinterpret_cast<SDirectoryItemData*>(event.GetItem().GetData());
-	Expects(data != nullptr);
-
-	if (data->Type != EDirectoryEntryType::File)
+	std::vector<SDirectoryItemData*> datas{};
+	long item = -1;
+	while ((item = GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED)) != wxNOT_FOUND)
 	{
-		wxLogDebug("> Trying to drag non-file");
+		wxLogDebug("> '%s'", GetItemText(item));
+		SDirectoryItemData* data = reinterpret_cast<SDirectoryItemData*>(GetItemData(item));
+		if (data && data->Type == EDirectoryEntryType::File)
+		{
+			datas.push_back(data);
+		}
+	}
+
+	if (datas.size() == 0)
+	{
 		return;
 	}
 
-	SPathView path = data->Path;
-	IDevice* device = mFileSystem->FindDevice(path);
+	// get device based on the path of the first selected item because all selected items should
+	// have the same device since they are in the same directory
+	IDevice* device = mFileSystem->FindDevice(datas[0]->Path);
 	if (device == mFileSystem->FindDevice("/"))
 	{
-		SPathView relPath = path.RelativeTo("/");
-		std::filesystem::path fullPath =
-			reinterpret_cast<noire::fs::CNativeDevice*>(device)->RootDirectory() / relPath.String();
-
 		wxFileDataObject dataObj{};
-		dataObj.AddFile(fullPath.c_str());
-		wxLogDebug("> Dragging native file '%ls'", fullPath.c_str());
+		const std::filesystem::path& rootPath =
+			reinterpret_cast<noire::fs::CNativeDevice*>(device)->RootDirectory();
+		for (SDirectoryItemData* d : datas)
+		{
+			SPathView relPath = d->Path.RelativeTo("/");
+			std::filesystem::path fullPath = rootPath / relPath.String();
+
+			dataObj.AddFile(fullPath.c_str());
+		}
 		wxDropSource src{ dataObj, this };
 		src.DoDragDrop(wxDrag_CopyOnly);
 	}
 	else
 	{
-		wxLogDebug("> Dragging virtual file '%.*s'",
-				   path.String().size(),
-				   path.String().data());
+		std::vector<SPathView> paths{};
+		paths.reserve(datas.size());
+		std::transform(datas.begin(),
+					   datas.end(),
+					   std::back_inserter(paths),
+					   [](SDirectoryItemData* d) { return SPathView{ d->Path }; });
 
-		CVirtualFileDataObject dataObj{ mFileSystem, path };
+		CVirtualFileDataObject dataObj{ mFileSystem, paths };
 
 		wxDropSource src{ dataObj, this };
 		src.DoDragDrop(wxDrag_CopyOnly);

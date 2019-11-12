@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <formats/fs/Path.h>
+#include <vector>
 #include <wx/dataobj.h>
 
 namespace noire::fs
@@ -11,7 +12,8 @@ namespace noire::fs
 class CVirtualFileDataObject : public wxDataObject
 {
 public:
-	CVirtualFileDataObject(noire::fs::CFileSystem* fileSystem, noire::fs::SPathView path);
+	CVirtualFileDataObject(noire::fs::CFileSystem* fileSystem,
+						   const std::vector<noire::fs::SPathView>& paths);
 
 	void GetAllFormats(wxDataFormat* formats, Direction dir = Get) const override;
 	bool GetDataHere(const wxDataFormat& format, void* buff) const override;
