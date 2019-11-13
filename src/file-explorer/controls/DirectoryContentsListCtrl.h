@@ -7,7 +7,7 @@
 #include <wx/event.h>
 #include <wx/listctrl.h>
 
-class wxMenu;
+class wxDataObject;
 
 namespace noire
 {
@@ -50,6 +50,7 @@ public:
 	void OnItemContextMenu(wxListEvent& event);
 	void OnItemActivated(wxListEvent& event);
 	void OnBeginDrag(wxListEvent& event);
+	void OnCopy(wxCommandEvent& event);
 
 private:
 	void ShowItemContextMenu();
@@ -57,6 +58,8 @@ private:
 	void UpdateContents();
 	void DeleteAllItemsData();
 	void OpenFile(noire::fs::SPathView filePath);
+
+	wxDataObject* CreateSelectedFilesDataObject() const;
 
 	noire::fs::CFileSystem* mFileSystem;
 	noire::fs::SPath mDirPath;

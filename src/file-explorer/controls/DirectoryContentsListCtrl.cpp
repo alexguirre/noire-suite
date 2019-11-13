@@ -12,7 +12,9 @@
 #include <formats/fs/NativeDevice.h>
 #include <gsl/gsl>
 #include <vector>
+#include <wx/clipbrd.h>
 #include <wx/dnd.h>
+#include <wx/menu.h>
 #include <wx/msgdlg.h>
 #include <wx/wx.h>
 
@@ -80,6 +82,13 @@ CDirectoryContentsListCtrl::CDirectoryContentsListCtrl(wxWindow* parent,
 	BuildColumns();
 
 	Bind(wxEVT_LIST_BEGIN_DRAG, &CDirectoryContentsListCtrl::OnBeginDrag, this);
+	Bind(wxEVT_MENU, &CDirectoryContentsListCtrl::OnCopy, this, wxID_COPY);
+
+	// wxID_COPY
+	std::array<wxAcceleratorEntry, 1> entries{};
+	entries[0].Set(wxACCEL_CTRL, 'C', wxID_COPY);
+
+	SetAcceleratorTable({ entries.size(), entries.data() });
 }
 
 CDirectoryContentsListCtrl::~CDirectoryContentsListCtrl()
@@ -140,61 +149,33 @@ void CDirectoryContentsListCtrl::OnBeginDrag(wxListEvent& event)
 {
 	wxLogDebug(__FUNCTION__);
 
-	std::vector<SDirectoryItemData*> datas{};
-	long item = -1;
-	while ((item = GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED)) != wxNOT_FOUND)
+	if (std::unique_ptr<wxDataObject> dataObj{ CreateSelectedFilesDataObject() }; dataObj)
 	{
-		wxLogDebug("> '%s'", GetItemText(item));
-		SDirectoryItemData* data = reinterpret_cast<SDirectoryItemData*>(GetItemData(item));
-		if (data && data->Type == EDirectoryEntryType::File)
-		{
-			datas.push_back(data);
-		}
-	}
-
-	if (datas.size() == 0)
-	{
-		return;
-	}
-
-	// get device based on the path of the first selected item because all selected items should
-	// have the same device since they are in the same directory
-	IDevice* device = mFileSystem->FindDevice(datas[0]->Path);
-	if (device == mFileSystem->FindDevice("/"))
-	{
-		wxFileDataObject dataObj{};
-		const std::filesystem::path& rootPath =
-			reinterpret_cast<noire::fs::CNativeDevice*>(device)->RootDirectory();
-		for (SDirectoryItemData* d : datas)
-		{
-			SPathView relPath = d->Path.RelativeTo("/");
-			std::filesystem::path fullPath = rootPath / relPath.String();
-
-			dataObj.AddFile(fullPath.c_str());
-		}
-		wxDropSource src{ dataObj, this };
+		wxDropSource src{ *dataObj, this };
 		src.DoDragDrop(wxDrag_CopyOnly);
 	}
-	else
+	event.Skip();
+}
+
+void CDirectoryContentsListCtrl::OnCopy(wxCommandEvent& event)
+{
+	wxLogDebug(__FUNCTION__);
+
+	if (wxDataObject* dataObj = CreateSelectedFilesDataObject(); dataObj && wxTheClipboard->Open())
 	{
-		std::vector<SPathView> paths{};
-		paths.reserve(datas.size());
-		std::transform(datas.begin(),
-					   datas.end(),
-					   std::back_inserter(paths),
-					   [](SDirectoryItemData* d) { return SPathView{ d->Path }; });
-
-		CVirtualFileDataObject dataObj{ mFileSystem, paths };
-
-		wxDropSource src{ dataObj, this };
-		src.DoDragDrop(wxDrag_CopyOnly);
+		// wxTheClipboard takes ownership of the wxDataObject so don't delete it
+		wxTheClipboard->SetData(dataObj);
+		wxTheClipboard->Close();
 	}
 	event.Skip();
 }
 
 void CDirectoryContentsListCtrl::ShowItemContextMenu()
 {
-	// PopupMenu(mItemContextMenu.get());
+	wxMenu menu{};
+	menu.Append(wxID_COPY);
+
+	PopupMenu(&menu);
 }
 
 void CDirectoryContentsListCtrl::BuildColumns()
@@ -367,5 +348,57 @@ void CDirectoryContentsListCtrl::OpenFile(noire::fs::SPathView filePath)
 							 { filePath.String().data(), filePath.String().size() },
 							 img);
 		imgWin->Show();
+	}
+}
+
+wxDataObject* CDirectoryContentsListCtrl::CreateSelectedFilesDataObject() const
+{
+	wxLogDebug(__FUNCTION__);
+
+	std::vector<SDirectoryItemData*> datas{};
+	long item = -1;
+	while ((item = GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED)) != wxNOT_FOUND)
+	{
+		wxLogDebug("> '%s'", GetItemText(item));
+		SDirectoryItemData* data = reinterpret_cast<SDirectoryItemData*>(GetItemData(item));
+		if (data && data->Type == EDirectoryEntryType::File)
+		{
+			datas.push_back(data);
+		}
+	}
+
+	if (datas.size() == 0)
+	{
+		return nullptr;
+	}
+
+	// get device based on the path of the first selected item because all selected items should
+	// have the same device since they are in the same directory
+	IDevice* device = mFileSystem->FindDevice(datas[0]->Path);
+	if (device == mFileSystem->FindDevice("/"))
+	{
+		wxFileDataObject* dataObj = new wxFileDataObject;
+		const std::filesystem::path& rootPath =
+			reinterpret_cast<noire::fs::CNativeDevice*>(device)->RootDirectory();
+		for (SDirectoryItemData* d : datas)
+		{
+			SPathView relPath = d->Path.RelativeTo("/");
+			std::filesystem::path fullPath = rootPath / relPath.String();
+
+			dataObj->AddFile(fullPath.c_str());
+		}
+
+		return dataObj;
+	}
+	else
+	{
+		std::vector<SPathView> paths{};
+		paths.reserve(datas.size());
+		std::transform(datas.begin(),
+					   datas.end(),
+					   std::back_inserter(paths),
+					   [](SDirectoryItemData* d) { return SPathView{ d->Path }; });
+
+		return new CVirtualFileDataObject{ mFileSystem, paths };
 	}
 }
