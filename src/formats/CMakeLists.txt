@@ -4,6 +4,8 @@ file(GLOB FORMATS_SOURCES
     "ContainerFile.cpp"
     "ContainerFile.h"
     "File.h"
+    "Hash.cpp"
+    "Hash.h"
     "TrunkFile.cpp"
     "TrunkFile.h"
     "WADFile.cpp"

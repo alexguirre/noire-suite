@@ -33,7 +33,7 @@ namespace noire
 			const std::uint32_t f2 = mStream.Read<std::uint32_t>();
 			const std::uint32_t f3 = mStream.Read<std::uint32_t>();
 			const std::uint32_t f4 = mStream.Read<std::uint32_t>();
-
+			
 			mEntries.emplace_back(f0, f1, f2, f3, f4);
 		}
 	}

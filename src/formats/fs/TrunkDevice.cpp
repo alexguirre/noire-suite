@@ -1,5 +1,6 @@
 #include "TrunkDevice.h"
 #include "FileSystem.h"
+#include "Hash.h"
 #include <array>
 #include <charconv>
 #include <gsl/gsl>
@@ -22,12 +23,15 @@ namespace noire::fs
 											 path.String().data() + path.String().size(),
 											 nameHash,
 											 16);
-		Expects(ec == std::errc{});
+		Expects(ec == std::errc{} || ec == std::errc::invalid_argument);
+		const std::uint32_t nameHash2 = crc32(path.String());
 
 		// check if any entry path is equal to the path or contains it
 		return std::any_of(mTrunkFile.Entries().begin(),
 						   mTrunkFile.Entries().end(),
-						   [nameHash](const STrunkEntry& e) { return e.NameHash == nameHash; });
+						   [nameHash, nameHash2](const STrunkEntry& e) {
+							   return e.NameHash == nameHash || e.NameHash == nameHash2;
+						   });
 	}
 
 	bool CTrunkDevice::FileExists(SPathView filePath) const { return PathExists(filePath); }
@@ -43,11 +47,14 @@ namespace noire::fs
 											 filePath.String().data() + filePath.String().size(),
 											 nameHash,
 											 16);
-		Expects(ec == std::errc{});
+		Expects(ec == std::errc{} || ec == std::errc::invalid_argument);
+		const std::uint32_t nameHash2 = crc32(filePath.String());
 
 		auto it = std::find_if(mTrunkFile.Entries().begin(),
 							   mTrunkFile.Entries().end(),
-							   [nameHash](const STrunkEntry& e) { return e.NameHash == nameHash; });
+							   [nameHash, nameHash2](const STrunkEntry& e) {
+								   return e.NameHash == nameHash || e.NameHash == nameHash2;
+							   });
 		return it->Size;
 	}
 
@@ -58,11 +65,14 @@ namespace noire::fs
 											 path.String().data() + path.String().size(),
 											 nameHash,
 											 16);
-		Expects(ec == std::errc{});
+		Expects(ec == std::errc{} || ec == std::errc::invalid_argument);
+		const std::uint32_t nameHash2 = crc32(path.String());
 
 		auto it = std::find_if(mTrunkFile.Entries().begin(),
 							   mTrunkFile.Entries().end(),
-							   [nameHash](const STrunkEntry& e) { return e.NameHash == nameHash; });
+							   [nameHash, nameHash2](const STrunkEntry& e) {
+								   return e.NameHash == nameHash || e.NameHash == nameHash2;
+							   });
 
 		if (it != mTrunkFile.Entries().end())
 		{
@@ -84,15 +94,8 @@ namespace noire::fs
 		entries.emplace_back(this, SPathView{}, EDirectoryEntryType::Collection); // root
 		for (auto& e : mTrunkFile.Entries())
 		{
-			std::array<char, 16> buffer{};
-			const auto [p, ec] =
-				std::to_chars(buffer.data(), buffer.data() + buffer.size(), e.NameHash, 16);
-			Expects(ec == std::errc{});
-
-			const std::size_t strSize = p - buffer.data();
-			entries.emplace_back(this,
-								 std::string_view{ buffer.data(), strSize },
-								 EDirectoryEntryType::File);
+			std::string str = CHashDatabase::Instance().GetString(e.NameHash);
+			entries.emplace_back(this, std::move(str), EDirectoryEntryType::File);
 		}
 		return entries;
 	}

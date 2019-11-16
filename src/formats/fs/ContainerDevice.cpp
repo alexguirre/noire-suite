@@ -1,5 +1,6 @@
 #include "ContainerDevice.h"
 #include "FileSystem.h"
+#include "Hash.h"
 #include <array>
 #include <charconv>
 #include <gsl/gsl>
@@ -24,13 +25,15 @@ namespace noire::fs
 											 path.String().data() + path.String().size(),
 											 nameHash,
 											 16);
-		Expects(ec == std::errc{});
+		Expects(ec == std::errc{} || ec == std::errc::invalid_argument);
+		const std::uint32_t nameHash2 = crc32(path.String());
 
 		// check if any entry path is equal to the path or contains it
-		return std::any_of(
-			mContainerFile.Entries().begin(),
-			mContainerFile.Entries().end(),
-			[nameHash](const SContainerChunkEntry& e) { return e.NameHash == nameHash; });
+		return std::any_of(mContainerFile.Entries().begin(),
+						   mContainerFile.Entries().end(),
+						   [nameHash, nameHash2](const SContainerChunkEntry& e) {
+							   return e.NameHash == nameHash || e.NameHash == nameHash2;
+						   });
 	}
 
 	bool CContainerDevice::FileExists(SPathView filePath) const { return PathExists(filePath); }
@@ -46,12 +49,14 @@ namespace noire::fs
 											 filePath.String().data() + filePath.String().size(),
 											 nameHash,
 											 16);
-		Expects(ec == std::errc{});
+		Expects(ec == std::errc{} || ec == std::errc::invalid_argument);
+		const std::uint32_t nameHash2 = crc32(filePath.String());
 
-		auto it = std::find_if(
-			mContainerFile.Entries().begin(),
-			mContainerFile.Entries().end(),
-			[nameHash](const SContainerChunkEntry& e) { return e.NameHash == nameHash; });
+		auto it = std::find_if(mContainerFile.Entries().begin(),
+							   mContainerFile.Entries().end(),
+							   [nameHash, nameHash2](const SContainerChunkEntry& e) {
+								   return e.NameHash == nameHash || e.NameHash == nameHash2;
+							   });
 		return it->Size();
 	}
 
@@ -62,12 +67,14 @@ namespace noire::fs
 											 path.String().data() + path.String().size(),
 											 nameHash,
 											 16);
-		Expects(ec == std::errc{});
+		Expects(ec == std::errc{} || ec == std::errc::invalid_argument);
+		const std::uint32_t nameHash2 = crc32(path.String());
 
-		auto it = std::find_if(
-			mContainerFile.Entries().begin(),
-			mContainerFile.Entries().end(),
-			[nameHash](const SContainerChunkEntry& e) { return e.NameHash == nameHash; });
+		auto it = std::find_if(mContainerFile.Entries().begin(),
+							   mContainerFile.Entries().end(),
+							   [nameHash, nameHash2](const SContainerChunkEntry& e) {
+								   return e.NameHash == nameHash || e.NameHash == nameHash2;
+							   });
 
 		if (it != mContainerFile.Entries().end())
 		{
@@ -89,15 +96,8 @@ namespace noire::fs
 		entries.emplace_back(this, SPathView{}, EDirectoryEntryType::Collection); // root
 		for (auto& e : mContainerFile.Entries())
 		{
-			std::array<char, 16> buffer{};
-			const auto [p, ec] =
-				std::to_chars(buffer.data(), buffer.data() + buffer.size(), e.NameHash, 16);
-			Expects(ec == std::errc{});
-
-			const std::size_t strSize = p - buffer.data();
-			entries.emplace_back(this,
-								 std::string_view{ buffer.data(), strSize },
-								 EDirectoryEntryType::File);
+			std::string str = CHashDatabase::Instance().GetString(e.NameHash);
+			entries.emplace_back(this, std::move(str), EDirectoryEntryType::File);
 		}
 		return entries;
 	}
