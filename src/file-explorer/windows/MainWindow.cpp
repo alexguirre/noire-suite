@@ -134,64 +134,31 @@ void CMainWindow::OnExit(wxCommandEvent&)
 void CMainWindow::ChangeRootPath(const std::filesystem::path& path)
 {
 	// TODO: remember last opened folder after closing the application
+	using namespace noire;
+	using namespace noire::fs;
 
-	mFileSystem = std::make_unique<noire::fs::CFileSystem>();
+	mFileSystem = std::make_unique<CFileSystem>();
 
-	mFileSystem->Mount("/", std::make_unique<noire::fs::CNativeDevice>(path));
+	// CContainerDevice
+	mFileSystem->RegisterDeviceType(&TFileTraits<CContainerFile>::IsValid,
+									[](CFileSystem&, IDevice& d, SPathView relPath) {
+										return std::make_unique<CContainerDevice>(d, relPath);
+									});
 
-	// TODO: this scan is way too slow, we should scan lazily, for example only when the users
-	// selects the folder
-	for (auto& e : mFileSystem->GetAllEntries())
-	{
-		if (e.Type != noire::fs::EDirectoryEntryType::File)
-		{
-			continue;
-		}
+	// CWADDevice
+	mFileSystem->RegisterDeviceType(&TFileTraits<WADFile>::IsValid,
+									[](CFileSystem&, IDevice& d, SPathView relPath) {
+										return std::make_unique<CWADDevice>(d, relPath);
+									});
 
-		auto f = mFileSystem->OpenFile(e.Path);
+	// CTrunkDevice
+	mFileSystem->RegisterDeviceType(&TFileTraits<CTrunkFile>::IsValid,
+									[](CFileSystem&, IDevice& d, SPathView relPath) {
+										return std::make_unique<CTrunkDevice>(d, relPath);
+									});
 
-		if (noire::TFileTraits<noire::CContainerFile>::IsValid(*f))
-		{
-			const noire::fs::SPath mountPath = e.Path + noire::fs::CFileSystem::DirectorySeparator;
-			const noire::fs::SPathView parentDevicePath = mFileSystem->GetDeviceMountPath(e.Device);
-			const noire::fs::SPathView relPath = e.Path.RelativeTo(parentDevicePath);
-
-			mFileSystem->Mount(mountPath,
-							   std::make_unique<noire::fs::CContainerDevice>(*e.Device, relPath));
-		}
-		else if (noire::TFileTraits<noire::WADFile>::IsValid(*f))
-		{
-			const noire::fs::SPath mountPath = e.Path + noire::fs::CFileSystem::DirectorySeparator;
-			const noire::fs::SPathView parentDevicePath = mFileSystem->GetDeviceMountPath(e.Device);
-			const noire::fs::SPathView relPath = e.Path.RelativeTo(parentDevicePath);
-
-			mFileSystem->Mount(mountPath,
-							   std::make_unique<noire::fs::CWADDevice>(*e.Device, relPath));
-		}
-	}
-
-	// TODO: remove harcoded path
-	noire::fs::IDevice* wadDevice = mFileSystem->FindDevice("/final/pc/out.wad.pc/");
-	const noire::fs::SPathView wadDevicePath = mFileSystem->GetDeviceMountPath(wadDevice);
-	for (auto& e : wadDevice->GetAllEntries())
-	{
-		if (e.Type != noire::fs::EDirectoryEntryType::File)
-		{
-			continue;
-		}
-
-		auto f = wadDevice->OpenFile(e.Path);
-
-		if (noire::TFileTraits<noire::CTrunkFile>::IsValid(*f))
-		{
-			const noire::fs::SPath mountPath =
-				(wadDevicePath / e.Path) + noire::fs::CFileSystem::DirectorySeparator;
-			const noire::fs::SPathView relPath = e.Path;
-
-			mFileSystem->Mount(mountPath,
-							   std::make_unique<noire::fs::CTrunkDevice>(*e.Device, relPath));
-		}
-	}
+	mFileSystem->EnableDeviceScanning(true);
+	mFileSystem->Mount("/", std::make_unique<CNativeDevice>(path));
 
 	if (mDirTreeCtrl)
 	{

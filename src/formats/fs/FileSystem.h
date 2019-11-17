@@ -2,6 +2,7 @@
 #include "Device.h"
 #include "FileStream.h"
 #include "Path.h"
+#include <functional>
 #include <memory>
 #include <string_view>
 #include <utility>
@@ -9,6 +10,8 @@
 
 namespace noire::fs
 {
+	class CFileSystem;
+
 	struct SMountPoint
 	{
 		SPath Path;
@@ -20,12 +23,29 @@ namespace noire::fs
 		}
 	};
 
+	struct SDeviceType
+	{
+		using ValidatorFunction = std::function<bool(fs::IFileStream&)>;
+		using CreatorFunction =
+			std::function<std::unique_ptr<IDevice>(CFileSystem&,
+												   IDevice& parentDevice,
+												   SPathView pathRelativeToDevice)>;
+
+		ValidatorFunction Validator;
+		CreatorFunction Creator;
+
+		SDeviceType(ValidatorFunction validator, CreatorFunction creator)
+			: Validator{ std::move(validator) }, Creator{ std::move(creator) }
+		{
+		}
+	};
+
 	class CFileSystem
 	{
 	public:
 		static constexpr char DirectorySeparator{ SPath::DirectorySeparator };
 
-		CFileSystem() {}
+		CFileSystem();
 
 		void Mount(SPathView path, std::unique_ptr<IDevice> device);
 		void Unmount(SPathView path);
@@ -46,7 +66,16 @@ namespace noire::fs
 		}
 		SPathView GetDeviceMountPath(const IDevice* device) const;
 
+		bool IsDeviceScanningEnabled() const { return mDeviceScanningEnabled; }
+		void EnableDeviceScanning(bool enable) { mDeviceScanningEnabled = enable; }
+		void RegisterDeviceType(SDeviceType::ValidatorFunction validator,
+								SDeviceType::CreatorFunction creator);
+
 	private:
+		void ScanForDevices(SPathView path);
+
+		bool mDeviceScanningEnabled;
+		std::vector<SDeviceType> mDeviceTypes;
 		std::vector<SMountPoint> mMounts;
 	};
 }

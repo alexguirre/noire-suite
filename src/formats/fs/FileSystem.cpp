@@ -4,31 +4,45 @@
 
 namespace noire::fs
 {
+	CFileSystem::CFileSystem() : mDeviceScanningEnabled{ false }, mDeviceTypes{}, mMounts{} {}
+
 	void CFileSystem::Mount(SPathView path, std::unique_ptr<IDevice> device)
 	{
 		Expects(path.IsDirectory());
 		Expects(device);
 
+		bool exists = false;
 		for (auto& m : mMounts)
 		{
 			if (m.Path == path)
 			{
 				m.Device = std::move(device);
-				return;
+				exists = true;
+				break;
 			}
 		}
 
-		// no mount with same path already exists, add new one
-		mMounts.emplace_back(path, std::move(device));
+		if (!exists)
+		{
+			// no mount with same path already exists, add new one
+			mMounts.emplace_back(path, std::move(device));
 
-		// sort the mounts, longest paths first
-		std::sort(mMounts.begin(), mMounts.end(), [](auto& a, auto& b) {
-			return a.Path.String().size() > b.Path.String().size();
-		});
+			// sort the mounts, longest paths first
+			std::sort(mMounts.begin(), mMounts.end(), [](auto& a, auto& b) {
+				return a.Path.String().size() > b.Path.String().size();
+			});
+		}
+
+		if (mDeviceScanningEnabled)
+		{
+			ScanForDevices(path);
+		}
 	}
 
 	void CFileSystem::Unmount(SPathView path)
 	{
+		// TODO: should CFileSystem::Unmount unmount any child mount points (mounts that have `path`
+		// in their path)?
 		mMounts.erase(std::remove_if(mMounts.begin(),
 									 mMounts.end(),
 									 [path](auto& m) { return m.Path == path; }),
@@ -149,5 +163,42 @@ namespace noire::fs
 		Expects(it != mMounts.end());
 
 		return it->Path;
+	}
+
+	void CFileSystem::RegisterDeviceType(SDeviceType::ValidatorFunction validator,
+										 SDeviceType::CreatorFunction creator)
+	{
+		mDeviceTypes.emplace_back(std::move(validator), std::move(creator));
+	}
+
+	void CFileSystem::ScanForDevices(SPathView path)
+	{
+		// TODO: this scan is probably way too slow, we should scan lazily, for example only when
+		// the users selects the folder
+		Expects(path.IsDirectory() && DirectoryExists(path));
+
+		IDevice* device = FindDevice(path);
+		std::vector<SDirectoryEntry> entries = device->GetAllEntries();
+		for (SDirectoryEntry& e : entries)
+		{
+			if (e.Type != noire::fs::EDirectoryEntryType::File)
+			{
+				continue;
+			}
+
+			auto f = device->OpenFile(e.Path);
+
+			auto it = std::find_if(mDeviceTypes.begin(), mDeviceTypes.end(), [&f](SDeviceType& d) {
+				return d.Validator(*f);
+			});
+
+			if (it != mDeviceTypes.end())
+			{
+				const noire::fs::SPath mountPath =
+					(path / e.Path) + noire::fs::CFileSystem::DirectorySeparator;
+
+				Mount(mountPath, it->Creator(*this, *device, e.Path));
+			}
+		}
 	}
 }
