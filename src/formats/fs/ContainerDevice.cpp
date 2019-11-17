@@ -6,7 +6,6 @@
 #include <gsl/gsl>
 #include <string_view>
 #include <unordered_set>
-#include <Windows.h>
 
 namespace noire::fs
 {
