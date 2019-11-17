@@ -30,6 +30,8 @@ namespace noire::fs
 	class IDevice
 	{
 	public:
+		virtual ~IDevice() = default;
+
 		virtual bool PathExists(SPathView path) const = 0;
 		virtual bool FileExists(SPathView filePath) const = 0;
 		virtual bool DirectoryExists(SPathView dirPath) const = 0;
