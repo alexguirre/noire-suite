@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <formats/Hash.h>
 #include <formats/WADFile.h>
 #include <formats/fs/NativeDevice.h>
 #include <gsl/gsl>
@@ -327,27 +328,82 @@ static wxImage CreateImageFromDDS(gsl::span<std::byte> ddsData)
 	return img;
 }
 
-void CDirectoryContentsListCtrl::OpenFile(noire::fs::SPathView filePath)
+void CDirectoryContentsListCtrl::OpenFile(SPathView filePath)
 {
-	std::uint32_t headerMagic;
-	std::unique_ptr<IFileStream> file = mFileSystem->OpenFile(filePath);
-	file->Read(&headerMagic, sizeof(headerMagic));
-
-	if (headerMagic == 0x20534444) // == 'DDS '
+	if (filePath.Name() == "uniquetexturevram")
 	{
-		const std::size_t size = file->Size();
+		// TODO: move this loading somewhere else, possibly to noire-formats
+		// TODO: show all textures in the same window
+		SPath mainPath = filePath.Parent() / "uniquetexturemain";
+		Expects(mFileSystem->FileExists(mainPath)); // TODO: 'uniquetexturemain' may not exist along
+													// with a 'uniquetexturevram' file
+		std::unique_ptr<IFileStream> mainStream = mFileSystem->OpenFile(mainPath);
+		std::unique_ptr<IFileStream> vramStream = mFileSystem->OpenFile(filePath);
+		const std::size_t vramStreamSize = vramStream->Size();
 
-		std::unique_ptr<std::byte[]> buffer = std::make_unique<std::byte[]>(size);
-		file->Seek(0);
-		file->Read(buffer.get(), size);
+		mainStream->Read<std::uint32_t>(); // these 4 bytes are used by the game at runtime to
+										   // indicate if it already loaded the texture, the file
+										   // should always have 0 here
 
-		const wxImage img = CreateImageFromDDS({ buffer.get(), gsl::narrow<std::ptrdiff_t>(size) });
-		CImageWindow* imgWin =
-			new CImageWindow(this,
-							 wxID_ANY,
-							 { filePath.String().data(), filePath.String().size() },
-							 img);
-		imgWin->Show();
+		// read entries
+		const std::uint32_t textureCount = mainStream->Read<std::uint32_t>();
+		struct TextureEntry
+		{
+			std::uint32_t Offset;
+			std::uint32_t UnkZero;
+			std::uint32_t NameHash;
+		};
+		std::vector<TextureEntry> entries{};
+		entries.reserve(textureCount);
+		for (std::size_t i = 0; i < textureCount; i++)
+		{
+			entries.emplace_back(mainStream->Read<TextureEntry>());
+		}
+
+		// open a window for each texture
+		for (std::size_t i = 0; i < entries.size(); i++)
+		{
+			const TextureEntry& e = entries[i];
+			// this expects the entries to be sorted by offset, not sure if that is always the case
+			const std::size_t size = (i < (entries.size() - 1)) ?
+										 (entries[i + 1].Offset - e.Offset) :
+										 (vramStreamSize - e.Offset);
+			std::unique_ptr<std::byte[]> buffer = std::make_unique<std::byte[]>(size);
+			vramStream->Seek(e.Offset);
+			vramStream->Read(buffer.get(), size);
+
+			const wxImage img =
+				CreateImageFromDDS({ buffer.get(), gsl::narrow<std::ptrdiff_t>(size) });
+
+			std::string title = noire::CHashDatabase::Instance().GetString(e.NameHash);
+			title += " | " + std::string{ filePath.String() };
+			CImageWindow* imgWin = new CImageWindow(this, wxID_ANY, title, img);
+			imgWin->Show();
+		}
+	}
+	else
+	{
+		std::uint32_t headerMagic;
+		std::unique_ptr<IFileStream> file = mFileSystem->OpenFile(filePath);
+		file->Read(&headerMagic, sizeof(headerMagic));
+
+		if (headerMagic == 0x20534444) // == 'DDS '
+		{
+			const std::size_t size = file->Size();
+
+			std::unique_ptr<std::byte[]> buffer = std::make_unique<std::byte[]>(size);
+			file->Seek(0);
+			file->Read(buffer.get(), size);
+
+			const wxImage img =
+				CreateImageFromDDS({ buffer.get(), gsl::narrow<std::ptrdiff_t>(size) });
+			CImageWindow* imgWin =
+				new CImageWindow(this,
+								 wxID_ANY,
+								 { filePath.String().data(), filePath.String().size() },
+								 img);
+			imgWin->Show();
+		}
 	}
 }
 
