@@ -5,40 +5,72 @@
 #include <charconv>
 #include <gsl/gsl>
 #include <string_view>
+#include <unordered_set>
+#include <Windows.h>
 
 namespace noire::fs
 {
-	// TODO: reverse name hashes
-
 	CContainerDevice::CContainerDevice(IDevice& parentDevice, SPathView containerFilePath)
 		: mParent{ parentDevice },
 		  mContainerFilePath{ (Expects(mParent.FileExists(containerFilePath)), containerFilePath) },
 		  mContainerFileStream{ mParent.OpenFile(mContainerFilePath) },
-		  mContainerFile{ *mContainerFileStream }
+		  mContainerFile{ *mContainerFileStream },
+		  mEntries{}
 	{
+		CreateEntries();
 	}
 
 	bool CContainerDevice::PathExists(SPathView path) const
 	{
-		std::uint32_t nameHash;
-		const auto [_, ec] = std::from_chars(path.String().data(),
-											 path.String().data() + path.String().size(),
-											 nameHash,
-											 16);
-		Expects(ec == std::errc{} || ec == std::errc::invalid_argument);
-		const std::uint32_t nameHash2 = crc32(path.String());
+		if (path.IsFile())
+		{
+			std::uint32_t nameHash;
+			const auto [_, ec] = std::from_chars(path.String().data(),
+												 path.String().data() + path.String().size(),
+												 nameHash,
+												 16);
+			Expects(ec == std::errc{} || ec == std::errc::invalid_argument);
+			const std::uint32_t nameHash2 = crc32(path.String());
 
-		// check if any entry path is equal to the path or contains it
-		return std::any_of(mContainerFile.Entries().begin(),
-						   mContainerFile.Entries().end(),
-						   [nameHash, nameHash2](const SContainerChunkEntry& e) {
-							   return e.NameHash == nameHash || e.NameHash == nameHash2;
-						   });
+			// check if any entry path is equal to the path or contains it
+			return std::any_of(mContainerFile.Entries().begin(),
+							   mContainerFile.Entries().end(),
+							   [nameHash, nameHash2](const SContainerChunkEntry& e) {
+								   return e.NameHash == nameHash || e.NameHash == nameHash2;
+							   });
+		}
+		else
+		{
+			for (auto& e : mEntries)
+			{
+				if (e.Type != EDirectoryEntryType::File && e.Path == path)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
 	}
 
-	bool CContainerDevice::FileExists(SPathView filePath) const { return PathExists(filePath); }
+	bool CContainerDevice::FileExists(SPathView filePath) const
+	{
+		Expects(filePath.IsFile());
 
-	bool CContainerDevice::DirectoryExists(SPathView dirPath) const { return dirPath.IsEmpty(); }
+		return PathExists(filePath);
+	}
+
+	bool CContainerDevice::DirectoryExists(SPathView dirPath) const
+	{
+		if (dirPath.IsEmpty()) // empty path represent root of this device
+		{
+			return true;
+		}
+
+		Expects(dirPath.IsDirectory());
+
+		return PathExists(dirPath);
+	}
 
 	FileStreamSize CContainerDevice::FileSize(SPathView filePath)
 	{
@@ -89,25 +121,49 @@ namespace noire::fs
 		}
 	}
 
-	std::vector<SDirectoryEntry> CContainerDevice::GetAllEntries()
-	{
-		std::vector<SDirectoryEntry> entries{};
-		entries.reserve(mContainerFile.Entries().size() + 1);
-		entries.emplace_back(this, SPathView{}, EDirectoryEntryType::Collection); // root
-		for (auto& e : mContainerFile.Entries())
-		{
-			std::string str = CHashDatabase::Instance().GetString(e.NameHash);
-			entries.emplace_back(this, std::move(str), EDirectoryEntryType::File);
-		}
-		return entries;
-	}
+	std::vector<SDirectoryEntry> CContainerDevice::GetAllEntries() { return mEntries; }
 
 	std::vector<SDirectoryEntry> CContainerDevice::GetEntries(SPathView dirPath)
 	{
 		Expects(DirectoryExists(dirPath));
 
-		auto e = GetAllEntries();
-		e.erase(e.begin()); // remove root entry
-		return e;
+		std::vector<SDirectoryEntry> entries{};
+		for (auto& e : mEntries)
+		{
+			if (!e.Path.IsEmpty() && e.Path.Parent() == dirPath)
+			{
+				entries.emplace_back(this, e.Path, e.Type);
+			}
+		}
+
+		return entries;
+	}
+
+	void CContainerDevice::CreateEntries()
+	{
+		mEntries.emplace_back(this, SPathView{}, EDirectoryEntryType::Collection); // root
+
+		std::unordered_set<std::string_view> dirs{};
+		const auto getDirectoriesFromPath = [](SPathView path,
+											   std::unordered_set<std::string_view>& directories) {
+			SPathView p = path.IsFile() ? path.Parent() : path;
+			while (!p.IsEmpty() && !p.IsRoot())
+			{
+				directories.emplace(p.String());
+				p = p.Parent();
+			}
+		};
+
+		for (auto& e : mContainerFile.Entries())
+		{
+			std::string str = CHashDatabase::Instance().GetString(e.NameHash);
+			mEntries.emplace_back(this, std::move(str), EDirectoryEntryType::File);
+			getDirectoriesFromPath(mEntries.back().Path, dirs);
+		}
+
+		for (std::string_view d : dirs)
+		{
+			mEntries.emplace_back(this, d, EDirectoryEntryType::Directory);
+		}
 	}
 }

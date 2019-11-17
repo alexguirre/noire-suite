@@ -3,6 +3,7 @@
 #include "Device.h"
 #include "FileStream.h"
 #include <memory>
+#include <vector>
 
 namespace noire::fs
 {
@@ -13,8 +14,8 @@ namespace noire::fs
 
 		CContainerDevice(const CContainerDevice&) = delete;
 		CContainerDevice& operator=(const CContainerDevice&) = delete;
-		CContainerDevice(CContainerDevice&&) = default;
-		CContainerDevice& operator=(CContainerDevice&&) = default;
+		CContainerDevice(CContainerDevice&&) = delete;
+		CContainerDevice& operator=(CContainerDevice&&) = delete;
 
 		bool PathExists(SPathView path) const override;
 		bool FileExists(SPathView filePath) const override;
@@ -25,9 +26,12 @@ namespace noire::fs
 		std::vector<SDirectoryEntry> GetEntries(SPathView dirPath) override;
 
 	private:
+		void CreateEntries();
+
 		IDevice& mParent;
 		SPath mContainerFilePath;
 		std::unique_ptr<IFileStream> mContainerFileStream;
 		CContainerFile mContainerFile;
+		std::vector<SDirectoryEntry> mEntries;
 	};
 }

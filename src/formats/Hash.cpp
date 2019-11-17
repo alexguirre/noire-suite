@@ -51,14 +51,7 @@ namespace noire
 		std::uint32_t hash = inHash;
 		for (std::size_t i = 0; i < str.size(); ++i)
 		{
-			// tmp hack as ContainerDevice and TrunkDevice don't handle directories yet
-			char c = str[i];
-			if (c == '@')
-			{
-				c = '/';
-			}
-
-			hash = crc32Table[c ^ (hash & 0xFF)] ^ (hash >> 8);
+			hash = crc32Table[str[i] ^ (hash & 0xFF)] ^ (hash >> 8);
 		}
 
 		return hash;
@@ -94,13 +87,11 @@ namespace noire
 
 	void CHashDatabase::Load(const std::filesystem::path& dbPath)
 	{
+		auto fp = std::filesystem::absolute(dbPath);
 		std::ifstream f{ dbPath, std::ios::in };
 
 		for (std::string line; std::getline(f, line);)
 		{
-			// tmp hack as ContainerDevice and TrunkDevice don't handle directories yet
-			std::replace(line.begin(), line.end(), '/', '@');
-
 			std::uint32_t hash = crc32(line);
 			mHashToStr.try_emplace(hash, line);
 
