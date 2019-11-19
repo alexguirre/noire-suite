@@ -10,6 +10,7 @@
 #include <formats/WADFile.h>
 #include <formats/fs/ContainerDevice.h>
 #include <formats/fs/NativeDevice.h>
+#include <formats/fs/ShaderProgramsDevice.h>
 #include <formats/fs/TrunkDevice.h>
 #include <formats/fs/WADDevice.h>
 #include <gsl/gsl>
@@ -25,10 +26,10 @@ CMainWindow::CMainWindow()
 	  mDirTreeCtrl{ nullptr },
 	  mDirContentsListCtrl{ nullptr }
 {
-#if _DEBUG
+	#if _DEBUG
 	// hardcoded path to aid in development as the last opened folder is not saved yet
 	ChangeRootPath("E:\\Rockstar Games\\L.A. Noire Complete Edition\\");
-#endif
+	#endif
 
 	// construct menu bar
 	{
@@ -155,6 +156,12 @@ void CMainWindow::ChangeRootPath(const std::filesystem::path& path)
 	mFileSystem->RegisterDeviceType(&TFileTraits<CTrunkFile>::IsValid,
 									[](CFileSystem&, IDevice& d, SPathView relPath) {
 										return std::make_unique<CTrunkDevice>(d, relPath);
+									});
+
+	// CShaderProgramsDevice
+	mFileSystem->RegisterDeviceType(&TFileTraits<CShaderProgramsFile>::IsValid,
+									[](CFileSystem&, IDevice& d, SPathView relPath) {
+										return std::make_unique<CShaderProgramsDevice>(d, relPath);
 									});
 
 	mFileSystem->EnableDeviceScanning(true);
