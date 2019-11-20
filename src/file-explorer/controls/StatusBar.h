@@ -7,6 +7,7 @@ enum class EStatusBarField : int
 {
 	NumberOfItems = 0,
 	SelectedItems,
+	Info,
 
 	Count,
 };
@@ -23,6 +24,7 @@ public:
 
 	void SetNumberOfItems(std::size_t num);
 	void SetSelectedItems(std::size_t num, std::uintmax_t totalByteSize);
+	void SetInfo(const wxString& newText);
 
 private:
 	void SetFieldText(EStatusBarField field, const wxString& newText);

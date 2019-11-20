@@ -3,6 +3,7 @@
 #include <formats/fs/FileSystem.h>
 #include <memory>
 #include <wx/menu.h>
+#include <wx/thread.h>
 #include <wx/wx.h>
 
 class CDirectoryTreeCtrl;
@@ -28,6 +29,7 @@ private:
 	void OnDirectoryTreeSelectionChanged(wxTreeEvent& event);
 	void OnOpenFolder(wxCommandEvent& event);
 	void OnExit(wxCommandEvent& event);
+	void OnFileSystemScanComplated(wxThreadEvent& event);
 
 	void ChangeRootPath(const std::filesystem::path& path);
 

@@ -37,6 +37,11 @@ void CStatusBar::SetSelectedItems(std::size_t num, std::uintmax_t totalByteSize)
 	SetFieldText(EStatusBarField::SelectedItems, str);
 }
 
+void CStatusBar::SetInfo(const wxString& newText)
+{
+	SetFieldText(EStatusBarField::Info, newText);
+}
+
 void CStatusBar::SetFieldText(EStatusBarField field, const wxString& newText)
 {
 	SetStatusText(newText, static_cast<int>(field));

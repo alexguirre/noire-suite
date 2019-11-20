@@ -14,10 +14,16 @@
 #include <formats/fs/TrunkDevice.h>
 #include <formats/fs/WADDevice.h>
 #include <gsl/gsl>
+#include <processthreadsapi.h>
+#include <thread>
 #include <wx/artprov.h>
 #include <wx/button.h>
 #include <wx/splitter.h>
 #include <wx/textctrl.h>
+
+wxDECLARE_EVENT(EVT_FILE_SYSTEM_SCAN_COMPLETED, wxThreadEvent);
+
+wxDEFINE_EVENT(EVT_FILE_SYSTEM_SCAN_COMPLETED, wxThreadEvent);
 
 CMainWindow::CMainWindow()
 	: wxFrame(nullptr, wxID_ANY, "noire-suite - File Explorer"),
@@ -26,11 +32,6 @@ CMainWindow::CMainWindow()
 	  mDirTreeCtrl{ nullptr },
 	  mDirContentsListCtrl{ nullptr }
 {
-	#if _DEBUG
-	// hardcoded path to aid in development as the last opened folder is not saved yet
-	ChangeRootPath("E:\\Rockstar Games\\L.A. Noire Complete Edition\\");
-	#endif
-
 	// construct menu bar
 	{
 		wxMenu* fileMenu = new wxMenu();
@@ -81,6 +82,12 @@ CMainWindow::CMainWindow()
 
 	Bind(wxEVT_MENU, &CMainWindow::OnOpenFolder, this, MenuBarOpenFolderId);
 	Bind(wxEVT_MENU, &CMainWindow::OnExit, this, wxID_EXIT);
+	Bind(EVT_FILE_SYSTEM_SCAN_COMPLETED, &CMainWindow::OnFileSystemScanComplated, this);
+
+#if _DEBUG
+	// hardcoded path to aid in development as the last opened folder is not saved yet
+	ChangeRootPath("E:\\Rockstar Games\\L.A. Noire Complete Edition\\");
+#endif
 }
 
 wxToolBar* CMainWindow::OnCreateToolBar(long style, wxWindowID id, const wxString& name)
@@ -138,34 +145,53 @@ void CMainWindow::ChangeRootPath(const std::filesystem::path& path)
 	using namespace noire;
 	using namespace noire::fs;
 
-	mFileSystem = std::make_unique<CFileSystem>();
+	if (CStatusBar* statusBar = reinterpret_cast<CStatusBar*>(GetStatusBar()); statusBar)
+	{
+		statusBar->SetInfo(wxString::Format("Scanning '%ls'...", path.c_str()));
+	}
 
-	// CContainerDevice
-	mFileSystem->RegisterDeviceType(&TFileTraits<CContainerFile>::IsValid,
-									[](CFileSystem&, IDevice& d, SPathView relPath) {
-										return std::make_unique<CContainerDevice>(d, relPath);
-									});
+	std::thread t{ [this, path]() {
+		std::unique_ptr fs = std::make_unique<CFileSystem>();
 
-	// CWADDevice
-	mFileSystem->RegisterDeviceType(&TFileTraits<WADFile>::IsValid,
-									[](CFileSystem&, IDevice& d, SPathView relPath) {
-										return std::make_unique<CWADDevice>(d, relPath);
-									});
+		// CContainerDevice
+		fs->RegisterDeviceType(&TFileTraits<CContainerFile>::IsValid,
+							   [](CFileSystem&, IDevice& d, SPathView relPath) {
+								   return std::make_unique<CContainerDevice>(d, relPath);
+							   });
 
-	// CTrunkDevice
-	mFileSystem->RegisterDeviceType(&TFileTraits<CTrunkFile>::IsValid,
-									[](CFileSystem&, IDevice& d, SPathView relPath) {
-										return std::make_unique<CTrunkDevice>(d, relPath);
-									});
+		// CWADDevice
+		fs->RegisterDeviceType(&TFileTraits<WADFile>::IsValid,
+							   [](CFileSystem&, IDevice& d, SPathView relPath) {
+								   return std::make_unique<CWADDevice>(d, relPath);
+							   });
 
-	// CShaderProgramsDevice
-	mFileSystem->RegisterDeviceType(&TFileTraits<CShaderProgramsFile>::IsValid,
-									[](CFileSystem&, IDevice& d, SPathView relPath) {
-										return std::make_unique<CShaderProgramsDevice>(d, relPath);
-									});
+		// CTrunkDevice
+		fs->RegisterDeviceType(&TFileTraits<CTrunkFile>::IsValid,
+							   [](CFileSystem&, IDevice& d, SPathView relPath) {
+								   return std::make_unique<CTrunkDevice>(d, relPath);
+							   });
 
-	mFileSystem->EnableDeviceScanning(true);
-	mFileSystem->Mount("/", std::make_unique<CNativeDevice>(path));
+		// CShaderProgramsDevice
+		fs->RegisterDeviceType(&TFileTraits<CShaderProgramsFile>::IsValid,
+							   [](CFileSystem&, IDevice& d, SPathView relPath) {
+								   return std::make_unique<CShaderProgramsDevice>(d, relPath);
+							   });
+
+		fs->EnableDeviceScanning(true);
+		fs->Mount("/", std::make_unique<CNativeDevice>(path));
+
+		wxThreadEvent* evt = new wxThreadEvent(EVT_FILE_SYSTEM_SCAN_COMPLETED);
+		evt->SetPayload(fs.release());
+		wxQueueEvent(this, evt);
+	} };
+
+	SetThreadPriority(t.native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
+	t.detach();
+}
+
+void CMainWindow::OnFileSystemScanComplated(wxThreadEvent& event)
+{
+	mFileSystem.reset(event.GetPayload<noire::fs::CFileSystem*>());
 
 	if (mDirTreeCtrl)
 	{
@@ -179,6 +205,7 @@ void CMainWindow::ChangeRootPath(const std::filesystem::path& path)
 
 	if (CStatusBar* statusBar = reinterpret_cast<CStatusBar*>(GetStatusBar()); statusBar)
 	{
+		statusBar->SetInfo("");
 		statusBar->SetFileSystem(mFileSystem.get());
 	}
 }
