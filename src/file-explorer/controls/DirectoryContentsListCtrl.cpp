@@ -9,6 +9,7 @@
 #include <cstring>
 #include <filesystem>
 #include <formats/Hash.h>
+#include <formats/ShaderProgramFile.h>
 #include <formats/WADFile.h>
 #include <formats/fs/NativeDevice.h>
 #include <gsl/gsl>
@@ -330,6 +331,8 @@ static wxImage CreateImageFromDDS(gsl::span<std::byte> ddsData)
 
 void CDirectoryContentsListCtrl::OpenFile(SPathView filePath)
 {
+	using namespace noire;
+
 	if (filePath.Name() == "uniquetexturevram")
 	{
 		// TODO: move this loading somewhere else, possibly to noire-formats
@@ -385,24 +388,49 @@ void CDirectoryContentsListCtrl::OpenFile(SPathView filePath)
 	{
 		std::uint32_t headerMagic;
 		std::unique_ptr<IFileStream> file = mFileSystem->OpenFile(filePath);
-		file->Read(&headerMagic, sizeof(headerMagic));
 
-		if (headerMagic == 0x20534444) // == 'DDS '
+		if (TFileTraits<CShaderProgramFile>::IsValid(*file))
 		{
-			const std::size_t size = file->Size();
+			CShaderProgramFile shaderFile{ *file };
 
-			std::unique_ptr<std::byte[]> buffer = std::make_unique<std::byte[]>(size);
-			file->Seek(0);
-			file->Read(buffer.get(), size);
+			// TODO: create a CShaderProgramFile viewer window
+			wxMessageBox(wxString::Format("Vertex Shader:\n"
+										  "	> Name          = '%s'\n"
+										  "	> Unk08         = %08X\n"
+										  "	> Bytecode Size = %zu\n"
+										  "Pixel Shader:\n"
+										  "	> Name          = '%s'\n"
+										  "	> Unk08         = %08X\n"
+										  "	> Bytecode Size = %zu\n",
+										  shaderFile.VertexShader().Name,
+										  shaderFile.VertexShader().Unk08,
+										  shaderFile.VertexShader().Bytecode.size(),
+										  shaderFile.PixelShader().Name,
+										  shaderFile.PixelShader().Unk08,
+										  shaderFile.PixelShader().Bytecode.size()),
+						 "Shader Program Viewer");
+		}
+		else
+		{
+			file->Read(&headerMagic, sizeof(headerMagic));
 
-			const wxImage img =
-				CreateImageFromDDS({ buffer.get(), gsl::narrow<std::ptrdiff_t>(size) });
-			CImageWindow* imgWin =
-				new CImageWindow(this,
-								 wxID_ANY,
-								 { filePath.String().data(), filePath.String().size() },
-								 img);
-			imgWin->Show();
+			if (headerMagic == 0x20534444) // == 'DDS '
+			{
+				const std::size_t size = file->Size();
+
+				std::unique_ptr<std::byte[]> buffer = std::make_unique<std::byte[]>(size);
+				file->Seek(0);
+				file->Read(buffer.get(), size);
+
+				const wxImage img =
+					CreateImageFromDDS({ buffer.get(), gsl::narrow<std::ptrdiff_t>(size) });
+				CImageWindow* imgWin =
+					new CImageWindow(this,
+									 wxID_ANY,
+									 { filePath.String().data(), filePath.String().size() },
+									 img);
+				imgWin->Show();
+			}
 		}
 	}
 }

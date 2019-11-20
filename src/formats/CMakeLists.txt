@@ -6,6 +6,8 @@ file(GLOB FORMATS_SOURCES
     "File.h"
     "Hash.cpp"
     "Hash.h"
+    "ShaderProgramFile.cpp"
+    "ShaderProgramFile.h"
     "ShaderProgramsFile.cpp"
     "ShaderProgramsFile.h"
     "TrunkFile.cpp"
