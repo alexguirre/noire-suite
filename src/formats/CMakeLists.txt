@@ -58,8 +58,10 @@ target_include_directories(noire-formats-test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
 
 target_link_libraries(noire-formats PRIVATE
     doctest::doctest
+    d3dcompiler
 )
 
 target_link_libraries(noire-formats-test PRIVATE
     doctest::doctest
+    d3dcompiler
 )

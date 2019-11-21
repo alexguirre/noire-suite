@@ -1,9 +1,30 @@
 #include "ShaderProgramFile.h"
 #include <d3d11.h>
+#include <d3dcompiler.h>
 #include <gsl/gsl>
 
 namespace noire
 {
+	std::string CShaderProgramFile::Shader::Disassemble() const
+	{
+		if (ID3DBlob* disassembly = nullptr;
+			SUCCEEDED(D3DDisassemble(Bytecode.data(),
+									 Bytecode.size(),
+									 D3D_DISASM_ENABLE_DEFAULT_VALUE_PRINTS,
+									 "",
+									 &disassembly)))
+		{
+			std::string str = { reinterpret_cast<char*>(disassembly->GetBufferPointer()),
+								disassembly->GetBufferSize() };
+			disassembly->Release();
+			return str;
+		}
+		else
+		{
+			return {};
+		}
+	}
+
 	CShaderProgramFile::CShaderProgramFile(fs::IFileStream& stream)
 		: mVertexShader{}, mPixelShader{}
 	{

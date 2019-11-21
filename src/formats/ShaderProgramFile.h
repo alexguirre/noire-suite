@@ -16,6 +16,8 @@ namespace noire
 			std::string Name;
 			std::uint32_t Unk08;
 			Bytecode Bytecode;
+
+			std::string Disassemble() const;
 		};
 
 		CShaderProgramFile(fs::IFileStream& stream);

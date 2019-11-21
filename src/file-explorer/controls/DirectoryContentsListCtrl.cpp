@@ -398,16 +398,20 @@ void CDirectoryContentsListCtrl::OpenFile(SPathView filePath)
 										  "	> Name          = '%s'\n"
 										  "	> Unk08         = %08X\n"
 										  "	> Bytecode Size = %zu\n"
+										  "%s\n"
 										  "Pixel Shader:\n"
 										  "	> Name          = '%s'\n"
 										  "	> Unk08         = %08X\n"
-										  "	> Bytecode Size = %zu\n",
+										  "	> Bytecode Size = %zu\n"
+										  "%s\n",
 										  shaderFile.VertexShader().Name,
 										  shaderFile.VertexShader().Unk08,
 										  shaderFile.VertexShader().Bytecode.size(),
+										  shaderFile.VertexShader().Disassemble(),
 										  shaderFile.PixelShader().Name,
 										  shaderFile.PixelShader().Unk08,
-										  shaderFile.PixelShader().Bytecode.size()),
+										  shaderFile.PixelShader().Bytecode.size(),
+										  shaderFile.PixelShader().Disassemble()),
 						 "Shader Program Viewer");
 		}
 		else
