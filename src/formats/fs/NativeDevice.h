@@ -35,6 +35,7 @@ namespace noire::fs
 	{
 	public:
 		CNativeFileStream(const std::filesystem::path& path);
+		~CNativeFileStream();
 
 		void Read(void* destBuffer, FileStreamSize count) override;
 		void Seek(FileStreamSize offset) override;
