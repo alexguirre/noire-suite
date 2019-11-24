@@ -40,13 +40,14 @@ namespace noire
 
 	bool CContainerFile::IsValid(fs::IFileStream& stream)
 	{
-		if (stream.Size() <= 12) // min required bytes
+		const fs::FileStreamSize size = stream.Size();
+		if (size <= 12) // min required bytes
 		{
 			return false;
 		}
 
-		const fs::FileStreamSize pos = stream.Size() - 4;
-		if (pos >= stream.Size()) // check incase of underflow
+		const fs::FileStreamSize pos = size - 4;
+		if (pos >= size) // check incase of underflow
 		{
 			return false;
 		}
@@ -54,8 +55,8 @@ namespace noire
 		stream.Seek(pos);
 		const std::uint32_t entriesOffset = stream.Read<std::uint32_t>();
 
-		const fs::FileStreamSize entriesPos = stream.Size() - entriesOffset;
-		if (entriesPos + 4 >= stream.Size()) // +4 as it should be able to read at least 4 bytes
+		const fs::FileStreamSize entriesPos = size - entriesOffset;
+		if (entriesPos + 4 >= size) // +4 as it should be able to read at least 4 bytes
 		{
 			return false;
 		}
