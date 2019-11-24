@@ -26,6 +26,8 @@ file(GLOB FILE_EXPLORER_SOURCES
     "windows/ImageWindow.h"
     "windows/MainWindow.cpp"
     "windows/MainWindow.h"
+    "windows/ShaderProgramWindow.cpp"
+    "windows/ShaderProgramWindow.h"
 )
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${FILE_EXPLORER_SOURCES})
 
@@ -71,6 +73,9 @@ set(VCPKG_LIBS_DIR ${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/lib)
 set(WX_LIBS
     optimized ${VCPKG_LIBS_DIR}/wxbase31u.lib debug ${VCPKG_LIBS_DEBUG_DIR}/wxbase31ud.lib
     optimized ${VCPKG_LIBS_DIR}/wxmsw31u_core.lib debug ${VCPKG_LIBS_DEBUG_DIR}/wxmsw31ud_core.lib
+    optimized ${VCPKG_LIBS_DIR}/wxmsw31u_stc.lib debug ${VCPKG_LIBS_DEBUG_DIR}/wxmsw31ud_stc.lib
+    optimized ${VCPKG_LIBS_DIR}/wxscintilla.lib debug ${VCPKG_LIBS_DEBUG_DIR}/wxscintillad.lib
+    optimized ${VCPKG_LIBS_DIR}/wxmsw31u_propgrid.lib debug ${VCPKG_LIBS_DEBUG_DIR}/wxmsw31ud_propgrid.lib
     optimized ${VCPKG_LIBS_DIR}/libpng16.lib debug ${VCPKG_LIBS_DEBUG_DIR}/libpng16d.lib
     optimized ${VCPKG_LIBS_DIR}/zlib.lib debug ${VCPKG_LIBS_DEBUG_DIR}/zlibd.lib
     comctl32
