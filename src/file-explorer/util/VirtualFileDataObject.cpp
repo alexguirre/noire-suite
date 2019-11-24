@@ -353,7 +353,6 @@ wxIDataObjectImposter::~wxIDataObjectImposter()
 	}
 }
 
-// TODO: support dragging multiple files
 // Based on https://devblogs.microsoft.com/oldnewthing/tag/what-a-drag
 class CVirtualFileComDataObject : public wxIDataObjectImposter
 {
