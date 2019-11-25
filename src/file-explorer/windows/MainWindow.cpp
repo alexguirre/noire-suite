@@ -86,7 +86,7 @@ CMainWindow::CMainWindow()
 
 #if _DEBUG
 	// hardcoded path to aid in development as the last opened folder is not saved yet
-	// ChangeRootPath("E:\\Rockstar Games\\L.A. Noire Complete Edition\\");
+	ChangeRootPath("E:\\Rockstar Games\\L.A. Noire Complete Edition\\");
 #endif
 }
 

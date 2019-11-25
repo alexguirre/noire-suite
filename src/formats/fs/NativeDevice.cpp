@@ -93,20 +93,13 @@ namespace noire::fs
 		return entries;
 	}
 
-	// NOTE: temp variable for debuggin
-	static std::size_t Num{ 0 };
-
 	CNativeFileStream::CNativeFileStream(const stdfs::path& path)
 		: mStream{ path, std::ios::binary | std::ios::in }
 	{
 		Expects(stdfs::is_regular_file(path));
 
 		Ensures(mStream.is_open());
-
-		Num++;
 	}
-
-	CNativeFileStream::~CNativeFileStream() { Num--; }
 
 	void CNativeFileStream::Read(void* destBuffer, FileStreamSize count)
 	{
