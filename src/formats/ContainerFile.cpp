@@ -40,6 +40,8 @@ namespace noire
 
 	bool CContainerFile::IsValid(fs::IFileStream& stream)
 	{
+		const auto resetStreamPos = gsl::finally([&stream]() { stream.Seek(0); });
+
 		const fs::FileStreamSize size = stream.Size();
 		if (size <= 12) // min required bytes
 		{
@@ -63,8 +65,6 @@ namespace noire
 
 		stream.Seek(entriesPos);
 		const std::uint32_t magicValue = stream.Read<std::uint32_t>();
-
-		stream.Seek(0);
 
 		constexpr std::uint32_t ExpectedMagicValue{ 3 };
 		return magicValue == ExpectedMagicValue;

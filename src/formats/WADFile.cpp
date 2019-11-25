@@ -169,6 +169,8 @@ namespace noire
 
 	bool WADFile::IsValid(fs::IFileStream& stream)
 	{
+		const auto resetStreamPos = gsl::finally([&stream]() { stream.Seek(0); });
+
 		if (stream.Size() <= 8) // min required bytes
 		{
 			return false;
@@ -176,7 +178,6 @@ namespace noire
 
 		stream.Seek(0);
 		const std::uint32_t magic = stream.Read<std::uint32_t>();
-		stream.Seek(0);
 		return magic == HeaderMagic;
 	}
 }

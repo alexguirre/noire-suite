@@ -57,6 +57,8 @@ namespace noire
 
 	bool CShaderProgramFile::IsValid(fs::IFileStream& stream)
 	{
+		const auto resetStreamPos = gsl::finally([&stream]() { stream.Seek(0); });
+
 		const fs::FileStreamSize streamSize = stream.Size();
 		if (streamSize <= 16) // min required bytes
 		{
