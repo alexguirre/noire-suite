@@ -10,6 +10,8 @@ namespace noire::fs
 	class IFileStream
 	{
 	public:
+		virtual ~IFileStream() = default;
+
 		virtual void Read(void* destBuffer, FileStreamSize count) = 0;
 		virtual void Seek(FileStreamSize offset) = 0;
 		virtual FileStreamSize Tell() = 0;
