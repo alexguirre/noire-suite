@@ -24,11 +24,10 @@ namespace noire::fs
 		if (path.IsFile())
 		{
 			std::uint32_t nameHash;
-			const auto [_, ec] = std::from_chars(path.String().data(),
-												 path.String().data() + path.String().size(),
-												 nameHash,
-												 16);
-			Expects(ec == std::errc{} || ec == std::errc::invalid_argument);
+			std::from_chars(path.String().data(),
+							path.String().data() + path.String().size(),
+							nameHash,
+							16);
 			const std::uint32_t nameHash2 = crc32(path.String());
 
 			// check if any entry path is equal to the path or contains it
@@ -76,11 +75,10 @@ namespace noire::fs
 		Expects(FileExists(filePath));
 
 		std::uint32_t nameHash;
-		const auto [_, ec] = std::from_chars(filePath.String().data(),
-											 filePath.String().data() + filePath.String().size(),
-											 nameHash,
-											 16);
-		Expects(ec == std::errc{} || ec == std::errc::invalid_argument);
+		std::from_chars(filePath.String().data(),
+						filePath.String().data() + filePath.String().size(),
+						nameHash,
+						16);
 		const std::uint32_t nameHash2 = crc32(filePath.String());
 
 		auto it = std::find_if(mContainerFile.Entries().begin(),
@@ -94,11 +92,10 @@ namespace noire::fs
 	std::unique_ptr<IFileStream> CContainerDevice::OpenFile(SPathView path)
 	{
 		std::uint32_t nameHash;
-		const auto [_, ec] = std::from_chars(path.String().data(),
-											 path.String().data() + path.String().size(),
-											 nameHash,
-											 16);
-		Expects(ec == std::errc{} || ec == std::errc::invalid_argument);
+		std::from_chars(path.String().data(),
+						path.String().data() + path.String().size(),
+						nameHash,
+						16);
 		const std::uint32_t nameHash2 = crc32(path.String());
 
 		auto it = std::find_if(mContainerFile.Entries().begin(),
