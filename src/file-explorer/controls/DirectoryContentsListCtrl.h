@@ -42,7 +42,6 @@ public:
 							   const wxWindowID id,
 							   const wxPoint& pos = wxDefaultPosition,
 							   const wxSize& size = wxDefaultSize);
-	~CDirectoryContentsListCtrl() override;
 
 	void SetFileSystem(noire::fs::CFileSystem* fileSystem);
 	void SetDirectory(noire::fs::SPathView dirPath);
@@ -51,18 +50,20 @@ public:
 	void OnItemActivated(wxListEvent& event);
 	void OnBeginDrag(wxListEvent& event);
 	void OnCopy(wxCommandEvent& event);
+	wxString OnGetItemText(long item, long column) const override;
+	int OnGetItemImage(long item) const override;
 
 private:
 	void ShowItemContextMenu();
 	void BuildColumns();
 	void UpdateContents();
-	void DeleteAllItemsData();
 	void OpenFile(noire::fs::SPathView filePath);
 
 	wxDataObject* CreateSelectedFilesDataObject() const;
 
 	noire::fs::CFileSystem* mFileSystem;
 	noire::fs::SPath mDirPath;
+	std::vector<noire::fs::SDirectoryEntry> mDirEntries;
 
 	wxDECLARE_EVENT_TABLE();
 };

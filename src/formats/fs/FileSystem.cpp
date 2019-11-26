@@ -118,13 +118,10 @@ namespace noire::fs
 
 			if (entry.Type == EDirectoryEntryType::File)
 			{
-				if (auto it = std::find_if(mMounts.begin(),
-										   mMounts.end(),
-										   [&entryFullPath](auto& mount) {
-											   return mount.Path ==
-													  (entryFullPath + DirectorySeparator);
-										   });
-					it != mMounts.end())
+				SPath possibleMountPath = entryFullPath + DirectorySeparator;
+				if (std::find_if(mMounts.begin(), mMounts.end(), [&possibleMountPath](auto& mount) {
+						return mount.Path == possibleMountPath;
+					}) != mMounts.end())
 				{
 					// found a mount with the same path as a file entry, convert it to a collection
 					// entry
