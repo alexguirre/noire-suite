@@ -46,14 +46,6 @@ wxBEGIN_EVENT_TABLE(CDirectoryContentsListCtrl, wxListCtrl)
 wxEND_EVENT_TABLE();
 // clang-format on
 
-struct SDirectoryItemData
-{
-	SPath Path;
-	EDirectoryEntryType Type;
-
-	SDirectoryItemData(SPathView path, EDirectoryEntryType type) : Path{ path }, Type{ type } {}
-};
-
 class CDirectoryItemContextMenu : public wxMenu
 {
 public:
@@ -79,7 +71,10 @@ CDirectoryContentsListCtrl::CDirectoryContentsListCtrl(wxWindow* parent,
 													   const wxWindowID id,
 													   const wxPoint& pos,
 													   const wxSize& size)
-	: wxListCtrl(parent, id, pos, size, wxLC_REPORT), mFileSystem{ nullptr }, mDirPath{}
+	: wxListCtrl(parent, id, pos, size, wxLC_REPORT | wxLC_VIRTUAL),
+	  mFileSystem{ nullptr },
+	  mDirPath{},
+	  mDirEntries{}
 {
 	SetImageList(CImages::Icons(), wxIMAGE_LIST_SMALL);
 	BuildColumns();
@@ -92,11 +87,6 @@ CDirectoryContentsListCtrl::CDirectoryContentsListCtrl(wxWindow* parent,
 	entries[0].Set(wxACCEL_CTRL, 'C', wxID_COPY);
 
 	SetAcceleratorTable({ entries.size(), entries.data() });
-}
-
-CDirectoryContentsListCtrl::~CDirectoryContentsListCtrl()
-{
-	DeleteAllItemsData();
 }
 
 void CDirectoryContentsListCtrl::SetFileSystem(CFileSystem* fileSystem)
@@ -132,11 +122,10 @@ void CDirectoryContentsListCtrl::OnItemContextMenu(wxListEvent& event)
 
 void CDirectoryContentsListCtrl::OnItemActivated(wxListEvent& event)
 {
-	SDirectoryItemData* data = reinterpret_cast<SDirectoryItemData*>(event.GetItem().GetData());
-	Expects(data != nullptr);
+	const SDirectoryEntry& entry = mDirEntries[event.GetIndex()];
 
-	SPathView path = data->Path;
-	if (data->Type == EDirectoryEntryType::File)
+	SPathView path = entry.Path;
+	if (entry.Type == EDirectoryEntryType::File)
 	{
 		OpenFile(path);
 	}
@@ -173,6 +162,62 @@ void CDirectoryContentsListCtrl::OnCopy(wxCommandEvent& event)
 	event.Skip();
 }
 
+wxString CDirectoryContentsListCtrl::OnGetItemText(long item, long column) const
+{
+	constexpr long NameCol{ 0 }, TypeCol{ 1 }, SizeCol{ 2 };
+
+	const SDirectoryEntry& e = mDirEntries[item];
+	if (e.Type == EDirectoryEntryType::File)
+	{
+		switch (column)
+		{
+		case NameCol:
+		{
+			std::string_view name = e.Path.Name();
+			return { name.data(), name.size() };
+		}
+		case TypeCol: return "File";
+		case SizeCol: return BytesToHumanReadable(mFileSystem->FileSize(e.Path));
+		}
+	}
+	else
+	{
+		switch (column)
+		{
+		case NameCol:
+		{
+			std::string_view name = e.Path.Name();
+			return { name.data(), name.size() };
+		}
+		case TypeCol: return "Folder";
+		case SizeCol:
+		{
+			std::string_view path = e.Path.String();
+			return e.Type == EDirectoryEntryType::Collection ?
+					   BytesToHumanReadable(
+						   // remove last '/' and pass it to FileSize
+						   mFileSystem->FileSize(path.substr(0, path.size() - 1))) :
+					   "TBD";
+		}
+		}
+	}
+
+	// should never get here
+	Expects(false);
+}
+
+int CDirectoryContentsListCtrl::OnGetItemImage(long item) const
+{
+	const SDirectoryEntry& e = mDirEntries[item];
+	switch (e.Type)
+	{
+	case EDirectoryEntryType::Directory: return CImages::IconFolder;
+	case EDirectoryEntryType::Collection: return CImages::IconBlueFolder;
+	default:
+	case EDirectoryEntryType::File: return CImages::IconBlankFile;
+	}
+}
+
 void CDirectoryContentsListCtrl::ShowItemContextMenu()
 {
 	wxMenu menu{};
@@ -190,95 +235,45 @@ void CDirectoryContentsListCtrl::BuildColumns()
 
 void CDirectoryContentsListCtrl::UpdateContents()
 {
-	DeleteAllItemsData();
-	DeleteAllItems();
-
 	if (mFileSystem == nullptr || mDirPath.IsEmpty())
 	{
+		SetItemCount(0);
 		return;
 	}
 
 	Freeze();
 	SetCursor(wxCursor{ wxCURSOR_ARROWWAIT });
 
-	long itemId = 0;
-	const auto addItem = [this, &itemId](const wxString& name,
-										 const wxString& type,
-										 const wxString& size,
-										 SDirectoryItemData* data) {
-		wxListItem item{};
-		item.SetId(itemId++);
-		item.SetText(name);
+	mDirEntries = mFileSystem->GetEntries(mDirPath);
 
-		long idx = InsertItem(item);
-		SetItem(idx, 1, type);
-		SetItem(idx, 2, size);
+	// sort the entries so directories appear before files and in alphabetical order
+	std::stable_sort(mDirEntries.begin(),
+					 mDirEntries.end(),
+					 [](const SDirectoryEntry& a, const SDirectoryEntry& b) {
+						 return a.Path.Name() < b.Path.Name();
+					 });
+	std::stable_sort(mDirEntries.begin(),
+					 mDirEntries.end(),
+					 [](const SDirectoryEntry& a, const SDirectoryEntry& b) {
+						 static const auto toOrder = [](EDirectoryEntryType type) -> int {
+							 // get the priority for each entry type
+							 switch (type)
+							 {
+							 case EDirectoryEntryType::Directory: return 0;
+							 case EDirectoryEntryType::Collection: return 1;
+							 default:
+							 case EDirectoryEntryType::File: return 2;
+							 }
+						 };
 
-		SetItemPtrData(idx, reinterpret_cast<wxUIntPtr>(data));
+						 return toOrder(a.Type) < toOrder(b.Type);
+					 });
 
-		int icon = -1;
-		switch (data->Type)
-		{
-		case EDirectoryEntryType::Directory: icon = CImages ::IconFolder; break;
-		case EDirectoryEntryType::Collection: icon = CImages ::IconBlueFolder; break;
-		default:
-		case EDirectoryEntryType::File: icon = CImages::IconBlankFile; break;
-		}
-		SetItemImage(idx, icon);
-	};
-
-	auto entries = mFileSystem->GetEntries(mDirPath);
-	// add directories first
-	for (auto& d : entries)
-	{
-		if (d.Type != EDirectoryEntryType::File)
-		{
-			std::string_view nameView = d.Path.Name();
-
-			wxString name{ nameView.data(), nameView.size() };
-			wxString type{ "Folder" };
-			wxString size{
-				d.Type == EDirectoryEntryType::Collection ?
-					// remove last '/' and pass it to FileSize
-					BytesToHumanReadable(mFileSystem->FileSize(
-						std::string_view{ d.Path.String().data(), d.Path.String().size() - 1 })) :
-					"TBD"
-			};
-			// size.Printf("%u items", d.Files().size() + d.Directories().size());
-
-			addItem(name, type, size, new SDirectoryItemData(d.Path, d.Type));
-		}
-	}
-
-	// add files
-	for (auto& f : entries)
-	{
-		if (f.Type == EDirectoryEntryType::File)
-		{
-			std::string_view nameView = f.Path.Name();
-
-			wxString name{ nameView.data(), nameView.size() };
-			wxString type{ "File" };
-			wxString size{ BytesToHumanReadable(mFileSystem->FileSize(f.Path)) };
-
-			addItem(name, type, size, new SDirectoryItemData(f.Path, f.Type));
-		}
-	}
+	SetItemCount(mDirEntries.size());
+	RefreshItems(0, mDirEntries.size() - 1);
 
 	Thaw();
 	SetCursor(wxCursor{ wxCURSOR_DEFAULT });
-}
-
-void CDirectoryContentsListCtrl::DeleteAllItemsData()
-{
-	for (int i = 0; i < GetItemCount(); i++)
-	{
-		SDirectoryItemData* d = reinterpret_cast<SDirectoryItemData*>(GetItemData(i));
-		if (d)
-		{
-			delete d;
-		}
-	}
 }
 
 static wxImage CreateImageFromDDS(gsl::span<std::byte> ddsData)
@@ -430,34 +425,34 @@ wxDataObject* CDirectoryContentsListCtrl::CreateSelectedFilesDataObject() const
 {
 	wxLogDebug(__FUNCTION__);
 
-	std::vector<SDirectoryItemData*> datas{};
+	std::vector<const SDirectoryEntry*> entries{};
 	long item = -1;
 	while ((item = GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED)) != wxNOT_FOUND)
 	{
 		wxLogDebug("> '%s'", GetItemText(item));
-		SDirectoryItemData* data = reinterpret_cast<SDirectoryItemData*>(GetItemData(item));
-		if (data && data->Type == EDirectoryEntryType::File)
+		const SDirectoryEntry* entry = &mDirEntries[item];
+		if (entry && entry->Type == EDirectoryEntryType::File)
 		{
-			datas.push_back(data);
+			entries.push_back(entry);
 		}
 	}
 
-	if (datas.size() == 0)
+	if (entries.size() == 0)
 	{
 		return nullptr;
 	}
 
 	// get device based on the path of the first selected item because all selected items should
 	// have the same device since they are in the same directory
-	IDevice* device = mFileSystem->FindDevice(datas[0]->Path);
+	IDevice* device = mFileSystem->FindDevice(entries[0]->Path);
 	if (device == mFileSystem->FindDevice("/"))
 	{
 		wxFileDataObject* dataObj = new wxFileDataObject;
 		const std::filesystem::path& rootPath =
 			reinterpret_cast<noire::fs::CNativeDevice*>(device)->RootDirectory();
-		for (SDirectoryItemData* d : datas)
+		for (const SDirectoryEntry* e : entries)
 		{
-			SPathView relPath = d->Path.RelativeTo("/");
+			SPathView relPath = e->Path.RelativeTo("/");
 			std::filesystem::path fullPath = rootPath / relPath.String();
 
 			dataObj->AddFile(fullPath.c_str());
@@ -468,11 +463,11 @@ wxDataObject* CDirectoryContentsListCtrl::CreateSelectedFilesDataObject() const
 	else
 	{
 		std::vector<SPathView> paths{};
-		paths.reserve(datas.size());
-		std::transform(datas.begin(),
-					   datas.end(),
+		paths.reserve(entries.size());
+		std::transform(entries.begin(),
+					   entries.end(),
 					   std::back_inserter(paths),
-					   [](SDirectoryItemData* d) { return SPathView{ d->Path }; });
+					   [](const SDirectoryEntry* e) { return SPathView{ e->Path }; });
 
 		return new CVirtualFileDataObject{ mFileSystem, paths };
 	}
