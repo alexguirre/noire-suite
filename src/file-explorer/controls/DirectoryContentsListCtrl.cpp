@@ -9,10 +9,12 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <formats/AttributeFile.h>
 #include <formats/Hash.h>
 #include <formats/ShaderProgramFile.h>
 #include <formats/WADFile.h>
 #include <formats/fs/NativeDevice.h>
+#include <functional>
 #include <gsl/gsl>
 #include <vector>
 #include <wx/clipbrd.h>
@@ -395,6 +397,31 @@ void CDirectoryContentsListCtrl::OpenFile(SPathView filePath)
 										 title,
 										 std::make_unique<CShaderProgramFile>(*file));
 			shaderWin->Show();
+		}
+		else if (TFileTraits<CAttributeFile>::IsValid(*file))
+		{
+			CAttributeFile atb{ *file };
+			wxString s{};
+			const std::function<void(const SAttributeObject&, std::size_t)> addNames =
+				[&s, &addNames](const SAttributeObject& obj, std::size_t depth) {
+					s += wxString::Format("%*s", depth, "");
+					s += obj.Name;
+					s += '\n';
+
+					if (obj.IsCollection)
+					{
+						for (const SAttributeObject& child : obj.Objects)
+						{
+							addNames(child, depth + 1);
+						}
+					}
+				};
+
+			addNames(atb.Root(), 0);
+
+			wxMessageBox(s,
+						 "Attribute File -" +
+							 wxString{ filePath.String().data(), filePath.String().size() });
 		}
 		else
 		{
