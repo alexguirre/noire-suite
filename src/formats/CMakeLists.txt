@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.12)
 
 file(GLOB FORMATS_SOURCES
+    "AttributeFile.cpp"
+    "AttributeFile.h"
     "ContainerFile.cpp"
     "ContainerFile.h"
     "File.h"
