@@ -3,6 +3,7 @@
 #include "Images.h"
 #include "util/Format.h"
 #include "util/VirtualFileDataObject.h"
+#include "windows/AttributeWindow.h"
 #include "windows/ImageWindow.h"
 #include "windows/ShaderProgramWindow.h"
 #include <IL/il.h>
@@ -400,28 +401,14 @@ void CDirectoryContentsListCtrl::OpenFile(SPathView filePath)
 		}
 		else if (TFileTraits<CAttributeFile>::IsValid(*file))
 		{
-			CAttributeFile atb{ *file };
-			wxString s{};
-			const std::function<void(const SAttributeObject&, std::size_t)> addNames =
-				[&s, &addNames](const SAttributeObject& obj, std::size_t depth) {
-					s += wxString::Format("%*s", depth, "");
-					s += obj.Name;
-					s += '\n';
-
-					if (obj.IsCollection)
-					{
-						for (const SAttributeObject& child : obj.Objects)
-						{
-							addNames(child, depth + 1);
-						}
-					}
-				};
-
-			addNames(atb.Root(), 0);
-
-			wxMessageBox(s,
-						 "Attribute File -" +
-							 wxString{ filePath.String().data(), filePath.String().size() });
+			wxString title =
+				"Attribute - " + wxString{ filePath.String().data(), filePath.String().size() };
+			CAttributeWindow* atbWin =
+				new CAttributeWindow(this,
+									 wxID_ANY,
+									 title,
+									 std::make_unique<CAttributeFile>(*file));
+			atbWin->Show();
 		}
 		else
 		{

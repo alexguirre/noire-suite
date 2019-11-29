@@ -22,6 +22,8 @@ file(GLOB FILE_EXPLORER_SOURCES
     "util/Format.h"
     "util/VirtualFileDataObject.cpp"
     "util/VirtualFileDataObject.h"
+    "windows/AttributeWindow.cpp"
+    "windows/AttributeWindow.h"
     "windows/ImageWindow.cpp"
     "windows/ImageWindow.h"
     "windows/MainWindow.cpp"
