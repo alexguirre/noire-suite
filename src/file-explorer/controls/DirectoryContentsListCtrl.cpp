@@ -3,16 +3,19 @@
 #include "Images.h"
 #include "util/Format.h"
 #include "util/VirtualFileDataObject.h"
+#include "windows/AttributeWindow.h"
 #include "windows/ImageWindow.h"
 #include "windows/ShaderProgramWindow.h"
 #include <IL/il.h>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <formats/AttributeFile.h>
 #include <formats/Hash.h>
 #include <formats/ShaderProgramFile.h>
 #include <formats/WADFile.h>
 #include <formats/fs/NativeDevice.h>
+#include <functional>
 #include <gsl/gsl>
 #include <vector>
 #include <wx/clipbrd.h>
@@ -395,6 +398,17 @@ void CDirectoryContentsListCtrl::OpenFile(SPathView filePath)
 										 title,
 										 std::make_unique<CShaderProgramFile>(*file));
 			shaderWin->Show();
+		}
+		else if (TFileTraits<CAttributeFile>::IsValid(*file))
+		{
+			wxString title =
+				"Attribute - " + wxString{ filePath.String().data(), filePath.String().size() };
+			CAttributeWindow* atbWin =
+				new CAttributeWindow(this,
+									 wxID_ANY,
+									 title,
+									 std::make_unique<CAttributeFile>(*file));
+			atbWin->Show();
 		}
 		else
 		{
