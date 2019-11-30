@@ -6,6 +6,32 @@
 
 namespace noire
 {
+	std::string_view ToString(EAttributePropertyType type)
+	{
+		using namespace std::string_view_literals;
+
+		switch (type)
+		{
+		case EAttributePropertyType::Int32: return "Int32"sv;
+		case EAttributePropertyType::UInt32: return "UInt32"sv;
+		case EAttributePropertyType::Float: return "Float"sv;
+		case EAttributePropertyType::Bool: return "Bool"sv;
+		case EAttributePropertyType::Vec3: return "Vec3"sv;
+		case EAttributePropertyType::Vec2: return "Vec2"sv;
+		case EAttributePropertyType::Mat4: return "Mat4"sv;
+		case EAttributePropertyType::AString: return "AString"sv;
+		case EAttributePropertyType::UInt64: return "UInt64"sv;
+		case EAttributePropertyType::Vec4: return "Vec4"sv;
+		case EAttributePropertyType::UString: return "UString"sv;
+		case EAttributePropertyType::PolyPtr: return "PolyPtr"sv;
+		case EAttributePropertyType::Link: return "Link"sv;
+		case EAttributePropertyType::Bitfield: return "Bitfield"sv;
+		case EAttributePropertyType::Array: return "Array"sv;
+		case EAttributePropertyType::Structure: return "Structure"sv;
+		default: Expects(false);
+		}
+	}
+
 	CAttributeFile::CAttributeFile(fs::IFileStream& stream) : mRoot{ 0, "root", {}, true, {} }
 	{
 		Load(stream);
@@ -140,16 +166,15 @@ namespace noire
 		break;
 		case EAttributePropertyType::Array:
 		{
-			const EAttributePropertyType itemType =
-				static_cast<EAttributePropertyType>(stream.Read<std::uint8_t>());
+			SAttributeProperty::Array arr;
+			arr.ItemType = static_cast<EAttributePropertyType>(stream.Read<std::uint8_t>());
 			const std::size_t itemCount = stream.Read<std::uint16_t>();
-			std::vector<SAttributeProperty> items;
-			items.reserve(itemCount);
+			arr.Items.reserve(itemCount);
 			for (std::size_t i = 0; i < itemCount; i++)
 			{
-				items.emplace_back(std::move(ReadPropertyValue(stream, 0, itemType)));
+				arr.Items.emplace_back(std::move(ReadPropertyValue(stream, 0, arr.ItemType)));
 			}
-			prop.Value = std::move(items);
+			prop.Value = std::move(arr);
 		}
 		break;
 		case EAttributePropertyType::Structure:

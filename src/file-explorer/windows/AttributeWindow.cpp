@@ -74,12 +74,15 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 			[&name](const std::unique_ptr<noire::SAttributeObject>&) -> wxPGProperty* {
 				return new wxStringProperty(name, wxPG_LABEL);
 			},
-			[&name](const std::vector<noire::SAttributeProperty>& v) -> wxPGProperty* {
-				// TODO: show type of array
-				return new wxStringProperty(
-					name,
-					wxPG_LABEL,
-					wxString::Format("%zu %s", v.size(), v.size() == 1 ? "item" : "items"));
+			[&name](const noire::SAttributeProperty::Array& v) -> wxPGProperty* {
+				std::string_view type = noire::ToString(v.ItemType);
+				return new wxStringProperty(name,
+											wxPG_LABEL,
+											wxString::Format("%zu %s (type: %.*s)",
+															 v.Items.size(),
+															 v.Items.size() == 1 ? "item" : "items",
+															 type.size(),
+															 type.data()));
 			} },
 		p.Value);
 
@@ -90,10 +93,10 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 
 	if (p.Type == noire::EAttributePropertyType::Array)
 	{
-		const auto& items = std::get<std::vector<noire::SAttributeProperty>>(p.Value);
-		for (std::size_t i = 0; i < items.size(); i++)
+		const auto& arr = std::get<noire::SAttributeProperty::Array>(p.Value);
+		for (std::size_t i = 0; i < arr.Items.size(); i++)
 		{
-			AppendPropertyToGrid(propGrid, items[i], wxString::Format("[%zu]", i), newProp);
+			AppendPropertyToGrid(propGrid, arr.Items[i], wxString::Format("[%zu]", i), newProp);
 		}
 	}
 	else if (p.Type == noire::EAttributePropertyType::Structure)

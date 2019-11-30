@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -30,6 +31,8 @@ namespace noire
 		Structure = 70,
 	};
 
+	std::string_view ToString(EAttributePropertyType type);
+
 	struct SAttributeObject;
 
 	struct SAttributeProperty
@@ -38,6 +41,11 @@ namespace noire
 		using Vec3 = std::array<float, 3>;
 		using Vec4 = std::array<float, 4>;
 		using Mat4 = std::array<float, 16>;
+		struct Array
+		{
+			EAttributePropertyType ItemType;
+			std::vector<SAttributeProperty> Items;
+		};
 		using ValueVariant = std::variant<std::monostate,
 										  std::int32_t,
 										  std::uint32_t,
@@ -49,7 +57,7 @@ namespace noire
 										  std::string,
 										  std::uint64_t,
 										  Vec4,
-										  std::vector<SAttributeProperty>,
+										  Array,
 										  std::unique_ptr<SAttributeObject>>;
 
 		std::uint32_t NameHash;
