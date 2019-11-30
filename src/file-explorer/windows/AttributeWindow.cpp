@@ -36,10 +36,12 @@ CAttributeWindow::CAttributeWindow(wxWindow* parent,
 
 	SetSizer(mainSizer);
 
-	const std::function<void(const noire::SAttributeObject&, wxString, wxPGProperty*)>
+	const std::function<
+		void(const noire::SAttributeObject&, wxString, wxPGProperty*, wxPGProperty*)>
 		appendObjProps = [propGrid, &appendObjProps](const noire::SAttributeObject& obj,
 													 wxString parentQualifiedName,
-													 wxPGProperty* parent) {
+													 wxPGProperty* parent,
+													 wxPGProperty* actualProp) {
 			if (!parentQualifiedName.IsEmpty())
 			{
 				parentQualifiedName += '.';
@@ -47,23 +49,28 @@ CAttributeWindow::CAttributeWindow(wxWindow* parent,
 			parentQualifiedName += obj.Name;
 
 			wxPGProperty* prop =
-				parent ? propGrid->AppendIn(
-							 parent,
-							 new wxStringProperty(obj.Name, wxPG_LABEL, parentQualifiedName)) :
-						 propGrid->Append(
-							 new wxStringProperty(obj.Name, wxPG_LABEL, parentQualifiedName));
+				actualProp ?
+					actualProp :
+					parent ? propGrid->AppendIn(
+								 parent,
+								 new wxStringProperty(obj.Name, wxPG_LABEL, parentQualifiedName)) :
+							 propGrid->Append(
+								 new wxStringProperty(obj.Name, wxPG_LABEL, parentQualifiedName));
 
-			propGrid->AppendIn(prop, new wxStringProperty("Name", wxPG_LABEL, obj.Name));
+			if (!obj.Name.empty())
+			{
+				propGrid->AppendIn(prop, new wxStringProperty("Name", wxPG_LABEL, obj.Name));
+			}
 			propGrid->AppendIn(prop,
-							   new wxStringProperty(
-								   "Definition",
-								   wxPG_LABEL,
-								   noire::CHashDatabase::Instance().GetString(obj.DefinitionHash)));
+							   new wxStringProperty("Definition",
+													wxPG_LABEL,
+													noire::CHashDatabase::Instance(false).GetString(
+														obj.DefinitionHash)));
 			wxPGProperty* propertiesProp =
 				propGrid->AppendIn(prop, new wxStringProperty("Properties", wxPG_LABEL));
 			for (const noire::SAttributeProperty& p : obj.Properties)
 			{
-				wxString name = noire::CHashDatabase::Instance().GetString(p.NameHash);
+				wxString name = noire::CHashDatabase::Instance(false).GetString(p.NameHash);
 				wxPGProperty* newProp = std::visit(
 					overloaded{
 						[&name](auto) -> wxPGProperty* {
@@ -111,9 +118,24 @@ CAttributeWindow::CAttributeWindow(wxWindow* parent,
 												 v[1],
 												 v[2],
 												 v[3]));
+						},
+						[&name](const std::unique_ptr<noire::SAttributeObject>&) -> wxPGProperty* {
+							return new wxStringProperty(name, wxPG_LABEL);
 						} },
 					p.Value);
-				propGrid->AppendIn(propertiesProp, newProp);
+
+				if (newProp)
+				{
+					newProp = propGrid->AppendIn(propertiesProp, newProp);
+				}
+
+				if (p.Type == noire::EAttributePropertyType::Structure)
+				{
+					appendObjProps(*std::get<std::unique_ptr<noire::SAttributeObject>>(p.Value),
+								   name,
+								   nullptr,
+								   newProp);
+				}
 			}
 
 			if (obj.IsCollection)
@@ -123,13 +145,13 @@ CAttributeWindow::CAttributeWindow(wxWindow* parent,
 
 				for (const noire::SAttributeObject& o : obj.Objects)
 				{
-					appendObjProps(o, parentQualifiedName, objectsProp);
+					appendObjProps(o, parentQualifiedName, objectsProp, nullptr);
 				}
 			}
 		};
 
 	wxPGProperty* topProp = propGrid->Append(new wxPropertyCategory("Attributes"));
-	appendObjProps(mFile->Root(), "", nullptr);
+	appendObjProps(mFile->Root(), "", nullptr, nullptr);
 
 	propGrid->SetPropertyReadOnly(topProp, true);
 	propGrid->CollapseAll();
