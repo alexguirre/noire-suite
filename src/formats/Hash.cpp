@@ -62,7 +62,24 @@ namespace noire
 		return ~crc32Partial(str, inHash);
 	}
 
-	CHashDatabase::CHashDatabase(const std::filesystem::path& dbPath) : mHashToStr{}
+	std::uint32_t crc32LowercasePartial(std::string_view str, std::uint32_t inHash)
+	{
+		std::uint32_t hash = inHash;
+		for (std::size_t i = 0; i < str.size(); ++i)
+		{
+			hash = crc32Table[std::tolower(str[i]) ^ (hash & 0xFF)] ^ (hash >> 8);
+		}
+
+		return hash;
+	}
+
+	std::uint32_t crc32Lowercase(std::string_view str, std::uint32_t inHash)
+	{
+		return ~crc32LowercasePartial(str, inHash);
+	}
+
+	CHashDatabase::CHashDatabase(const std::filesystem::path& dbPath, bool caseSensitive)
+		: mHashToStr{}, mCaseSensitive{ caseSensitive }
 	{
 		Load(dbPath);
 	}
@@ -90,30 +107,49 @@ namespace noire
 		auto fp = std::filesystem::absolute(dbPath);
 		std::ifstream f{ dbPath, std::ios::in };
 
-		for (std::string line; std::getline(f, line);)
+		if (mCaseSensitive)
 		{
-			std::uint32_t hash = crc32(line);
-			mHashToStr.try_emplace(hash, line);
-
-			for (auto& c : line)
+			for (std::string line; std::getline(f, line);)
 			{
-				c = static_cast<char>(std::toupper(c));
-			}
-			hash = crc32(line);
-			mHashToStr.try_emplace(hash, line);
+				std::uint32_t hash = crc32(line);
+				mHashToStr.try_emplace(hash, line);
 
-			for (auto& c : line)
-			{
-				c = static_cast<char>(std::tolower(c));
+				for (auto& c : line)
+				{
+					c = static_cast<char>(std::toupper(c));
+				}
+				hash = crc32(line);
+				mHashToStr.try_emplace(hash, line);
+
+				for (auto& c : line)
+				{
+					c = static_cast<char>(std::tolower(c));
+				}
+				hash = crc32(line);
+				mHashToStr.try_emplace(hash, std::move(line));
 			}
-			hash = crc32(line);
-			mHashToStr.try_emplace(hash, std::move(line));
+		}
+		else
+		{
+			for (std::string line; std::getline(f, line);)
+			{
+				std::uint32_t hash = crc32Lowercase(line);
+				mHashToStr.try_emplace(hash, std::move(line));
+			}
 		}
 	}
 
-	const CHashDatabase& CHashDatabase::Instance()
+	const CHashDatabase& CHashDatabase::Instance(bool caseSensitive)
 	{
-		static CHashDatabase inst{ "hashes.db" };
-		return inst;
+		if (caseSensitive)
+		{
+			static CHashDatabase inst{ "hashes.db", true };
+			return inst;
+		}
+		else
+		{
+			static CHashDatabase inst{ "hashes.db", false };
+			return inst;
+		}
 	}
 }
