@@ -3,6 +3,7 @@
 #include "fs/FileStream.h"
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <variant>
 #include <vector>
@@ -29,6 +30,8 @@ namespace noire
 		Structure = 70,
 	};
 
+	struct SAttributeObject;
+
 	struct SAttributeProperty
 	{
 		using Vec2 = std::array<float, 2>;
@@ -45,7 +48,8 @@ namespace noire
 										  Mat4,
 										  std::string,
 										  std::uint64_t,
-										  Vec4>;
+										  Vec4,
+										  std::unique_ptr<SAttributeObject>>;
 
 		std::uint32_t NameHash;
 		EAttributePropertyType Type;

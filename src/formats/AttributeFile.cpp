@@ -146,8 +146,11 @@ namespace noire
 		break;
 		case EAttributePropertyType::Structure:
 		{
-			// TODO: support for reading EAttributePropertyType::Structure
-			SkipProperty(stream, propertyType);
+			std::unique_ptr structObj = std::make_unique<SAttributeObject>();
+			structObj->DefinitionHash = stream.Read<std::uint32_t>();
+			structObj->IsCollection = false;
+			ReadObject(stream, *structObj);
+			prop.Value = std::move(structObj);
 		}
 		break;
 		default: Expects(false); break;
