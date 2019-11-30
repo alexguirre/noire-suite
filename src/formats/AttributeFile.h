@@ -41,11 +41,20 @@ namespace noire
 		using Vec3 = std::array<float, 3>;
 		using Vec4 = std::array<float, 4>;
 		using Mat4 = std::array<float, 16>;
+		struct PolyPtr
+		{
+			std::unique_ptr<SAttributeObject> Object;
+		};
 		struct Array
 		{
 			EAttributePropertyType ItemType;
 			std::vector<SAttributeProperty> Items;
 		};
+		struct Structure
+		{
+			std::unique_ptr<SAttributeObject> Object;
+		};
+
 		using ValueVariant = std::variant<std::monostate,
 										  std::int32_t,
 										  std::uint32_t,
@@ -57,8 +66,9 @@ namespace noire
 										  std::string,
 										  std::uint64_t,
 										  Vec4,
+										  PolyPtr,
 										  Array,
-										  std::unique_ptr<SAttributeObject>>;
+										  Structure>;
 
 		std::uint32_t NameHash;
 		EAttributePropertyType Type;

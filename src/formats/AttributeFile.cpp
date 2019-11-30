@@ -154,8 +154,17 @@ namespace noire
 		break;
 		case EAttributePropertyType::PolyPtr:
 		{
-			// TODO: support for reading EAttributePropertyType::PolyPtr
-			SkipProperty(stream, propertyType);
+			SAttributeProperty::PolyPtr polyPtr{ nullptr };
+			std::uint32_t definitionHash = stream.Read<std::uint32_t>();
+			if (definitionHash != 0)
+			{
+				polyPtr.Object = std::make_unique<SAttributeObject>();
+				polyPtr.Object->DefinitionHash = definitionHash;
+				polyPtr.Object->IsCollection = false;
+				ReadObject(stream, *polyPtr.Object);
+			}
+
+			prop.Value = std::move(polyPtr);
 		}
 		break;
 		case EAttributePropertyType::Link:
@@ -179,11 +188,11 @@ namespace noire
 		break;
 		case EAttributePropertyType::Structure:
 		{
-			std::unique_ptr structObj = std::make_unique<SAttributeObject>();
-			structObj->DefinitionHash = stream.Read<std::uint32_t>();
-			structObj->IsCollection = false;
-			ReadObject(stream, *structObj);
-			prop.Value = std::move(structObj);
+			SAttributeProperty::Structure struc{ std::make_unique<SAttributeObject>() };
+			struc.Object->DefinitionHash = stream.Read<std::uint32_t>();
+			struc.Object->IsCollection = false;
+			ReadObject(stream, *struc.Object);
+			prop.Value = std::move(struc);
 		}
 		break;
 		default: Expects(false); break;

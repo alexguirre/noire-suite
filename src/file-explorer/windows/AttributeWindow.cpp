@@ -71,7 +71,10 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 					wxPG_LABEL,
 					wxString::Format("X:%.4f, Y:%.4f, Z:%.4f, W:%.4f", v[0], v[1], v[2], v[3]));
 			},
-			[&name](const std::unique_ptr<noire::SAttributeObject>&) -> wxPGProperty* {
+			[&name](const noire::SAttributeProperty::PolyPtr& v) -> wxPGProperty* {
+				return new wxStringProperty(name, wxPG_LABEL, v.Object ? "" : "null");
+			},
+			[&name](const noire::SAttributeProperty::Structure&) -> wxPGProperty* {
 				return new wxStringProperty(name, wxPG_LABEL);
 			},
 			[&name](const noire::SAttributeProperty::Array& v) -> wxPGProperty* {
@@ -90,8 +93,16 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 	{
 		newProp = propGrid->AppendIn(inProp, newProp);
 	}
-
-	if (p.Type == noire::EAttributePropertyType::Array)
+	if (p.Type == noire::EAttributePropertyType::PolyPtr)
+	{
+		const noire::SAttributeProperty::PolyPtr& polyPtr =
+			std::get<noire::SAttributeProperty::PolyPtr>(p.Value);
+		if (polyPtr.Object)
+		{
+			AppendObjectToGrid(propGrid, *polyPtr.Object, name, nullptr, newProp);
+		}
+	}
+	else if (p.Type == noire::EAttributePropertyType::Array)
 	{
 		const auto& arr = std::get<noire::SAttributeProperty::Array>(p.Value);
 		for (std::size_t i = 0; i < arr.Items.size(); i++)
@@ -102,7 +113,7 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 	else if (p.Type == noire::EAttributePropertyType::Structure)
 	{
 		AppendObjectToGrid(propGrid,
-						   *std::get<std::unique_ptr<noire::SAttributeObject>>(p.Value),
+						   *std::get<noire::SAttributeProperty::Structure>(p.Value).Object,
 						   name,
 						   nullptr,
 						   newProp);
