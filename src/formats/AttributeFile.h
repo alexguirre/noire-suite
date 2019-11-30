@@ -49,6 +49,7 @@ namespace noire
 										  std::string,
 										  std::uint64_t,
 										  Vec4,
+										  std::vector<SAttributeProperty>,
 										  std::unique_ptr<SAttributeObject>>;
 
 		std::uint32_t NameHash;
@@ -77,10 +78,9 @@ namespace noire
 		void ReadCollection(fs::IFileStream& stream, SAttributeObject& destCollection);
 		void ReadCollectionEntry(fs::IFileStream& stream, SAttributeObject& destCollection);
 		void ReadObject(fs::IFileStream& stream, SAttributeObject& destObject);
-		void ReadPropertyValue(fs::IFileStream& stream,
-							   SAttributeObject& destObject,
-							   std::uint32_t propertyNameHash,
-							   EAttributePropertyType propertyType);
+		SAttributeProperty ReadPropertyValue(fs::IFileStream& stream,
+											 std::uint32_t propertyNameHash,
+											 EAttributePropertyType propertyType);
 		void SkipProperty(fs::IFileStream& stream, EAttributePropertyType propertyType);
 
 		SAttributeObject mRoot;

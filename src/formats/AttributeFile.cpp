@@ -64,14 +64,14 @@ namespace noire
 			std::uint32_t propertyNameHash = stream.Read<std::uint32_t>();
 			EAttributePropertyType propertyType = static_cast<EAttributePropertyType>(v);
 
-			ReadPropertyValue(stream, destObject, propertyNameHash, propertyType);
+			destObject.Properties.emplace_back(
+				std::move(ReadPropertyValue(stream, propertyNameHash, propertyType)));
 		}
 	}
 
-	void CAttributeFile::ReadPropertyValue(fs::IFileStream& stream,
-										   SAttributeObject& destObject,
-										   std::uint32_t propertyNameHash,
-										   EAttributePropertyType propertyType)
+	SAttributeProperty CAttributeFile::ReadPropertyValue(fs::IFileStream& stream,
+														 std::uint32_t propertyNameHash,
+														 EAttributePropertyType propertyType)
 	{
 		SAttributeProperty prop{ propertyNameHash, propertyType, {} };
 		switch (propertyType)
@@ -140,8 +140,16 @@ namespace noire
 		break;
 		case EAttributePropertyType::Array:
 		{
-			// TODO: support for reading EAttributePropertyType::Array
-			SkipProperty(stream, propertyType);
+			const EAttributePropertyType itemType =
+				static_cast<EAttributePropertyType>(stream.Read<std::uint8_t>());
+			const std::size_t itemCount = stream.Read<std::uint16_t>();
+			std::vector<SAttributeProperty> items;
+			items.reserve(itemCount);
+			for (std::size_t i = 0; i < itemCount; i++)
+			{
+				items.emplace_back(std::move(ReadPropertyValue(stream, 0, itemType)));
+			}
+			prop.Value = std::move(items);
 		}
 		break;
 		case EAttributePropertyType::Structure:
@@ -156,7 +164,7 @@ namespace noire
 		default: Expects(false); break;
 		}
 
-		destObject.Properties.emplace_back(std::move(prop));
+		return prop;
 	}
 
 	void CAttributeFile::SkipProperty(fs::IFileStream& stream, EAttributePropertyType propertyType)
