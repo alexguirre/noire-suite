@@ -32,7 +32,34 @@ namespace noire
 		}
 	}
 
-	CAttributeFile::CAttributeFile(fs::IFileStream& stream) : mRoot{ 0, "root", {}, true, {} }
+	std::string SAttributeProperty::Link::ScopedName() const
+	{
+		if (!Storage)
+		{
+			using namespace std::string_literals;
+			return "null"s;
+		}
+
+		std::string str{};
+		char sep = '\0';
+		for (std::uint32_t h : Storage->ScopedNameHashes)
+		{
+			if (!sep)
+			{
+				sep = '.';
+			}
+			else
+			{
+				str += sep;
+			}
+			str += CHashDatabase::Instance(false).GetString(h);
+		}
+
+		return str;
+	}
+
+	CAttributeFile::CAttributeFile(fs::IFileStream& stream)
+		: mRoot{ 0, "root", {}, true, {} }, mLinksToResolve{}
 	{
 		Load(stream);
 	}
@@ -43,6 +70,8 @@ namespace noire
 		stream.Read<std::uint32_t>(); // header magic
 
 		ReadCollection(stream, mRoot);
+
+		ResolveLinks(stream);
 	}
 
 	void CAttributeFile::ReadCollection(fs::IFileStream& stream, SAttributeObject& destCollection)
@@ -172,8 +201,16 @@ namespace noire
 		break;
 		case EAttributePropertyType::Link:
 		{
-			// TODO: support for reading EAttributePropertyType::Link
-			SkipProperty(stream, propertyType);
+			const std::uint16_t id = stream.Read<std::uint16_t>();
+			SAttributeProperty::Link link{ nullptr };
+			if (id != 0xFFFF)
+			{
+				link.Storage = std::make_unique<SAttributeProperty::LinkStorage>();
+				link.Storage->Id = id;
+				mLinksToResolve.emplace_back(link.Storage.get());
+			}
+
+			prop.Value = std::move(link);
 		}
 		break;
 		case EAttributePropertyType::Array:
@@ -264,6 +301,30 @@ namespace noire
 		}
 
 		stream.Seek(stream.Tell() + offset);
+	}
+
+	void CAttributeFile::ResolveLinks(fs::IFileStream& stream)
+	{
+		std::vector<std::vector<std::uint32_t>> linkNames{};
+		const std::uint16_t linkNamesCount = stream.Read<std::uint16_t>();
+		linkNames.reserve(linkNamesCount);
+		for (std::size_t i = 0; i < linkNamesCount; i++)
+		{
+			std::vector<std::uint32_t>& hashes = linkNames.emplace_back();
+			const std::uint8_t hashesCount = stream.Read<std::uint8_t>();
+			hashes.reserve(hashesCount);
+			for (std::size_t j = 0; j < hashesCount; j++)
+			{
+				hashes.emplace_back(stream.Read<std::uint32_t>());
+			}
+		}
+
+		for (SAttributeProperty::LinkStorage* l : mLinksToResolve)
+		{
+			l->ScopedNameHashes = linkNames.at(l->Id);
+		}
+
+		mLinksToResolve.clear();
 	}
 
 	bool CAttributeFile::IsValid(fs::IFileStream& stream)

@@ -49,6 +49,19 @@ namespace noire
 		{
 			std::unique_ptr<SAttributeObject> Object;
 		};
+		struct LinkStorage
+		{
+			std::uint16_t Id;
+			std::vector<std::uint32_t> ScopedNameHashes;
+		};
+		struct Link
+		{
+			// A pointer so we can keep a reference to the link for resolving it after reading the
+			// root.
+			std::unique_ptr<LinkStorage> Storage;
+
+			std::string ScopedName() const;
+		};
 		struct Array
 		{
 			EAttributePropertyType ItemType;
@@ -72,6 +85,7 @@ namespace noire
 										  Vec4,
 										  UString,
 										  PolyPtr,
+										  Link,
 										  Array,
 										  Structure>;
 
@@ -105,8 +119,10 @@ namespace noire
 											 std::uint32_t propertyNameHash,
 											 EAttributePropertyType propertyType);
 		void SkipProperty(fs::IFileStream& stream, EAttributePropertyType propertyType);
+		void ResolveLinks(fs::IFileStream& stream);
 
 		SAttributeObject mRoot;
+		std::vector<SAttributeProperty::LinkStorage*> mLinksToResolve;
 
 	public:
 		static bool IsValid(fs::IFileStream& stream);
