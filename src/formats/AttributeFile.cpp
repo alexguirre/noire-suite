@@ -155,10 +155,10 @@ namespace noire
 			break;
 		case EAttributePropertyType::AString:
 		{
-			std::uint16_t length = stream.Read<std::uint16_t>();
-			std::string str{};
-			str.resize(length);
-			stream.Read(str.data(), length);
+			const std::uint16_t length = stream.Read<std::uint16_t>();
+			SAttributeProperty::AString str{};
+			str.AsciiString.resize(length);
+			stream.Read(str.AsciiString.data(), length);
 			prop.Value = std::move(str);
 		}
 		break;

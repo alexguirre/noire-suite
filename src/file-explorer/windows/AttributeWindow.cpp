@@ -59,8 +59,8 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 			[&name](const noire::SAttributeProperty::Mat4&) -> wxPGProperty* {
 				return new wxStringProperty(name, wxPG_LABEL, "Mat4 - TBD");
 			},
-			[&name](const std::string& v) -> wxPGProperty* {
-				return new wxStringProperty(name, wxPG_LABEL, v);
+			[&name](const noire::SAttributeProperty::AString& v) -> wxPGProperty* {
+				return new wxStringProperty(name, wxPG_LABEL, v.AsciiString);
 			},
 			[&name](std::uint64_t v) -> wxPGProperty* {
 				return new wxUIntProperty(name, wxPG_LABEL, v);

@@ -41,6 +41,10 @@ namespace noire
 		using Vec3 = std::array<float, 3>;
 		using Vec4 = std::array<float, 4>;
 		using Mat4 = std::array<float, 16>;
+		struct AString
+		{
+			std::string AsciiString;
+		};
 		struct UString
 		{
 			std::string Utf8String;
@@ -80,7 +84,7 @@ namespace noire
 										  Vec3,
 										  Vec2,
 										  Mat4,
-										  std::string,
+										  AString,
 										  std::uint64_t,
 										  Vec4,
 										  UString,
