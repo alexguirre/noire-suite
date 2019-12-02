@@ -142,8 +142,11 @@ namespace noire
 			break;
 		case EAttributePropertyType::UString:
 		{
-			// TODO: support for reading EAttributePropertyType::UString
-			SkipProperty(stream, propertyType);
+			const std::uint16_t byteCount = stream.Read<std::uint16_t>();
+			SAttributeProperty::UString str{};
+			str.Utf8String.resize(byteCount);
+			stream.Read(str.Utf8String.data(), byteCount);
+			prop.Value = std::move(str);
 		}
 		break;
 		case EAttributePropertyType::Bitfield:

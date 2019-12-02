@@ -71,6 +71,9 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 					wxPG_LABEL,
 					wxString::Format("X:%.4f, Y:%.4f, Z:%.4f, W:%.4f", v[0], v[1], v[2], v[3]));
 			},
+			[&name](const noire::SAttributeProperty::UString& v) -> wxPGProperty* {
+				return new wxStringProperty(name, wxPG_LABEL, wxString::FromUTF8(v.Utf8String));
+			},
 			[&name](const noire::SAttributeProperty::PolyPtr& v) -> wxPGProperty* {
 				return new wxStringProperty(name, wxPG_LABEL, v.Object ? "" : "null");
 			},

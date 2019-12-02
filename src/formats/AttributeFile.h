@@ -41,6 +41,10 @@ namespace noire
 		using Vec3 = std::array<float, 3>;
 		using Vec4 = std::array<float, 4>;
 		using Mat4 = std::array<float, 16>;
+		struct UString
+		{
+			std::string Utf8String;
+		};
 		struct PolyPtr
 		{
 			std::unique_ptr<SAttributeObject> Object;
@@ -66,6 +70,7 @@ namespace noire
 										  std::string,
 										  std::uint64_t,
 										  Vec4,
+										  UString,
 										  PolyPtr,
 										  Array,
 										  Structure>;
