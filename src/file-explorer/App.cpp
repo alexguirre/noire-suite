@@ -1,4 +1,5 @@
 #include "App.h"
+#include "windows/MainWindow.h"
 #include <IL/il.h>
 
 wxIMPLEMENT_APP(CApp);

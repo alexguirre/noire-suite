@@ -1,8 +1,7 @@
 #pragma once
-#include "windows/MainWindow.h"
-#include <memory>
-#include <wx/windowptr.h>
-#include <wx/wx.h>
+#include <wx/app.h>
+
+class CMainWindow;
 
 class CApp : public wxApp
 {
@@ -15,3 +14,5 @@ public:
 private:
 	CMainWindow* mMainWindow{ nullptr };
 };
+
+wxDECLARE_APP(CApp);
