@@ -9,19 +9,22 @@ namespace noire
 {
 	std::uint32_t crc32Partial(std::string_view str, std::uint32_t inHash = -1);
 	std::uint32_t crc32(std::string_view str, std::uint32_t inHash = -1);
+	std::uint32_t crc32LowercasePartial(std::string_view str, std::uint32_t inHash = -1);
+	std::uint32_t crc32Lowercase(std::string_view str, std::uint32_t inHash = -1);
 
 	class CHashDatabase
 	{
 	public:
-		CHashDatabase(const std::filesystem::path& dbPath);
+		CHashDatabase(const std::filesystem::path& dbPath, bool caseSensitive);
 
 		std::string GetString(std::uint32_t hash) const;
 
-		static const CHashDatabase& Instance();
+		static const CHashDatabase& Instance(bool caseSensitive = true);
 
 	private:
 		void Load(const std::filesystem::path& dbPath);
 
 		std::unordered_map<std::uint32_t, std::string> mHashToStr;
+		bool mCaseSensitive;
 	};
 }

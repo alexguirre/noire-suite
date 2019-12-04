@@ -3,7 +3,9 @@
 #include "fs/FileStream.h"
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -29,12 +31,64 @@ namespace noire
 		Structure = 70,
 	};
 
+	std::string_view ToString(EAttributePropertyType type);
+
+	struct SAttributeObject;
+
 	struct SAttributeProperty
 	{
 		using Vec2 = std::array<float, 2>;
 		using Vec3 = std::array<float, 3>;
 		using Vec4 = std::array<float, 4>;
 		using Mat4 = std::array<float, 16>;
+		struct AString
+		{
+			std::string AsciiString;
+		};
+		struct UString
+		{
+			std::string Utf8String;
+		};
+		struct Bitfield
+		{
+			std::uint32_t Mask;
+			std::uint32_t Flags;
+
+			/* Note:
+			 * Value used at runtime is calculated with
+			 *        (Flags & Mask) | (defaultValue & ~Mask)
+			 * where defaultValue is the value set in the constructor of the object (not really
+			 * possible to extract it automatically since it is not included in the Attribute System
+			 * definitions).
+			 */
+		};
+		struct PolyPtr
+		{
+			std::unique_ptr<SAttributeObject> Object;
+		};
+		struct LinkStorage
+		{
+			std::uint16_t Id;
+			std::vector<std::uint32_t> ScopedNameHashes;
+		};
+		struct Link
+		{
+			// A pointer so we can keep a reference to the link for resolving it after reading the
+			// root.
+			std::unique_ptr<LinkStorage> Storage;
+
+			std::string ScopedName() const;
+		};
+		struct Array
+		{
+			EAttributePropertyType ItemType;
+			std::vector<SAttributeProperty> Items;
+		};
+		struct Structure
+		{
+			std::unique_ptr<SAttributeObject> Object;
+		};
+
 		using ValueVariant = std::variant<std::monostate,
 										  std::int32_t,
 										  std::uint32_t,
@@ -43,9 +97,15 @@ namespace noire
 										  Vec3,
 										  Vec2,
 										  Mat4,
-										  std::string,
+										  AString,
 										  std::uint64_t,
-										  Vec4>;
+										  Vec4,
+										  UString,
+										  Bitfield,
+										  PolyPtr,
+										  Link,
+										  Array,
+										  Structure>;
 
 		std::uint32_t NameHash;
 		EAttributePropertyType Type;
@@ -73,13 +133,14 @@ namespace noire
 		void ReadCollection(fs::IFileStream& stream, SAttributeObject& destCollection);
 		void ReadCollectionEntry(fs::IFileStream& stream, SAttributeObject& destCollection);
 		void ReadObject(fs::IFileStream& stream, SAttributeObject& destObject);
-		void ReadPropertyValue(fs::IFileStream& stream,
-							   SAttributeObject& destObject,
-							   std::uint32_t propertyNameHash,
-							   EAttributePropertyType propertyType);
+		SAttributeProperty ReadPropertyValue(fs::IFileStream& stream,
+											 std::uint32_t propertyNameHash,
+											 EAttributePropertyType propertyType);
 		void SkipProperty(fs::IFileStream& stream, EAttributePropertyType propertyType);
+		void ResolveLinks(fs::IFileStream& stream);
 
 		SAttributeObject mRoot;
+		std::vector<SAttributeProperty::LinkStorage*> mLinksToResolve;
 
 	public:
 		static bool IsValid(fs::IFileStream& stream);

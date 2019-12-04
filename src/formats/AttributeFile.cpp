@@ -6,7 +6,60 @@
 
 namespace noire
 {
-	CAttributeFile::CAttributeFile(fs::IFileStream& stream) : mRoot{ 0, "root", {}, true, {} }
+	std::string_view ToString(EAttributePropertyType type)
+	{
+		using namespace std::string_view_literals;
+
+		switch (type)
+		{
+		case EAttributePropertyType::Int32: return "Int32"sv;
+		case EAttributePropertyType::UInt32: return "UInt32"sv;
+		case EAttributePropertyType::Float: return "Float"sv;
+		case EAttributePropertyType::Bool: return "Bool"sv;
+		case EAttributePropertyType::Vec3: return "Vec3"sv;
+		case EAttributePropertyType::Vec2: return "Vec2"sv;
+		case EAttributePropertyType::Mat4: return "Mat4"sv;
+		case EAttributePropertyType::AString: return "AString"sv;
+		case EAttributePropertyType::UInt64: return "UInt64"sv;
+		case EAttributePropertyType::Vec4: return "Vec4"sv;
+		case EAttributePropertyType::UString: return "UString"sv;
+		case EAttributePropertyType::PolyPtr: return "PolyPtr"sv;
+		case EAttributePropertyType::Link: return "Link"sv;
+		case EAttributePropertyType::Bitfield: return "Bitfield"sv;
+		case EAttributePropertyType::Array: return "Array"sv;
+		case EAttributePropertyType::Structure: return "Structure"sv;
+		default: Expects(false);
+		}
+	}
+
+	std::string SAttributeProperty::Link::ScopedName() const
+	{
+		if (!Storage)
+		{
+			using namespace std::string_literals;
+			return "null"s;
+		}
+
+		std::string str{};
+		char sep = '\0';
+		for (std::uint32_t h : Storage->ScopedNameHashes)
+		{
+			if (!sep)
+			{
+				sep = '.';
+			}
+			else
+			{
+				str += sep;
+			}
+			str += CHashDatabase::Instance(false).GetString(h);
+		}
+
+		return str;
+	}
+
+	CAttributeFile::CAttributeFile(fs::IFileStream& stream)
+		: mRoot{ 0, "root", {}, true, {} }, mLinksToResolve{}
 	{
 		Load(stream);
 	}
@@ -17,6 +70,8 @@ namespace noire
 		stream.Read<std::uint32_t>(); // header magic
 
 		ReadCollection(stream, mRoot);
+
+		ResolveLinks(stream);
 	}
 
 	void CAttributeFile::ReadCollection(fs::IFileStream& stream, SAttributeObject& destCollection)
@@ -64,14 +119,14 @@ namespace noire
 			std::uint32_t propertyNameHash = stream.Read<std::uint32_t>();
 			EAttributePropertyType propertyType = static_cast<EAttributePropertyType>(v);
 
-			ReadPropertyValue(stream, destObject, propertyNameHash, propertyType);
+			destObject.Properties.emplace_back(
+				std::move(ReadPropertyValue(stream, propertyNameHash, propertyType)));
 		}
 	}
 
-	void CAttributeFile::ReadPropertyValue(fs::IFileStream& stream,
-										   SAttributeObject& destObject,
-										   std::uint32_t propertyNameHash,
-										   EAttributePropertyType propertyType)
+	SAttributeProperty CAttributeFile::ReadPropertyValue(fs::IFileStream& stream,
+														 std::uint32_t propertyNameHash,
+														 EAttributePropertyType propertyType)
 	{
 		SAttributeProperty prop{ propertyNameHash, propertyType, {} };
 		switch (propertyType)
@@ -100,10 +155,10 @@ namespace noire
 			break;
 		case EAttributePropertyType::AString:
 		{
-			std::uint16_t length = stream.Read<std::uint16_t>();
-			std::string str{};
-			str.resize(length);
-			stream.Read(str.data(), length);
+			const std::uint16_t length = stream.Read<std::uint16_t>();
+			SAttributeProperty::AString str{};
+			str.AsciiString.resize(length);
+			stream.Read(str.AsciiString.data(), length);
 			prop.Value = std::move(str);
 		}
 		break;
@@ -116,44 +171,77 @@ namespace noire
 			break;
 		case EAttributePropertyType::UString:
 		{
-			// TODO: support for reading EAttributePropertyType::UString
-			SkipProperty(stream, propertyType);
+			const std::uint16_t byteCount = stream.Read<std::uint16_t>();
+			SAttributeProperty::UString str{};
+			str.Utf8String.resize(byteCount);
+			stream.Read(str.Utf8String.data(), byteCount);
+			prop.Value = std::move(str);
 		}
 		break;
 		case EAttributePropertyType::Bitfield:
 		{
-			// TODO: support for reading EAttributePropertyType::Bitfield
-			SkipProperty(stream, propertyType);
+			SAttributeProperty::Bitfield bitfield{};
+			bitfield.Mask = stream.Read<std::uint32_t>();
+			bitfield.Flags = stream.Read<std::uint32_t>();
+
+			prop.Value = std::move(bitfield);
 		}
 		break;
 		case EAttributePropertyType::PolyPtr:
 		{
-			// TODO: support for reading EAttributePropertyType::PolyPtr
-			SkipProperty(stream, propertyType);
+			SAttributeProperty::PolyPtr polyPtr{ nullptr };
+			std::uint32_t definitionHash = stream.Read<std::uint32_t>();
+			if (definitionHash != 0)
+			{
+				polyPtr.Object = std::make_unique<SAttributeObject>();
+				polyPtr.Object->DefinitionHash = definitionHash;
+				polyPtr.Object->IsCollection = false;
+				ReadObject(stream, *polyPtr.Object);
+			}
+
+			prop.Value = std::move(polyPtr);
 		}
 		break;
 		case EAttributePropertyType::Link:
 		{
-			// TODO: support for reading EAttributePropertyType::Link
-			SkipProperty(stream, propertyType);
+			const std::uint16_t id = stream.Read<std::uint16_t>();
+			SAttributeProperty::Link link{ nullptr };
+			if (id != 0xFFFF)
+			{
+				link.Storage = std::make_unique<SAttributeProperty::LinkStorage>();
+				link.Storage->Id = id;
+				mLinksToResolve.emplace_back(link.Storage.get());
+			}
+
+			prop.Value = std::move(link);
 		}
 		break;
 		case EAttributePropertyType::Array:
 		{
-			// TODO: support for reading EAttributePropertyType::Array
-			SkipProperty(stream, propertyType);
+			SAttributeProperty::Array arr;
+			arr.ItemType = static_cast<EAttributePropertyType>(stream.Read<std::uint8_t>());
+			const std::size_t itemCount = stream.Read<std::uint16_t>();
+			arr.Items.reserve(itemCount);
+			for (std::size_t i = 0; i < itemCount; i++)
+			{
+				arr.Items.emplace_back(std::move(ReadPropertyValue(stream, 0, arr.ItemType)));
+			}
+			prop.Value = std::move(arr);
 		}
 		break;
 		case EAttributePropertyType::Structure:
 		{
-			// TODO: support for reading EAttributePropertyType::Structure
-			SkipProperty(stream, propertyType);
+			SAttributeProperty::Structure struc{ std::make_unique<SAttributeObject>() };
+			struc.Object->DefinitionHash = stream.Read<std::uint32_t>();
+			struc.Object->IsCollection = false;
+			ReadObject(stream, *struc.Object);
+			prop.Value = std::move(struc);
 		}
 		break;
 		default: Expects(false); break;
 		}
 
-		destObject.Properties.emplace_back(std::move(prop));
+		return prop;
 	}
 
 	void CAttributeFile::SkipProperty(fs::IFileStream& stream, EAttributePropertyType propertyType)
@@ -216,6 +304,30 @@ namespace noire
 		}
 
 		stream.Seek(stream.Tell() + offset);
+	}
+
+	void CAttributeFile::ResolveLinks(fs::IFileStream& stream)
+	{
+		std::vector<std::vector<std::uint32_t>> linkNames{};
+		const std::uint16_t linkNamesCount = stream.Read<std::uint16_t>();
+		linkNames.reserve(linkNamesCount);
+		for (std::size_t i = 0; i < linkNamesCount; i++)
+		{
+			std::vector<std::uint32_t>& hashes = linkNames.emplace_back();
+			const std::uint8_t hashesCount = stream.Read<std::uint8_t>();
+			hashes.reserve(hashesCount);
+			for (std::size_t j = 0; j < hashesCount; j++)
+			{
+				hashes.emplace_back(stream.Read<std::uint32_t>());
+			}
+		}
+
+		for (SAttributeProperty::LinkStorage* l : mLinksToResolve)
+		{
+			l->ScopedNameHashes = linkNames.at(l->Id);
+		}
+
+		mLinksToResolve.clear();
 	}
 
 	bool CAttributeFile::IsValid(fs::IFileStream& stream)
