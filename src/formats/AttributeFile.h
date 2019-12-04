@@ -49,6 +49,19 @@ namespace noire
 		{
 			std::string Utf8String;
 		};
+		struct Bitfield
+		{
+			std::uint32_t Mask;
+			std::uint32_t Flags;
+
+			/* Note:
+			 * Value used at runtime is calculated with
+			 *        (Flags & Mask) | (defaultValue & ~Mask)
+			 * where defaultValue is the value set in the constructor of the object (not really
+			 * possible to extract it automatically since it is not included in the Attribute System
+			 * definitions).
+			 */
+		};
 		struct PolyPtr
 		{
 			std::unique_ptr<SAttributeObject> Object;
@@ -88,6 +101,7 @@ namespace noire
 										  std::uint64_t,
 										  Vec4,
 										  UString,
+										  Bitfield,
 										  PolyPtr,
 										  Link,
 										  Array,

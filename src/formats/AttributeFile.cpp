@@ -180,8 +180,11 @@ namespace noire
 		break;
 		case EAttributePropertyType::Bitfield:
 		{
-			// TODO: support for reading EAttributePropertyType::Bitfield
-			SkipProperty(stream, propertyType);
+			SAttributeProperty::Bitfield bitfield{};
+			bitfield.Mask = stream.Read<std::uint32_t>();
+			bitfield.Flags = stream.Read<std::uint32_t>();
+
+			prop.Value = std::move(bitfield);
 		}
 		break;
 		case EAttributePropertyType::PolyPtr:

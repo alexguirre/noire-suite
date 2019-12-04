@@ -74,6 +74,9 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 			[&name](const noire::SAttributeProperty::UString& v) -> wxPGProperty* {
 				return new wxStringProperty(name, wxPG_LABEL, wxString::FromUTF8(v.Utf8String));
 			},
+			[&name](const noire::SAttributeProperty::Bitfield&) -> wxPGProperty* {
+				return new wxStringProperty(name, wxPG_LABEL, "<composed>");
+			},
 			[&name](const noire::SAttributeProperty::PolyPtr& v) -> wxPGProperty* {
 				return new wxStringProperty(name, wxPG_LABEL, v.Object ? "" : "null");
 			},
@@ -99,7 +102,23 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 	{
 		newProp = propGrid->AppendIn(inProp, newProp);
 	}
-	if (p.Type == noire::EAttributePropertyType::PolyPtr)
+
+	switch (p.Type)
+	{
+	case noire::EAttributePropertyType::Bitfield:
+	{
+		const noire::SAttributeProperty::Bitfield& bitfield =
+			std::get<noire::SAttributeProperty::Bitfield>(p.Value);
+
+		propGrid->AppendIn(
+			newProp,
+			new wxStringProperty("Mask", wxPG_LABEL, wxString::Format("0x%08X", bitfield.Mask)));
+		propGrid->AppendIn(
+			newProp,
+			new wxStringProperty("Flags", wxPG_LABEL, wxString::Format("0x%08X", bitfield.Flags)));
+	}
+	break;
+	case noire::EAttributePropertyType::PolyPtr:
 	{
 		const noire::SAttributeProperty::PolyPtr& polyPtr =
 			std::get<noire::SAttributeProperty::PolyPtr>(p.Value);
@@ -108,7 +127,8 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 			AppendObjectToGrid(propGrid, *polyPtr.Object, name, nullptr, newProp);
 		}
 	}
-	else if (p.Type == noire::EAttributePropertyType::Array)
+	break;
+	case noire::EAttributePropertyType::Array:
 	{
 		const auto& arr = std::get<noire::SAttributeProperty::Array>(p.Value);
 		for (std::size_t i = 0; i < arr.Items.size(); i++)
@@ -116,13 +136,16 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 			AppendPropertyToGrid(propGrid, arr.Items[i], wxString::Format("[%zu]", i), newProp);
 		}
 	}
-	else if (p.Type == noire::EAttributePropertyType::Structure)
+	break;
+	case noire::EAttributePropertyType::Structure:
 	{
 		AppendObjectToGrid(propGrid,
 						   *std::get<noire::SAttributeProperty::Structure>(p.Value).Object,
 						   name,
 						   nullptr,
 						   newProp);
+	}
+	break;
 	}
 }
 
