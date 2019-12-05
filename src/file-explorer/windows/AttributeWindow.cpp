@@ -20,7 +20,6 @@ overloaded(Ts...)->overloaded<Ts...>;
 
 static wxPGProperty* AppendObjectToGrid(wxPropertyGrid* propGrid,
 										const noire::SAttributeObject& obj,
-										wxString parentQualifiedName,
 										wxPGProperty* parent,
 										wxPGProperty* inProp,
 										wxPGProperty** outPropertiesProp);
@@ -125,7 +124,7 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 			std::get<noire::SAttributeProperty::PolyPtr>(p.Value);
 		if (polyPtr.Object)
 		{
-			AppendObjectToGrid(propGrid, *polyPtr.Object, name, nullptr, newProp, nullptr);
+			AppendObjectToGrid(propGrid, *polyPtr.Object, nullptr, newProp, nullptr);
 		}
 	}
 	break;
@@ -142,7 +141,6 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 	{
 		AppendObjectToGrid(propGrid,
 						   *std::get<noire::SAttributeProperty::Structure>(p.Value).Object,
-						   name,
 						   nullptr,
 						   newProp,
 						   nullptr);
@@ -153,24 +151,14 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 
 static wxPGProperty* AppendObjectToGrid(wxPropertyGrid* propGrid,
 										const noire::SAttributeObject& obj,
-										wxString parentQualifiedName,
 										wxPGProperty* parent,
 										wxPGProperty* inProp,
 										wxPGProperty** outPropertiesProp)
 {
-	if (!parentQualifiedName.IsEmpty())
-	{
-		parentQualifiedName += '.';
-	}
-	parentQualifiedName += obj.Name;
-
 	wxPGProperty* prop =
-		inProp ?
-			inProp :
-			parent ?
-			propGrid->AppendIn(parent,
-							   new wxStringProperty(obj.Name, wxPG_LABEL, parentQualifiedName)) :
-			propGrid->Append(new wxStringProperty(obj.Name, wxPG_LABEL, parentQualifiedName));
+		inProp ? inProp :
+				 parent ? propGrid->AppendIn(parent, new wxStringProperty(obj.Name, wxPG_LABEL)) :
+						  propGrid->Append(new wxStringProperty(obj.Name, wxPG_LABEL));
 
 	if (!obj.Name.empty())
 	{
@@ -199,7 +187,7 @@ static void FillObjectPropertyGrid(wxPropertyGrid* propGrid, const noire::SAttri
 {
 	propGrid->Clear();
 	wxPGProperty* p2;
-	wxPGProperty* p = AppendObjectToGrid(propGrid, obj, "", nullptr, nullptr, &p2);
+	wxPGProperty* p = AppendObjectToGrid(propGrid, obj, nullptr, nullptr, &p2);
 	propGrid->SetPropertyReadOnly(propGrid->GetRoot(), true);
 	propGrid->CollapseAll();
 	// only expand root and properties
