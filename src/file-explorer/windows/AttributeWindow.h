@@ -7,7 +7,9 @@ namespace noire
 	class CAttributeFile;
 }
 
-class wxPropertyGridEvent;
+class wxPropertyGrid;
+class wxTreeCtrl;
+class wxTreeEvent;
 
 class CAttributeWindow : public wxFrame
 {
@@ -18,5 +20,9 @@ public:
 					 std::unique_ptr<noire::CAttributeFile> file);
 
 private:
+	void OnObjectSelectionChanged(wxTreeEvent& event);
+
 	std::unique_ptr<noire::CAttributeFile> mFile;
+	wxTreeCtrl* mObjectsTree;
+	wxPropertyGrid* mObjectPropertyGrid;
 };

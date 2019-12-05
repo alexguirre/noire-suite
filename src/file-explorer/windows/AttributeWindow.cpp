@@ -7,7 +7,7 @@
 #include <wx/propgrid/props.h>
 #include <wx/sizer.h>
 #include <wx/splitter.h>
-#include <wx/stc/stc.h>
+#include <wx/treectrl.h>
 
 // helper for std::visit
 template<class... Ts>
@@ -18,11 +18,11 @@ struct overloaded : Ts...
 template<class... Ts>
 overloaded(Ts...)->overloaded<Ts...>;
 
-static void AppendObjectToGrid(wxPropertyGrid* propGrid,
-							   const noire::SAttributeObject& obj,
-							   wxString parentQualifiedName,
-							   wxPGProperty* parent,
-							   wxPGProperty* inProp);
+static wxPGProperty* AppendObjectToGrid(wxPropertyGrid* propGrid,
+										const noire::SAttributeObject& obj,
+										wxPGProperty* parent,
+										wxPGProperty* inProp,
+										wxPGProperty** outPropertiesProp);
 
 static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 								 const noire::SAttributeProperty& p,
@@ -124,7 +124,7 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 			std::get<noire::SAttributeProperty::PolyPtr>(p.Value);
 		if (polyPtr.Object)
 		{
-			AppendObjectToGrid(propGrid, *polyPtr.Object, name, nullptr, newProp);
+			AppendObjectToGrid(propGrid, *polyPtr.Object, nullptr, newProp, nullptr);
 		}
 	}
 	break;
@@ -141,33 +141,24 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 	{
 		AppendObjectToGrid(propGrid,
 						   *std::get<noire::SAttributeProperty::Structure>(p.Value).Object,
-						   name,
 						   nullptr,
-						   newProp);
+						   newProp,
+						   nullptr);
 	}
 	break;
 	}
 }
 
-static void AppendObjectToGrid(wxPropertyGrid* propGrid,
-							   const noire::SAttributeObject& obj,
-							   wxString parentQualifiedName,
-							   wxPGProperty* parent,
-							   wxPGProperty* inProp)
+static wxPGProperty* AppendObjectToGrid(wxPropertyGrid* propGrid,
+										const noire::SAttributeObject& obj,
+										wxPGProperty* parent,
+										wxPGProperty* inProp,
+										wxPGProperty** outPropertiesProp)
 {
-	if (!parentQualifiedName.IsEmpty())
-	{
-		parentQualifiedName += '.';
-	}
-	parentQualifiedName += obj.Name;
-
 	wxPGProperty* prop =
-		inProp ?
-			inProp :
-			parent ?
-			propGrid->AppendIn(parent,
-							   new wxStringProperty(obj.Name, wxPG_LABEL, parentQualifiedName)) :
-			propGrid->Append(new wxStringProperty(obj.Name, wxPG_LABEL, parentQualifiedName));
+		inProp ? inProp :
+				 parent ? propGrid->AppendIn(parent, new wxStringProperty(obj.Name, wxPG_LABEL)) :
+						  propGrid->Append(new wxStringProperty(obj.Name, wxPG_LABEL));
 
 	if (!obj.Name.empty())
 	{
@@ -185,41 +176,108 @@ static void AppendObjectToGrid(wxPropertyGrid* propGrid,
 		AppendPropertyToGrid(propGrid, p, "", propertiesProp);
 	}
 
+	if (outPropertiesProp)
+	{
+		*outPropertiesProp = propertiesProp;
+	}
+	return prop;
+}
+
+static void FillObjectPropertyGrid(wxPropertyGrid* propGrid, const noire::SAttributeObject& obj)
+{
+	propGrid->Clear();
+	wxPGProperty* p2;
+	wxPGProperty* p = AppendObjectToGrid(propGrid, obj, nullptr, nullptr, &p2);
+	propGrid->SetPropertyReadOnly(propGrid->GetRoot(), true);
+	propGrid->CollapseAll();
+	// only expand root and properties
+	propGrid->Expand(p);
+	propGrid->Expand(p2);
+}
+
+class CObjectTreeItemData : public wxTreeItemData
+{
+public:
+	CObjectTreeItemData(const noire::SAttributeObject& obj) : mObject{ obj } {}
+
+	const noire::SAttributeObject& Object() const { return mObject; }
+
+private:
+	const noire::SAttributeObject& mObject;
+};
+
+static void
+AppendObjectToTree(wxTreeCtrl* tree, wxTreeItemId parent, const noire::SAttributeObject& obj)
+{
+	wxTreeItemId objItem =
+		tree->AppendItem(parent, obj.Name, -1, -1, new CObjectTreeItemData{ obj });
+
 	if (obj.IsCollection)
 	{
-		wxPGProperty* objectsProp =
-			propGrid->AppendIn(prop, new wxStringProperty("Objects", wxPG_LABEL));
-
 		for (const noire::SAttributeObject& o : obj.Objects)
 		{
-			AppendObjectToGrid(propGrid, o, parentQualifiedName, objectsProp, nullptr);
+			AppendObjectToTree(tree, objItem, o);
 		}
 	}
+}
+
+static void FillObjectsTree(wxTreeCtrl* tree, const noire::SAttributeObject& obj)
+{
+	wxTreeItemId root = tree->AddRoot("ROOT");
+	AppendObjectToTree(tree, root, obj);
 }
 
 CAttributeWindow::CAttributeWindow(wxWindow* parent,
 								   wxWindowID id,
 								   const wxString& title,
 								   std::unique_ptr<noire::CAttributeFile> file)
-	: wxFrame(parent, id, title), mFile{ std::move(file) }
+	: wxFrame(parent, id, title),
+	  mFile{ std::move(file) },
+	  mObjectsTree{ nullptr },
+	  mObjectPropertyGrid{ nullptr }
 {
 	Expects(mFile != nullptr);
 
 	wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
-	wxPropertyGrid* propGrid = new wxPropertyGrid(this,
-												  wxID_ANY,
-												  wxDefaultPosition,
-												  wxDefaultSize,
-												  wxPG_SPLITTER_AUTO_CENTER | wxPG_DEFAULT_STYLE);
-	mainSizer->Add(propGrid, 1, wxEXPAND);
+	wxSplitterWindow* splitter =
+		new wxSplitterWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_LIVE_UPDATE);
+	splitter->SetSashGravity(0.0);
+	splitter->SetMinimumPaneSize(50);
+	mainSizer->Add(splitter, 1, wxEXPAND);
+
+	mObjectsTree = new wxTreeCtrl(splitter,
+								  wxID_ANY,
+								  wxDefaultPosition,
+								  wxDefaultSize,
+								  wxTR_HAS_BUTTONS | wxTR_TWIST_BUTTONS | wxTR_NO_LINES |
+									  wxTR_HIDE_ROOT | wxTR_LINES_AT_ROOT | wxTR_SINGLE);
+
+	mObjectPropertyGrid = new wxPropertyGrid(splitter,
+											 wxID_ANY,
+											 wxDefaultPosition,
+											 wxDefaultSize,
+											 wxPG_SPLITTER_AUTO_CENTER | wxPG_DEFAULT_STYLE);
+
+	splitter->SplitVertically(mObjectsTree, mObjectPropertyGrid);
 
 	SetSizer(mainSizer);
 
-	wxPGProperty* topProp = propGrid->Append(new wxPropertyCategory("Attributes"));
-	AppendObjectToGrid(propGrid, mFile->Root(), "", nullptr, nullptr);
-
-	propGrid->SetPropertyReadOnly(topProp, true);
-	propGrid->CollapseAll();
+	FillObjectsTree(mObjectsTree, mFile->Root());
 
 	SetSize(800, 500);
+
+	mObjectsTree->Bind(wxEVT_TREE_SEL_CHANGED, &CAttributeWindow::OnObjectSelectionChanged, this);
+}
+
+void CAttributeWindow::OnObjectSelectionChanged(wxTreeEvent& event)
+{
+	wxTreeItemId itemId = event.GetItem();
+	Expects(itemId.IsOk());
+
+	const CObjectTreeItemData* data =
+		reinterpret_cast<CObjectTreeItemData*>(mObjectsTree->GetItemData(itemId));
+
+	FillObjectPropertyGrid(mObjectPropertyGrid, data->Object());
+
+	event.Skip();
 }
