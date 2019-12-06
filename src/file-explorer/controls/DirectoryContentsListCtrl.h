@@ -57,7 +57,6 @@ private:
 	void ShowItemContextMenu();
 	void BuildColumns();
 	void UpdateContents();
-	void OpenFile(noire::fs::SPathView filePath);
 
 	wxDataObject* CreateSelectedFilesDataObject() const;
 

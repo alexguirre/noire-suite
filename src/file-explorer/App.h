@@ -1,6 +1,7 @@
 #pragma once
 #include <filesystem>
 #include <formats/fs/FileSystem.h>
+#include <formats/fs/Path.h>
 #include <memory>
 #include <wx/app.h>
 #include <wx/event.h>
@@ -21,9 +22,15 @@ public:
 	void ChangeRootPath(const std::filesystem::path& path);
 	noire::fs::CFileSystem* FileSystem() { return mFileSystem.get(); }
 
+	// Opens a window for viewing the file contents.
+	// Returns true if the file format is supported and a window has been opened, otherwise, false.
+	bool OpenFile(noire::fs::SPathView filePath);
+
 private:
-	void OnFileSystemScanStarted(wxThreadEvent& event);
-	void OnFileSystemScanCompleted(wxThreadEvent& event);
+	bool OpenDDSFile(noire::fs::SPathView filePath);
+	bool OpenShaderProgramFile(noire::fs::SPathView filePath);
+	bool OpenAttributeFile(noire::fs::SPathView filePath);
+	bool OpenUniqueTextureVRamFile(noire::fs::SPathView filePath);
 
 	std::unique_ptr<noire::fs::CFileSystem> mFileSystem;
 	CMainWindow* mMainWindow;
