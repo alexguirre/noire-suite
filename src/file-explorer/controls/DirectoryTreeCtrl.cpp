@@ -1,6 +1,7 @@
 #include "DirectoryTreeCtrl.h"
 #include "Identifiers.h"
 #include "Images.h"
+#include <App.h>
 #include <filesystem>
 #include <formats/fs/NativeDevice.h>
 #include <gsl/gsl>
@@ -27,25 +28,17 @@ CDirectoryTreeCtrl::CDirectoryTreeCtrl(wxWindow* parent,
 									   const wxWindowID id,
 									   const wxPoint& pos,
 									   const wxSize& size)
-	: wxTreeCtrl(parent, id, pos, size, TreeCtrlStyle), mFileSystem{ nullptr }
+	: wxTreeCtrl(parent, id, pos, size, TreeCtrlStyle)
 {
 	SetImageList(CImages::Icons());
-}
-
-void CDirectoryTreeCtrl::SetFileSystem(CFileSystem* fileSystem)
-{
-	if (fileSystem != mFileSystem)
-	{
-		mFileSystem = fileSystem;
-		Refresh();
-	}
 }
 
 void CDirectoryTreeCtrl::Refresh()
 {
 	this->DeleteAllItems();
 
-	if (mFileSystem == nullptr)
+	auto* fs = wxGetApp().FileSystem();
+	if (fs == nullptr)
 	{
 		return;
 	}
@@ -55,7 +48,7 @@ void CDirectoryTreeCtrl::Refresh()
 	wxTreeItemId noireItem =
 		AppendItem(root, "L.A. Noire", CImages::IconNoire, -1, new CDirectoryItemData("/"));
 
-	std::vector<SDirectoryEntry> entries = mFileSystem->GetAllEntries();
+	std::vector<SDirectoryEntry> entries = fs->GetAllEntries();
 	// string_view key points to the path of a SDirectoryEntry
 	std::unordered_map<std::string_view, wxTreeItemId> items{};
 

@@ -21,7 +21,6 @@ public:
 	wxStatusBar* OnCreateStatusBar(int, long style, wxWindowID id, const wxString& name) override;
 
 private:
-	std::unique_ptr<noire::fs::CFileSystem> mFileSystem;
 	wxMenuBar* mMenuBar;
 	CDirectoryTreeCtrl* mDirTreeCtrl;
 	CDirectoryContentsListCtrl* mDirContentsListCtrl;
@@ -29,9 +28,8 @@ private:
 	void OnDirectoryTreeSelectionChanged(wxTreeEvent& event);
 	void OnOpenFolder(wxCommandEvent& event);
 	void OnExit(wxCommandEvent& event);
-	void OnFileSystemScanComplated(wxThreadEvent& event);
-
-	void ChangeRootPath(const std::filesystem::path& path);
+	void OnFileSystemScanStarted(wxThreadEvent& event);
+	void OnFileSystemScanCompleted(wxThreadEvent& event);
 
 	void CreateAccelTable();
 };

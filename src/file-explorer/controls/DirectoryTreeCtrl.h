@@ -24,14 +24,11 @@ public:
 					   const wxPoint& pos = wxDefaultPosition,
 					   const wxSize& size = wxDefaultSize);
 
-	void SetFileSystem(noire::fs::CFileSystem* fileSystem);
+	void Refresh();
 
 private:
-	void Refresh();
 	void OnItemContextMenu(wxTreeEvent& event);
 	void ShowItemContextMenu(wxTreeItemId id, const wxPoint& pos);
-
-	noire::fs::CFileSystem* mFileSystem;
 
 	wxDECLARE_EVENT_TABLE();
 };

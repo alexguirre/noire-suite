@@ -6,6 +6,7 @@
 #include "windows/AttributeWindow.h"
 #include "windows/ImageWindow.h"
 #include "windows/ShaderProgramWindow.h"
+#include <App.h>
 #include <IL/il.h>
 #include <cstdlib>
 #include <cstring>
@@ -74,10 +75,7 @@ CDirectoryContentsListCtrl::CDirectoryContentsListCtrl(wxWindow* parent,
 													   const wxWindowID id,
 													   const wxPoint& pos,
 													   const wxSize& size)
-	: wxListCtrl(parent, id, pos, size, wxLC_REPORT | wxLC_VIRTUAL),
-	  mFileSystem{ nullptr },
-	  mDirPath{},
-	  mDirEntries{}
+	: wxListCtrl(parent, id, pos, size, wxLC_REPORT | wxLC_VIRTUAL), mDirPath{}, mDirEntries{}
 {
 	SetImageList(CImages::Icons(), wxIMAGE_LIST_SMALL);
 	BuildColumns();
@@ -92,14 +90,10 @@ CDirectoryContentsListCtrl::CDirectoryContentsListCtrl(wxWindow* parent,
 	SetAcceleratorTable({ entries.size(), entries.data() });
 }
 
-void CDirectoryContentsListCtrl::SetFileSystem(CFileSystem* fileSystem)
+void CDirectoryContentsListCtrl::SetDirectoryToRoot()
 {
-	if (fileSystem != mFileSystem)
-	{
-		mFileSystem = fileSystem;
-		mDirPath = SPathView{};
-		SetDirectory({ "/" });
-	}
+	mDirPath = SPathView{};
+	SetDirectory({ "/" });
 }
 
 void CDirectoryContentsListCtrl::SetDirectory(noire::fs::SPathView dirPath)
@@ -180,7 +174,7 @@ wxString CDirectoryContentsListCtrl::OnGetItemText(long item, long column) const
 			return { name.data(), name.size() };
 		}
 		case TypeCol: return "File";
-		case SizeCol: return BytesToHumanReadable(mFileSystem->FileSize(e.Path));
+		case SizeCol: return BytesToHumanReadable(wxGetApp().FileSystem()->FileSize(e.Path));
 		}
 	}
 	else
@@ -199,7 +193,7 @@ wxString CDirectoryContentsListCtrl::OnGetItemText(long item, long column) const
 			return e.Type == EDirectoryEntryType::Collection ?
 					   BytesToHumanReadable(
 						   // remove last '/' and pass it to FileSize
-						   mFileSystem->FileSize(path.substr(0, path.size() - 1))) :
+						   wxGetApp().FileSystem()->FileSize(path.substr(0, path.size() - 1))) :
 					   "TBD";
 		}
 		}
@@ -238,7 +232,8 @@ void CDirectoryContentsListCtrl::BuildColumns()
 
 void CDirectoryContentsListCtrl::UpdateContents()
 {
-	if (mFileSystem == nullptr || mDirPath.IsEmpty())
+	auto* fs = wxGetApp().FileSystem();
+	if (fs == nullptr || mDirPath.IsEmpty())
 	{
 		SetItemCount(0);
 		return;
@@ -247,7 +242,7 @@ void CDirectoryContentsListCtrl::UpdateContents()
 	Freeze();
 	SetCursor(wxCursor{ wxCURSOR_ARROWWAIT });
 
-	mDirEntries = mFileSystem->GetEntries(mDirPath);
+	mDirEntries = fs->GetEntries(mDirPath);
 
 	// sort the entries so directories appear before files and in alphabetical order
 	std::stable_sort(mDirEntries.begin(),
@@ -332,15 +327,16 @@ void CDirectoryContentsListCtrl::OpenFile(SPathView filePath)
 {
 	using namespace noire;
 
+	auto* fs = wxGetApp().FileSystem();
 	if (filePath.Name() == "uniquetexturevram")
 	{
 		// TODO: move this loading somewhere else, possibly to noire-formats
 		// TODO: show all textures in the same window
 		SPath mainPath = filePath.Parent() / "uniquetexturemain";
-		Expects(mFileSystem->FileExists(mainPath)); // TODO: 'uniquetexturemain' may not exist along
-													// with a 'uniquetexturevram' file
-		std::unique_ptr<IFileStream> mainStream = mFileSystem->OpenFile(mainPath);
-		std::unique_ptr<IFileStream> vramStream = mFileSystem->OpenFile(filePath);
+		Expects(fs->FileExists(mainPath)); // TODO: 'uniquetexturemain' may not exist along
+										   // with a 'uniquetexturevram' file
+		std::unique_ptr<IFileStream> mainStream = fs->OpenFile(mainPath);
+		std::unique_ptr<IFileStream> vramStream = fs->OpenFile(filePath);
 		const std::size_t vramStreamSize = vramStream->Size();
 
 		mainStream->Read<std::uint32_t>(); // these 4 bytes are used by the game at runtime to
@@ -386,7 +382,7 @@ void CDirectoryContentsListCtrl::OpenFile(SPathView filePath)
 	else
 	{
 		std::uint32_t headerMagic;
-		std::unique_ptr<IFileStream> file = mFileSystem->OpenFile(filePath);
+		std::unique_ptr<IFileStream> file = fs->OpenFile(filePath);
 
 		if (TFileTraits<CShaderProgramFile>::IsValid(*file))
 		{
@@ -456,10 +452,11 @@ wxDataObject* CDirectoryContentsListCtrl::CreateSelectedFilesDataObject() const
 		return nullptr;
 	}
 
+	auto* fs = wxGetApp().FileSystem();
 	// get device based on the path of the first selected item because all selected items should
 	// have the same device since they are in the same directory
-	IDevice* device = mFileSystem->FindDevice(entries[0]->Path);
-	if (device == mFileSystem->FindDevice("/"))
+	IDevice* device = fs->FindDevice(entries[0]->Path);
+	if (device == fs->FindDevice("/"))
 	{
 		wxFileDataObject* dataObj = new wxFileDataObject;
 		const std::filesystem::path& rootPath =
@@ -483,6 +480,6 @@ wxDataObject* CDirectoryContentsListCtrl::CreateSelectedFilesDataObject() const
 					   std::back_inserter(paths),
 					   [](const SDirectoryEntry* e) { return SPathView{ e->Path }; });
 
-		return new CVirtualFileDataObject{ mFileSystem, paths };
+		return new CVirtualFileDataObject{ fs, paths };
 	}
 }

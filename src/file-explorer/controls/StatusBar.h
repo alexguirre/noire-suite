@@ -20,8 +20,6 @@ public:
 			   long style = wxSTB_DEFAULT_STYLE,
 			   const wxString& name = wxStatusBarNameStr);
 
-	void SetFileSystem(noire::fs::CFileSystem* fileSystem);
-
 	void SetNumberOfItems(std::size_t num);
 	void SetSelectedItems(std::size_t num, std::uintmax_t totalByteSize);
 	void SetInfo(const wxString& newText);
@@ -31,6 +29,4 @@ private:
 	void UpdateFieldWidth(EStatusBarField field, const wxString& newText);
 
 	void OnDirectoryChanged(CDirectoryEvent& e);
-
-	noire::fs::CFileSystem* mFileSystem;
 };
