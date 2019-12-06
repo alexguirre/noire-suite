@@ -83,11 +83,6 @@ CMainWindow::CMainWindow()
 	Bind(wxEVT_MENU, &CMainWindow::OnOpenFolder, this, MenuBarOpenFolderId);
 	Bind(wxEVT_MENU, &CMainWindow::OnExit, this, wxID_EXIT);
 	Bind(EVT_FILE_SYSTEM_SCAN_COMPLETED, &CMainWindow::OnFileSystemScanComplated, this);
-
-#if _DEBUG
-	// hardcoded path to aid in development as the last opened folder is not saved yet
-	ChangeRootPath("E:\\Rockstar Games\\L.A. Noire Complete Edition\\");
-#endif
 }
 
 wxToolBar* CMainWindow::OnCreateToolBar(long style, wxWindowID id, const wxString& name)
