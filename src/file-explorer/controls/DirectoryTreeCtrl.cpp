@@ -107,6 +107,18 @@ void CDirectoryTreeCtrl::Refresh()
 			addDirectoryToTree(entry.Path, entry.Type);
 		}
 	}
+
+	const std::function<void(const wxTreeItemId&)> sortRecursively = [this, &sortRecursively](
+																		 const wxTreeItemId& item) {
+		SortChildren(item); // sort in ascending case-sensitive alphabetical order
+		wxTreeItemIdValue cookie;
+		for (wxTreeItemId c = GetFirstChild(item, cookie); c.IsOk(); c = GetNextChild(item, cookie))
+		{
+			sortRecursively(c);
+		}
+	};
+
+	sortRecursively(root);
 }
 
 void CDirectoryTreeCtrl::OnItemContextMenu(wxTreeEvent& event)
