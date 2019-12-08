@@ -16,7 +16,7 @@ std::string BytesToHumanReadable(std::uintmax_t numBytes)
 	if (str.size() > 6)
 	{
 		// insert thousands separator
-		for (std::ptrdiff_t i = str.size() - 6; i >= 0; i -= 4)
+		for (std::ptrdiff_t i = str.size() - 6; i > 0; i -= 3)
 		{
 			str.insert(i, 1, ',');
 		}
