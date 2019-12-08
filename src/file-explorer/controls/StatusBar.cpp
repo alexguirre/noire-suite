@@ -1,5 +1,6 @@
 #include "StatusBar.h"
 #include "util/Format.h"
+#include <App.h>
 #include <array>
 #include <wx/dcclient.h>
 
@@ -14,11 +15,6 @@ CStatusBar::CStatusBar(wxWindow* parent, wxWindowID id, long style, const wxStri
 	SetSelectedItems(0, 0);
 
 	parent->Bind(EVT_DIRECTORY_CHANGED, &CStatusBar::OnDirectoryChanged, this);
-}
-
-void CStatusBar::SetFileSystem(CFileSystem* fileSystem)
-{
-	mFileSystem = fileSystem;
 }
 
 void CStatusBar::SetNumberOfItems(std::size_t num)
@@ -65,7 +61,7 @@ void CStatusBar::OnDirectoryChanged(CDirectoryEvent& e)
 {
 	// TODO: GetEntries may be too much overhead when a directory has too many items, maybe we need
 	// a GetEntryCount function or similar in the filesystem
-	std::size_t numItems = mFileSystem->GetEntries(e.GetDirectory()).size();
+	std::size_t numItems = wxGetApp().FileSystem()->GetEntries(e.GetDirectory()).size();
 
 	SetNumberOfItems(numItems);
 

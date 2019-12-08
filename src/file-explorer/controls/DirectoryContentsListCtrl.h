@@ -43,7 +43,7 @@ public:
 							   const wxPoint& pos = wxDefaultPosition,
 							   const wxSize& size = wxDefaultSize);
 
-	void SetFileSystem(noire::fs::CFileSystem* fileSystem);
+	void SetDirectoryToRoot();
 	void SetDirectory(noire::fs::SPathView dirPath);
 
 	void OnItemContextMenu(wxListEvent& event);
@@ -57,11 +57,9 @@ private:
 	void ShowItemContextMenu();
 	void BuildColumns();
 	void UpdateContents();
-	void OpenFile(noire::fs::SPathView filePath);
 
 	wxDataObject* CreateSelectedFilesDataObject() const;
 
-	noire::fs::CFileSystem* mFileSystem;
 	noire::fs::SPath mDirPath;
 	std::vector<noire::fs::SDirectoryEntry> mDirEntries;
 
