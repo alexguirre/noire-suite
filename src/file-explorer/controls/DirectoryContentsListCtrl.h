@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <formats/fs/FileSystem.h>
 #include <formats/fs/Path.h>
 #include <memory>
@@ -54,14 +55,17 @@ public:
 	int OnGetItemImage(long item) const override;
 
 private:
+	void OnColClick(wxListEvent& event);
 	void ShowItemContextMenu();
 	void BuildColumns();
 	void UpdateContents();
+	void SortContents(long column, bool ascending);
 
 	wxDataObject* CreateSelectedFilesDataObject() const;
 
 	noire::fs::SPath mDirPath;
 	std::vector<noire::fs::SDirectoryEntry> mDirEntries;
+	std::array<bool, 3> mColSortDescending;
 
 	wxDECLARE_EVENT_TABLE();
 };
