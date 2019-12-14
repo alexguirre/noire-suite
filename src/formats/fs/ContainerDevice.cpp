@@ -152,7 +152,7 @@ namespace noire::fs
 
 		for (auto& e : mContainerFile.Entries())
 		{
-			std::string str = CHashDatabase::Instance().GetString(e.NameHash);
+			std::string str = CHashDatabase::Instance().TryGetString(e.NameHash);
 			mEntries.emplace_back(this, std::move(str), EDirectoryEntryType::File);
 			getDirectoriesFromPath(mEntries.back().Path, dirs);
 		}

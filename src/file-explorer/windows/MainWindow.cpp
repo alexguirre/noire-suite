@@ -7,6 +7,7 @@
 #include "controls/StatusBar.h"
 #include <App.h>
 #include <gsl/gsl>
+#include <windows/HashLookupWindow.h>
 #include <wx/artprov.h>
 #include <wx/button.h>
 #include <wx/splitter.h>
@@ -25,7 +26,11 @@ CMainWindow::CMainWindow()
 		fileMenu->AppendSeparator();
 		fileMenu->Append(wxID_EXIT, "E&xit\tAlt+F4");
 
+		wxMenu* toolsMenu = new wxMenu();
+		toolsMenu->Append(MenuBarHashLookupId, "Hash &Lookup...");
+
 		mMenuBar->Append(fileMenu, "&File");
+		mMenuBar->Append(toolsMenu, "&Tools");
 		SetMenuBar(mMenuBar);
 	}
 
@@ -64,6 +69,7 @@ CMainWindow::CMainWindow()
 	mDirTreeCtrl->Bind(wxEVT_TREE_SEL_CHANGED, &CMainWindow::OnDirectoryTreeSelectionChanged, this);
 
 	Bind(wxEVT_MENU, &CMainWindow::OnOpenFolder, this, MenuBarOpenFolderId);
+	Bind(wxEVT_MENU, &CMainWindow::OnHashLookupTool, this, MenuBarHashLookupId);
 	Bind(wxEVT_MENU, &CMainWindow::OnExit, this, wxID_EXIT);
 	wxGetApp().Bind(EVT_FILE_SYSTEM_SCAN_STARTED, &CMainWindow::OnFileSystemScanStarted, this);
 	wxGetApp().Bind(EVT_FILE_SYSTEM_SCAN_COMPLETED, &CMainWindow::OnFileSystemScanCompleted, this);
@@ -109,6 +115,12 @@ void CMainWindow::OnOpenFolder(wxCommandEvent&)
 
 	std::filesystem::path rootPath = dlg.GetPath().c_str().AsChar();
 	wxGetApp().ChangeRootPath(rootPath);
+}
+
+void CMainWindow::OnHashLookupTool(wxCommandEvent&)
+{
+	CHashLookupWindow* win = new CHashLookupWindow(this);
+	win->Show();
 }
 
 void CMainWindow::OnExit(wxCommandEvent&)

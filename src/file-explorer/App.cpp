@@ -254,7 +254,7 @@ bool CApp::OpenUniqueTextureVRamFile(SPathView filePath)
 			const wxImage img =
 				CreateImageFromDDS({ buffer.get(), gsl::narrow<std::ptrdiff_t>(size) });
 
-			std::string title = noire::CHashDatabase::Instance().GetString(e.NameHash);
+			std::string title = noire::CHashDatabase::Instance().TryGetString(e.NameHash);
 			title += " | " + std::string{ filePath.String() };
 			CImageWindow* imgWin = new CImageWindow(mMainWindow, wxID_ANY, title, img);
 			imgWin->Show();

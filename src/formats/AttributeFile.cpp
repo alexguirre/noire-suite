@@ -52,7 +52,7 @@ namespace noire
 			{
 				str += sep;
 			}
-			str += CHashDatabase::Instance(false).GetString(h);
+			str += CHashDatabase::Instance(false).TryGetString(h);
 		}
 
 		return str;
