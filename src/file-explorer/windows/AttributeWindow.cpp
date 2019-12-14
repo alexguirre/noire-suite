@@ -31,7 +31,7 @@ static void AppendPropertyToGrid(wxPropertyGrid* propGrid,
 {
 	wxString name = !nameOverride.IsEmpty() ?
 						nameOverride :
-						wxString{ noire::CHashDatabase::Instance(false).GetString(p.NameHash) };
+						wxString{ noire::CHashDatabase::Instance(false).TryGetString(p.NameHash) };
 	wxPGProperty* newProp = std::visit(
 		overloaded{
 			[&name](auto) -> wxPGProperty* {
@@ -168,7 +168,7 @@ static wxPGProperty* AppendObjectToGrid(wxPropertyGrid* propGrid,
 		prop,
 		new wxStringProperty("Definition",
 							 wxPG_LABEL,
-							 noire::CHashDatabase::Instance(false).GetString(obj.DefinitionHash)));
+							 noire::CHashDatabase::Instance(false).TryGetString(obj.DefinitionHash)));
 	wxPGProperty* propertiesProp =
 		propGrid->AppendIn(prop, new wxStringProperty("Properties", wxPG_LABEL));
 	for (const noire::SAttributeProperty& p : obj.Properties)

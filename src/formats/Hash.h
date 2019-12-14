@@ -17,7 +17,9 @@ namespace noire
 	public:
 		CHashDatabase(const std::filesystem::path& dbPath, bool caseSensitive);
 
-		std::string GetString(std::uint32_t hash) const;
+		/// Tries to translate the hash to a string. If no translation is found, the hash converted
+		/// to a hexadecimal string (without '0x' prefix) is returned.
+		std::string TryGetString(std::uint32_t hash) const;
 
 		static const CHashDatabase& Instance(bool caseSensitive = true);
 

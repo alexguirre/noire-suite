@@ -84,7 +84,7 @@ namespace noire
 		Load(dbPath);
 	}
 
-	std::string CHashDatabase::GetString(std::uint32_t hash) const
+	std::string CHashDatabase::TryGetString(std::uint32_t hash) const
 	{
 		auto it = mHashToStr.find(hash);
 		if (it == mHashToStr.end())

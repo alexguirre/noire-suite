@@ -94,7 +94,7 @@ namespace noire::fs
 		entries.emplace_back(this, SPathView{}, EDirectoryEntryType::Collection); // root
 		for (auto& e : mTrunkFile.Entries())
 		{
-			std::string str = CHashDatabase::Instance().GetString(e.NameHash);
+			std::string str = CHashDatabase::Instance().TryGetString(e.NameHash);
 			entries.emplace_back(this, std::move(str), EDirectoryEntryType::File);
 		}
 		return entries;
