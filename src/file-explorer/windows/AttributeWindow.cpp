@@ -164,11 +164,11 @@ static wxPGProperty* AppendObjectToGrid(wxPropertyGrid* propGrid,
 	{
 		propGrid->AppendIn(prop, new wxStringProperty("Name", wxPG_LABEL, obj.Name));
 	}
-	propGrid->AppendIn(
-		prop,
-		new wxStringProperty("Definition",
-							 wxPG_LABEL,
-							 noire::CHashDatabase::Instance(false).TryGetString(obj.DefinitionHash)));
+	propGrid->AppendIn(prop,
+					   new wxStringProperty(
+						   "Definition",
+						   wxPG_LABEL,
+						   noire::CHashDatabase::Instance(false).TryGetString(obj.DefinitionHash)));
 	wxPGProperty* propertiesProp =
 		propGrid->AppendIn(prop, new wxStringProperty("Properties", wxPG_LABEL));
 	for (const noire::SAttributeProperty& p : obj.Properties)
