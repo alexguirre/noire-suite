@@ -3,6 +3,7 @@
 
 class wxTextCtrl;
 class wxCommandEvent;
+class wxKeyEvent;
 
 class CHashLookupWindow : public wxFrame
 {
@@ -11,6 +12,7 @@ public:
 
 private:
 	void OnLookup(wxCommandEvent&);
+	void OnInputChar(wxKeyEvent&);
 
 	wxTextCtrl* mInputTextCtrl;
 	wxTextCtrl* mOutputTextCtrl;

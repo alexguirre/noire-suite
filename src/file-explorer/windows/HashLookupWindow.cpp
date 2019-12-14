@@ -22,7 +22,6 @@ CHashLookupWindow::CHashLookupWindow(wxWindow* parent)
 		{
 			static float dest = 0.0f;
 			wxStaticText* inputLabel = new wxStaticText(inputPanel, wxID_ANY, "Input:");
-			// TODO: custom validator to only allow decimal and hexadecimal inputs
 			mInputTextCtrl = new wxTextCtrl(inputPanel,
 											wxID_ANY,
 											wxEmptyString,
@@ -72,6 +71,8 @@ CHashLookupWindow::CHashLookupWindow(wxWindow* parent)
 	SetBackgroundColour(*wxWHITE);
 
 	SetSize(700, 500);
+
+	mInputTextCtrl->Bind(wxEVT_CHAR, &CHashLookupWindow::OnInputChar, this);
 }
 
 void CHashLookupWindow::OnLookup(wxCommandEvent&)
@@ -109,4 +110,28 @@ void CHashLookupWindow::OnLookup(wxCommandEvent&)
 	}
 
 	mOutputTextCtrl->SetValue(output);
+}
+
+void CHashLookupWindow::OnInputChar(wxKeyEvent& event)
+{
+	wxLogDebug(__FUNCTION__ ": key:'%c'", event.GetUnicodeKey());
+
+	// skip by default
+	event.Skip();
+
+	wxChar k = event.GetUnicodeKey();
+
+	if (k < WXK_SPACE || k == WXK_DELETE)
+	{
+		return;
+	}
+
+	// only allow numeric chars
+	if ((k >= '0' && k <= '9') || (k >= 'a' && k <= 'f') || (k >= 'A' && k <= 'F') || k == 'x')
+	{
+		return;
+	}
+
+	// eat message
+	event.Skip(false);
 }
