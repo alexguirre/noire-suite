@@ -85,34 +85,23 @@ void CHashLookupWindow::OnLookup(wxCommandEvent&)
 		wxLogDebug(" > %s", hashStr);
 
 		const wxScopedCharBuffer hashChars = hashStr.To8BitData();
+		const char* charsBegin = hashChars.data();
+		const char* charsEnd = hashChars.data() + hashChars.length();
+		int base = 10;
+
 		if (hashStr.size() > 2 && hashStr[0] == '0' && hashStr[1] == 'x') // has hex prefix
 		{
-			// parse as hex
-			if (std::uint32_t hashValue; std::from_chars(hashChars.data() + 2, // skip prefix
-														 hashChars.data() + hashChars.length(),
-														 hashValue,
-														 16)
-											 .ec == std::errc{})
-			{
-				if (auto s = noire::CHashDatabase::Instance().GetString(hashValue); s.has_value())
-				{
-					output += s.value();
-				}
-			}
+			charsBegin += 2; // skip prefix
+			base = 16;
 		}
-		else
+
+		std::uint32_t hashValue;
+		if (auto [str, err] = std::from_chars(charsBegin, charsEnd, hashValue, base);
+			err == std::errc{} && str == charsEnd)
 		{
-			// parse as decimal
-			if (std::uint32_t hashValue; std::from_chars(hashChars.data(),
-														 hashChars.data() + hashChars.length(),
-														 hashValue,
-														 10)
-											 .ec == std::errc{})
+			if (auto s = noire::CHashDatabase::Instance().GetString(hashValue); s.has_value())
 			{
-				if (auto s = noire::CHashDatabase::Instance().GetString(hashValue); s.has_value())
-				{
-					output += s.value();
-				}
+				output += s.value();
 			}
 		}
 
