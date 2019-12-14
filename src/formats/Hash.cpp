@@ -102,6 +102,12 @@ namespace noire
 		}
 	}
 
+	std::optional<std::string> CHashDatabase::GetString(std::uint32_t hash) const
+	{
+		auto it = mHashToStr.find(hash);
+		return it == mHashToStr.end() ? std::nullopt : std::make_optional(it->second);
+	}
+
 	void CHashDatabase::Load(const std::filesystem::path& dbPath)
 	{
 		auto fp = std::filesystem::absolute(dbPath);

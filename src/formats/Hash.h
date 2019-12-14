@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -20,6 +21,10 @@ namespace noire
 		/// Tries to translate the hash to a string. If no translation is found, the hash converted
 		/// to a hexadecimal string (without '0x' prefix) is returned.
 		std::string TryGetString(std::uint32_t hash) const;
+
+		/// Gets the translation of the hash. If found, the translation string is returned,
+		/// otherwise, `nullopt`.
+		std::optional<std::string> GetString(std::uint32_t hash) const;
 
 		static const CHashDatabase& Instance(bool caseSensitive = true);
 

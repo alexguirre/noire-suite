@@ -94,9 +94,10 @@ void CHashLookupWindow::OnLookup(wxCommandEvent&)
 														 16)
 											 .ec == std::errc{})
 			{
-				// TODO: don't show hash value if it is not found in the database
-				// TryGetString returns the hash converted to hex string if it is not found
-				output += noire::CHashDatabase::Instance().TryGetString(hashValue);
+				if (auto s = noire::CHashDatabase::Instance().GetString(hashValue); s.has_value())
+				{
+					output += s.value();
+				}
 			}
 		}
 		else
@@ -108,7 +109,10 @@ void CHashLookupWindow::OnLookup(wxCommandEvent&)
 														 10)
 											 .ec == std::errc{})
 			{
-				output += noire::CHashDatabase::Instance().TryGetString(hashValue);
+				if (auto s = noire::CHashDatabase::Instance().GetString(hashValue); s.has_value())
+				{
+					output += s.value();
+				}
 			}
 		}
 
