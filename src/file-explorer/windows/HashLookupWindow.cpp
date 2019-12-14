@@ -71,7 +71,7 @@ CHashLookupWindow::CHashLookupWindow(wxWindow* parent)
 	SetSizer(mainSizer);
 	SetBackgroundColour(*wxWHITE);
 
-	SetSize(550, 650);
+	SetSize(700, 500);
 }
 
 void CHashLookupWindow::OnLookup(wxCommandEvent&)
