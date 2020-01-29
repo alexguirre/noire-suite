@@ -16,6 +16,8 @@ file(GLOB FILE_EXPLORER_SOURCES
     "controls/PathToolBar.h"
     "controls/StatusBar.cpp"
     "controls/StatusBar.h"
+    "rendering/Renderer.cpp"
+    "rendering/Renderer.h"
     "util/DirectoryHistory.cpp"
     "util/DirectoryHistory.h"
     "util/Format.cpp"
@@ -105,4 +107,5 @@ target_link_libraries(noire-file-explorer PRIVATE
     noire-core
     ${WX_LIBS}
     ${DEVIL_LIBS}
+    d3d11.lib
 )
