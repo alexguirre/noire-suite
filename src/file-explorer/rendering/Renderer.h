@@ -34,6 +34,11 @@ private:
 	Microsoft::WRL::ComPtr<ID3D11Device> mDevice;
 	Microsoft::WRL::ComPtr<ID3D11DeviceContext> mDeviceContext;
 	Microsoft::WRL::ComPtr<ID3D11RenderTargetView> mBackBuffer;
+	Microsoft::WRL::ComPtr<ID3D11VertexShader> mVertexShader;
+	Microsoft::WRL::ComPtr<ID3D11PixelShader> mPixelShader;
+	Microsoft::WRL::ComPtr<ID3D11InputLayout> mInputLayout;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> mVertexBuffer;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> mConstantBuffer;
 	std::thread mRenderingThread;
 	std::atomic_bool mRenderingThreadRunning;
 	FRenderCallback mRenderCallback;
