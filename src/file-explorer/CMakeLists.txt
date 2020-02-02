@@ -16,6 +16,8 @@ file(GLOB FILE_EXPLORER_SOURCES
     "controls/PathToolBar.h"
     "controls/StatusBar.cpp"
     "controls/StatusBar.h"
+    "rendering/Camera.cpp"
+    "rendering/Camera.h"
     "rendering/Math.h"
     "rendering/Renderer.cpp"
     "rendering/Renderer.h"

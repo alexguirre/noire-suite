@@ -1,4 +1,5 @@
 #pragma once
+#include "Camera.h"
 #include <Windows.h>
 #include <atomic>
 #include <cstddef>
@@ -42,4 +43,5 @@ private:
 	std::thread mRenderingThread;
 	std::atomic_bool mRenderingThreadRunning;
 	FRenderCallback mRenderCallback;
+	CCamera mCam;
 };

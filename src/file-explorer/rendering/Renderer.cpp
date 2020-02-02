@@ -18,7 +18,7 @@ struct VSConstantBuffer
 constexpr std::string_view Shader =
 	"cbuffer VSConstantBuffer : register(b0)"
 	"{"
-	"	matrix mWorldViewProj;"
+	"	float4x4 mWorldViewProj;"
 	"};"
 	""
 	"struct VSInput"
@@ -34,8 +34,7 @@ constexpr std::string_view Shader =
 	"VSOutput VSMain(VSInput input)"
 	"{"
 	"	VSOutput output = (VSOutput)0;"
-	"	output.position = mul(input.position, mWorldViewProj);"
-	"	output.position.w = 1.0;"
+	"	output.position = mul(float4(input.position, 1.0), mWorldViewProj);"
 	"	return output;"
 	"}"
 	""
@@ -160,9 +159,9 @@ void CRenderer::CreateDeviceResources()
 	// create vertex buffer
 	{
 		const std::array<float, 3 * 3> vertices{
-			0.0f,  0.0f, 0.5f,  // point at top
-			0.5f,  0.0f, -0.5f, // point at bottom-right
-			-0.5f, 0.0f, -0.5f, // point at bottom-left
+			0.0f,  0.5f,  0.0f, // point at top
+			0.5f,  -0.5f, 0.0f, // point at bottom-right
+			-0.5f, -0.5f, 0.0f, // point at bottom-left
 		};
 
 		D3D11_BUFFER_DESC desc = { 0 };
@@ -176,26 +175,8 @@ void CRenderer::CreateDeviceResources()
 
 	// create constant buffer
 	{
-		const XMVECTOR rotation{ XMQuaternionIdentity() };
-		const XMVECTOR position{ XMVectorSet(0.5f, -5.0f, 0.0f, 0.0f) };
-		constexpr float FocalDistance{ 0.0f };
-
-		const XMMATRIX proj{ XMMatrixPerspectiveFovRH(1.24f, 16.0f / 9.0f, 0.01f, 1000.0f) };
-
-		const XMVECTOR up{ XMVector3Rotate(XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), rotation) };
-		const XMVECTOR lookAt{ XMVector3Rotate(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rotation) +
-							   position };
-		const XMVECTOR eyePos{ XMVectorScale(
-								   XMVector3Rotate(XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), rotation),
-								   FocalDistance) +
-							   position };
-		const XMMATRIX view{ XMMatrixLookAtRH(eyePos, lookAt, up) };
-
-		const XMMATRIX worldViewProj{ (
-			XMMatrixMultiply(XMMatrixMultiply(XMMatrixIdentity(), view), proj)) };
-
 		VSConstantBuffer initData;
-		XMStoreFloat4x4(&initData.mWorldViewProj, worldViewProj);
+		XMStoreFloat4x4(&initData.mWorldViewProj, XMMatrixIdentity());
 
 		D3D11_BUFFER_DESC desc = { 0 };
 		desc.ByteWidth = sizeof(VSConstantBuffer);
@@ -239,6 +220,61 @@ void CRenderer::ReleaseDeviceResources()
 	mHasDeviceResources = false;
 }
 
+static void UpdateCamera(CCamera& c, float frameTime)
+{
+	constexpr float Speed{ 10.0f };
+
+	bool changed = false;
+
+	if (GetAsyncKeyState('W') & 0x8000)
+	{
+		c.Position(c.Position() + Vector3::Forward * Speed * frameTime);
+		changed = true;
+	}
+
+	if (GetAsyncKeyState('S') & 0x8000)
+	{
+		c.Position(c.Position() + Vector3::Backward * Speed * frameTime);
+		changed = true;
+	}
+
+	if (GetAsyncKeyState('A') & 0x8000)
+	{
+		c.Position(c.Position() + Vector3::Left * Speed * frameTime);
+		changed = true;
+	}
+
+	if (GetAsyncKeyState('D') & 0x8000)
+	{
+		c.Position(c.Position() + Vector3::Right * Speed * frameTime);
+		changed = true;
+	}
+
+	if (GetAsyncKeyState('Q') & 0x8000)
+	{
+		c.Position(c.Position() + Vector3::Down * Speed * frameTime);
+		changed = true;
+	}
+
+	if (GetAsyncKeyState('E') & 0x8000)
+	{
+		c.Position(c.Position() + Vector3::Up * Speed * frameTime);
+		changed = true;
+	}
+
+	if (changed)
+	{
+		char b[512];
+		std::snprintf(b,
+					  std::size(b),
+					  "Cam position: (%.3f, %.3f, %.3f)\n",
+					  c.Position().x,
+					  c.Position().y,
+					  c.Position().z);
+		OutputDebugStringA(b);
+	}
+}
+
 void CRenderer::RenderThreadStart()
 {
 	using namespace std::chrono;
@@ -272,8 +308,12 @@ void CRenderer::RenderThreadStart()
 					SUCCEEDED(mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer)));
 				Expects(SUCCEEDED(
 					mDevice->CreateRenderTargetView(backBuffer.Get(), nullptr, &mBackBuffer)));
+
+				mCam.Resize(static_cast<size_t>(newW), static_cast<size_t>(newH));
 			}
 		}
+
+		UpdateCamera(mCam, frameTime);
 
 		mRenderCallback(*this, frameTime);
 
@@ -289,6 +329,15 @@ void CRenderer::RenderThreadStart()
 
 			mDeviceContext->RSSetViewports(1, &viewport);
 		}
+
+		D3D11_MAPPED_SUBRESOURCE m = { 0 };
+		Expects(SUCCEEDED(
+			mDeviceContext->Map(mConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &m)));
+
+		XMStoreFloat4x4(&reinterpret_cast<VSConstantBuffer*>(m.pData)->mWorldViewProj,
+						mCam.ViewProjection().Transpose());
+
+		mDeviceContext->Unmap(mConstantBuffer.Get(), 0);
 
 		mDeviceContext->OMSetRenderTargets(1, mBackBuffer.GetAddressOf(), nullptr);
 
