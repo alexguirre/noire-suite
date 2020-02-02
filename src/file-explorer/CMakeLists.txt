@@ -19,6 +19,7 @@ file(GLOB FILE_EXPLORER_SOURCES
     "rendering/Math.h"
     "rendering/Renderer.cpp"
     "rendering/Renderer.h"
+    "rendering/SimpleMath.cpp"
     "rendering/SimpleMath.h"
     "rendering/SimpleMath.inl"
     "util/DirectoryHistory.cpp"
