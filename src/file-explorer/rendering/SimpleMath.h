@@ -8,6 +8,7 @@
 // http://go.microsoft.com/fwlink/?LinkID=615561
 //-------------------------------------------------------------------------------------
 
+// clang-format off
 #pragma once
 
 #if !defined(__d3d11_h__) && !defined(__d3d11_x_h__) && !defined(__d3d12_h__) && !defined(__d3d12_x_h__) && !defined(__XBOX_D3D12_X__)
@@ -1086,3 +1087,4 @@ namespace std
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
+// clang-format on
