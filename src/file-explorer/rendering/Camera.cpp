@@ -1,17 +1,24 @@
+
 #include "Camera.h"
 
-CCamera::CCamera()
-	: mPosition{},
-	  mUp{},
-	  mTarget{},
-	  mProjection{ Matrix::Identity },
-	  mView{ Matrix::Identity },
-	  mViewProjection{ Matrix::Identity }
+CCamera::CCamera() noexcept
+	: mTransform{},
+	  mProjection{},
+	  mView{},
+	  mViewProjection{},
+	  mClientWidth{ 1920 },
+	  mClientHeight{ 1080 }
 {
-	Position({ 0.0f, 0.0f, 1.0f });
+	Transform(Matrix::Identity);
 }
 
-void CCamera::Resize(std::size_t width, std::size_t height)
+void CCamera::Transform(const Matrix& t) noexcept
+{
+	mTransform = t;
+	UpdateMatrices();
+}
+
+void CCamera::Resize(std::size_t width, std::size_t height) noexcept
 {
 	if (mClientWidth != width || mClientHeight != height)
 	{
@@ -22,7 +29,7 @@ void CCamera::Resize(std::size_t width, std::size_t height)
 	}
 }
 
-void CCamera::UpdateMatrices()
+void CCamera::UpdateMatrices() noexcept
 {
 	// calculate projection
 	{
@@ -36,7 +43,11 @@ void CCamera::UpdateMatrices()
 
 	// calculate view
 	{
-		mView = Matrix::CreateLookAt(mPosition, mTarget, Up());
+		const Vector3 pos = mTransform.Translation();
+		const Vector3 up = mTransform.Up();
+		const Vector3 target = pos + mTransform.Forward();
+
+		mView = Matrix::CreateLookAt(pos, target, up);
 	}
 
 	// calculate view-projection

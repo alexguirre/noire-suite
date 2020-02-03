@@ -5,39 +5,26 @@
 class CCamera final
 {
 public:
-	CCamera();
-	CCamera(const CCamera&) = default;
-	CCamera(CCamera&&) = default;
+	CCamera() noexcept;
+	CCamera(const CCamera&) noexcept = default;
+	CCamera(CCamera&&) noexcept = default;
 
-	CCamera& operator=(const CCamera&) = default;
-	CCamera& operator=(CCamera&&) = default;
+	CCamera& operator=(const CCamera&) noexcept = default;
+	CCamera& operator=(CCamera&&) noexcept = default;
 
-	void Position(const Vector3& p) noexcept
-	{
-		mPosition = p;
-		mUp = mPosition + Vector3::Up;
-		mTarget = mPosition + Vector3::Forward;
-		UpdateMatrices();
-	}
-	const Vector3& Position() const noexcept { return mPosition; }
-
-	const Vector3 Up() const noexcept { return mUp - mPosition; }
-
-	const Vector3& Target() const noexcept { return mTarget; }
-	const Vector3 LookAtTarget() const noexcept { return mTarget - mPosition; }
+	void Transform(const Matrix& t) noexcept;
+	const Matrix& Transform() const noexcept { return mTransform; }
 
 	const Matrix& Projection() const noexcept { return mProjection; }
 	const Matrix& View() const noexcept { return mView; }
 	const Matrix& ViewProjection() const noexcept { return mViewProjection; }
 
-	void Resize(std::size_t width, std::size_t height);
+	void Resize(std::size_t width, std::size_t height) noexcept;
 
 private:
-	void UpdateMatrices();
+	void UpdateMatrices() noexcept;
 
-	Vector3 mPosition;
-	Vector3 mUp; // up vector end position
-	Vector3 mTarget;
+	Matrix mTransform;
 	Matrix mProjection;
 	Matrix mView;
 	Matrix mViewProjection;

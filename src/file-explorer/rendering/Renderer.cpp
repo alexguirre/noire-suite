@@ -236,44 +236,75 @@ void CRenderer::ReleaseDeviceResources()
 static bool UpdateCamera(CCamera& c, float frameTime)
 {
 	constexpr float Speed{ 10.0f };
+	constexpr float RotSpeed{ 0.5f };
 
 	bool changed = false;
 
+	Vector3 offset = Vector3::Zero;
 	if (GetAsyncKeyState('W') & 0x8000)
 	{
-		c.Position(c.Position() + Vector3::Forward * Speed * frameTime);
+		offset += Vector3::Forward * Speed * frameTime;
 		changed = true;
 	}
 
 	if (GetAsyncKeyState('S') & 0x8000)
 	{
-		c.Position(c.Position() + Vector3::Backward * Speed * frameTime);
+		offset += Vector3::Backward * Speed * frameTime;
 		changed = true;
 	}
 
 	if (GetAsyncKeyState('A') & 0x8000)
 	{
-		c.Position(c.Position() + Vector3::Left * Speed * frameTime);
+		offset += Vector3::Left * Speed * frameTime;
 		changed = true;
 	}
 
 	if (GetAsyncKeyState('D') & 0x8000)
 	{
-		c.Position(c.Position() + Vector3::Right * Speed * frameTime);
+		offset += Vector3::Right * Speed * frameTime;
 		changed = true;
 	}
 
 	if (GetAsyncKeyState('Q') & 0x8000)
 	{
-		c.Position(c.Position() + Vector3::Down * Speed * frameTime);
+		offset += Vector3::Down * Speed * frameTime;
 		changed = true;
 	}
 
 	if (GetAsyncKeyState('E') & 0x8000)
 	{
-		c.Position(c.Position() + Vector3::Up * Speed * frameTime);
+		offset += Vector3::Up * Speed * frameTime;
 		changed = true;
 	}
+
+	float yaw = 0.0f, pitch = 0.0f;
+	if (GetAsyncKeyState('Z') & 0x8000)
+	{
+		yaw += RotSpeed * frameTime;
+		changed = true;
+	}
+
+	if (GetAsyncKeyState('X') & 0x8000)
+	{
+		yaw -= RotSpeed * frameTime;
+		changed = true;
+	}
+
+	if (GetAsyncKeyState('T') & 0x8000)
+	{
+		pitch += RotSpeed * frameTime;
+		changed = true;
+	}
+
+	if (GetAsyncKeyState('G') & 0x8000)
+	{
+		pitch -= RotSpeed * frameTime;
+		changed = true;
+	}
+
+	const Matrix delta =
+		Matrix::CreateFromYawPitchRoll(yaw, pitch, 0.0f) * Matrix::CreateTranslation(offset);
+	c.Transform(delta * c.Transform());
 
 	if (changed)
 	{
@@ -281,9 +312,9 @@ static bool UpdateCamera(CCamera& c, float frameTime)
 		std::snprintf(b,
 					  std::size(b),
 					  "Cam position: (%.3f, %.3f, %.3f)\n",
-					  c.Position().x,
-					  c.Position().y,
-					  c.Position().z);
+					  c.Transform().Translation().x,
+					  c.Transform().Translation().y,
+					  c.Transform().Translation().z);
 		OutputDebugStringA(b);
 	}
 
@@ -388,6 +419,14 @@ void CRenderer::RenderThreadStart()
 		WorldMtx(objMatrix);
 		mDeviceContext->Draw(6, 0);
 
+		for (float i = 1.0f; i < 100.0f; i += 1.0f)
+		{
+			WorldMtx(objMatrix * Matrix::CreateTranslation(0.0f, i, 0.0f));
+			mDeviceContext->Draw(6, 0);
+
+			WorldMtx(objMatrix * Matrix::CreateTranslation(0.0f, -i, 0.0f));
+			mDeviceContext->Draw(6, 0);
+		}
 		Expects(SUCCEEDED(mSwapChain->Present(1, 0)));
 
 		const time_point currFrame = steady_clock::now();
