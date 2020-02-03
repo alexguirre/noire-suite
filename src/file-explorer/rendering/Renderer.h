@@ -28,6 +28,8 @@ private:
 	void CreateDeviceResources();
 	void ReleaseDeviceResources();
 	void RenderThreadStart();
+	void WorldMtx(const Matrix& world);
+	void WorldDefault();
 
 	HWND mHWND;
 	bool mHasDeviceResources;

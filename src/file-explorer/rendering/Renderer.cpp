@@ -24,23 +24,26 @@ constexpr std::string_view Shader =
 	"struct VSInput"
 	"{"
 	"	float3 position : POSITION;"
+	"	float4 color : COLOR;"
 	"};"
 	""
 	"struct VSOutput"
 	"{"
 	"	float4 position : SV_POSITION;"
+	"	float4 color : COLOR;"
 	"};"
 	""
 	"VSOutput VSMain(VSInput input)"
 	"{"
 	"	VSOutput output = (VSOutput)0;"
 	"	output.position = mul(float4(input.position, 1.0), mWorldViewProj);"
+	"	output.color = input.color;"
 	"	return output;"
 	"}"
 	""
 	"float4 PSMain(VSOutput input) : SV_TARGET"
 	"{"
-	"	return float4(1.0, 0.0, 1.0, 1.0);"
+	"	return input.color;"
 	"}";
 
 CRenderer::CRenderer(HWND hwnd, const FRenderCallback& renderCB)
@@ -145,8 +148,15 @@ void CRenderer::CreateDeviceResources()
 													 nullptr,
 													 &mPixelShader)));
 
-		const std::array<D3D11_INPUT_ELEMENT_DESC, 1> inputLayoutDesc{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+		const std::array<D3D11_INPUT_ELEMENT_DESC, 2> inputLayoutDesc{
+			{ { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+			  { "COLOR",
+				0,
+				DXGI_FORMAT_R32G32B32A32_FLOAT,
+				0,
+				3 * sizeof(float),
+				D3D11_INPUT_PER_VERTEX_DATA,
+				0 } }
 		};
 
 		Expects(SUCCEEDED(mDevice->CreateInputLayout(inputLayoutDesc.data(),
@@ -158,10 +168,13 @@ void CRenderer::CreateDeviceResources()
 
 	// create vertex buffer
 	{
-		const std::array<float, 3 * 3> vertices{
-			0.0f,  0.5f,  0.0f, // point at top
-			0.5f,  -0.5f, 0.0f, // point at bottom-right
-			-0.5f, -0.5f, 0.0f, // point at bottom-left
+		const std::array<float, 7 * 3 * 2> vertices{
+			0.0f,  0.5f,  0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // point at top
+			0.5f,  -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, // point at bottom-right
+			-0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, // point at bottom-left
+			0.0f,  0.5f,  0.0f, 1.0f, 0.0f, 0.0f, 1.0f, // point at top
+			-0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, // point at bottom-left
+			0.5f,  -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, // point at bottom-right
 		};
 
 		D3D11_BUFFER_DESC desc = { 0 };
@@ -220,7 +233,7 @@ void CRenderer::ReleaseDeviceResources()
 	mHasDeviceResources = false;
 }
 
-static void UpdateCamera(CCamera& c, float frameTime)
+static bool UpdateCamera(CCamera& c, float frameTime)
 {
 	constexpr float Speed{ 10.0f };
 
@@ -273,6 +286,25 @@ static void UpdateCamera(CCamera& c, float frameTime)
 					  c.Position().z);
 		OutputDebugStringA(b);
 	}
+
+	return changed;
+}
+
+void CRenderer::WorldMtx(const Matrix& world)
+{
+	D3D11_MAPPED_SUBRESOURCE m = { 0 };
+	Expects(
+		SUCCEEDED(mDeviceContext->Map(mConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &m)));
+
+	XMStoreFloat4x4(&reinterpret_cast<VSConstantBuffer*>(m.pData)->mWorldViewProj,
+					(world * mCam.ViewProjection()).Transpose());
+
+	mDeviceContext->Unmap(mConstantBuffer.Get(), 0);
+}
+
+void CRenderer::WorldDefault()
+{
+	WorldMtx(Matrix::Identity);
 }
 
 void CRenderer::RenderThreadStart()
@@ -286,6 +318,8 @@ void CRenderer::RenderThreadStart()
 	RECT clientRect = { 0 };
 	while (mRenderingThreadRunning)
 	{
+		bool camChanged = false;
+
 		{
 			RECT currClientRect = { 0 };
 			GetClientRect(mHWND, &currClientRect);
@@ -310,10 +344,12 @@ void CRenderer::RenderThreadStart()
 					mDevice->CreateRenderTargetView(backBuffer.Get(), nullptr, &mBackBuffer)));
 
 				mCam.Resize(static_cast<size_t>(newW), static_cast<size_t>(newH));
+
+				camChanged = true;
 			}
 		}
 
-		UpdateCamera(mCam, frameTime);
+		camChanged |= UpdateCamera(mCam, frameTime);
 
 		mRenderCallback(*this, frameTime);
 
@@ -330,20 +366,11 @@ void CRenderer::RenderThreadStart()
 			mDeviceContext->RSSetViewports(1, &viewport);
 		}
 
-		D3D11_MAPPED_SUBRESOURCE m = { 0 };
-		Expects(SUCCEEDED(
-			mDeviceContext->Map(mConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &m)));
-
-		XMStoreFloat4x4(&reinterpret_cast<VSConstantBuffer*>(m.pData)->mWorldViewProj,
-						mCam.ViewProjection().Transpose());
-
-		mDeviceContext->Unmap(mConstantBuffer.Get(), 0);
-
 		mDeviceContext->OMSetRenderTargets(1, mBackBuffer.GetAddressOf(), nullptr);
 
 		mDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		mDeviceContext->IASetInputLayout(mInputLayout.Get());
-		const UINT vertexStride = 3 * sizeof(float);
+		const UINT vertexStride = (3 + 4) * sizeof(float);
 		const UINT vertexOffset = 0;
 		mDeviceContext->IASetVertexBuffers(0,
 										   1,
@@ -355,7 +382,11 @@ void CRenderer::RenderThreadStart()
 		mDeviceContext->VSSetShader(mVertexShader.Get(), nullptr, 0);
 		mDeviceContext->PSSetShader(mPixelShader.Get(), nullptr, 0);
 
-		mDeviceContext->Draw(3, 0);
+		static Matrix objMatrix{ Matrix::Identity };
+		objMatrix *= Matrix::CreateFromAxisAngle(Vector3::Up, frameTime);
+
+		WorldMtx(objMatrix);
+		mDeviceContext->Draw(6, 0);
 
 		Expects(SUCCEEDED(mSwapChain->Present(1, 0)));
 
