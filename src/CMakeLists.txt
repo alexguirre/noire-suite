@@ -37,6 +37,7 @@ if(${CMAKE_VS_PLATFORM_NAME} STREQUAL Win32)
 
     add_subdirectory(hook)
     add_subdirectory(formats)
+    add_subdirectory(core)
     if(GEN_FILE_EXPLORER)
         add_subdirectory(file-explorer)
     endif()
