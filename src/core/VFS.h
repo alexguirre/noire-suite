@@ -80,7 +80,7 @@ namespace noire
 		// template<class F>
 		// std::shared_ptr<Stream> Create(PathView path, F createStreamCallback);
 
-		// bool Exists(PathView path);
+		bool Exists(PathView path);
 
 		// bool Delete(PathView path);
 
@@ -99,8 +99,17 @@ namespace noire
 	};
 
 	template<class T>
-	VirtualFileSystem<T>::VirtualFileSystem() : mEntries{}, mRoot{ GetDirectory("/", true) }
+	VirtualFileSystem<T>::VirtualFileSystem()
+		: mEntries{}, mRoot{ GetDirectory(PathView::Root, true) }
 	{
+	}
+
+	template<class T>
+	bool VirtualFileSystem<T>::Exists(PathView path)
+	{
+		Expects(path.IsAbsolute());
+
+		return FindEntry(path) != nullptr;
 	}
 
 	template<class T>
@@ -134,7 +143,7 @@ namespace noire
 			{
 				if (e->Type() == EntryType::File)
 				{
-					callback(Path{ dirPath } / e->Name(), reinterpret_cast<FileEntry*>(e)->Data());
+					callback(Path{ dirPath } / e->Name(), static_cast<FileEntry*>(e)->Data());
 				}
 			}
 
@@ -175,7 +184,7 @@ namespace noire
 		if (e)
 		{
 			Ensures(e->Type() == EntryType::Directory);
-			return reinterpret_cast<DirectoryEntry*>(e);
+			return static_cast<DirectoryEntry*>(e);
 		}
 		else if (create)
 		{
@@ -185,7 +194,7 @@ namespace noire
 				p.second)
 			{
 				Ensures(p.first->second->Type() == EntryType::Directory);
-				return reinterpret_cast<DirectoryEntry*>(p.first->second.get());
+				return static_cast<DirectoryEntry*>(p.first->second.get());
 			}
 		}
 

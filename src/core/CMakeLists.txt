@@ -6,6 +6,8 @@ file(GLOB CORE_SOURCES
     "Path.h"
     "VFS.cpp"
     "VFS.h"
+    "streams/FileStream.cpp"
+    "streams/FileStream.h"
     "streams/Stream.cpp"
     "streams/Stream.h"
 )

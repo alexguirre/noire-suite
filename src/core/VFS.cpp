@@ -19,5 +19,12 @@ TEST_SUITE("VFS")
 		vfs.ForEachFile("/", [](PathView p, const i32& d) {
 			std::cout << p.String() << ": " << d << '\n';
 		});
+
+		CHECK(vfs.Exists("/"));
+		CHECK(vfs.Exists("/test1"));
+		CHECK(vfs.Exists("/test2"));
+		CHECK(vfs.Exists("/test3"));
+		CHECK(vfs.Exists("/test4"));
+		CHECK_FALSE(vfs.Exists("/test5"));
 	}
 }
