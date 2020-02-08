@@ -45,6 +45,7 @@ namespace noire
 			DirectoryEntry(PathView path, DirectoryEntry* parent);
 
 			void AddChild(Entry* e);
+			void RemoveChild(Entry* e);
 
 			const std::vector<Entry*>& Children() const { return mChildren; }
 
@@ -82,9 +83,10 @@ namespace noire
 
 		bool Exists(PathView path);
 
-		// bool Delete(PathView path);
+		// NOTE: only supports deleting files, returns whether the file existed and was deleted
+		bool Delete(PathView filePath);
 
-		void RegisterFile(PathView path, const EntryData& data = EntryData{});
+		void RegisterExistingFile(PathView path, const EntryData& data = EntryData{});
 
 		// TODO: make ForEachFile recursive
 		bool ForEachFile(PathView dirPath,
@@ -113,7 +115,31 @@ namespace noire
 	}
 
 	template<class T>
-	void VirtualFileSystem<T>::RegisterFile(PathView path, const EntryData& data)
+	bool VirtualFileSystem<T>::Delete(PathView filePath)
+	{
+		Expects(filePath.IsFile() && filePath.IsAbsolute());
+
+		const size hash = std::hash<PathView>{}(filePath);
+
+		auto it = mEntries.find(hash);
+		if (it != mEntries.end())
+		{
+			DirectoryEntry* parent = GetDirectory(filePath.Parent(), false);
+			Ensures(parent != nullptr);
+
+			parent->RemoveChild(it->second.get());
+
+			mEntries.erase(it);
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	template<class T>
+	void VirtualFileSystem<T>::RegisterExistingFile(PathView path, const EntryData& data)
 	{
 		Expects(path.IsFile() && path.IsAbsolute());
 
@@ -224,6 +250,14 @@ namespace noire
 		Expects(e != nullptr && e->Parent() == this);
 
 		mChildren.push_back(e);
+	}
+
+	template<class T>
+	void VirtualFileSystem<T>::DirectoryEntry::RemoveChild(Entry* e)
+	{
+		Expects(e != nullptr && e->Parent() == this);
+
+		mChildren.erase(std::find(mChildren.begin(), mChildren.end(), e));
 	}
 
 	template<class T>
