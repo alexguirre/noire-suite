@@ -1,6 +1,7 @@
 #include "FileStream.h"
 #include <cstring>
 #include <doctest/doctest.h>
+#include <iostream>
 #include <iterator>
 
 namespace noire
@@ -12,12 +13,13 @@ namespace noire
 							   nullptr,
 							   OPEN_ALWAYS,
 							   FILE_ATTRIBUTE_NORMAL,
-							   nullptr) }
+							   nullptr) },
+		  mPath{ path }
 	{
 		Ensures(mHandle != INVALID_HANDLE_VALUE);
 	}
 
-	FileStream::FileStream(TempFileTag) : mHandle{ INVALID_HANDLE_VALUE }
+	FileStream::FileStream(TempFileTag) : mHandle{ INVALID_HANDLE_VALUE }, mPath{}
 	{
 		if (wchar_t tempPath[MAX_PATH]; GetTempPathW(std::size(tempPath), tempPath))
 		{
@@ -30,6 +32,7 @@ namespace noire
 									  CREATE_ALWAYS,
 									  FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE,
 									  nullptr);
+				mPath = fileName;
 			}
 		}
 
@@ -38,65 +41,71 @@ namespace noire
 
 	FileStream::~FileStream() { CloseHandle(mHandle); }
 
-	size FileStream::Read(void* dstBuffer, size count)
+	u64 FileStream::Read(void* dstBuffer, u64 count)
 	{
-		if (DWORD bytesRead; ReadFile(mHandle, dstBuffer, count, &bytesRead, nullptr))
+		// NOTE: limited to 4gb
+		if (DWORD bytesRead;
+			ReadFile(mHandle, dstBuffer, gsl::narrow<DWORD>(count), &bytesRead, nullptr))
 		{
 			return bytesRead;
 		}
 		else
 		{
-			return static_cast<size>(-1);
+			return static_cast<u64>(0);
 		}
 	}
 
-	size FileStream::ReadAt(void* dstBuffer, size count, size offset)
+	u64 FileStream::ReadAt(void* dstBuffer, u64 count, u64 offset)
 	{
 		OVERLAPPED ol = { 0 };
 		ol.Offset = static_cast<DWORD>(offset);
-		// TODO: uncomment if we switch to 64-bit builds
-		// ol.OffsetHigh = static_cast<DWORD>(offset >> 32);
+		ol.OffsetHigh = static_cast<DWORD>(offset >> 32);
 
-		if (DWORD bytesRead; ReadFile(mHandle, dstBuffer, count, &bytesRead, &ol))
+		// NOTE: limited to 4gb
+		if (DWORD bytesRead;
+			ReadFile(mHandle, dstBuffer, gsl::narrow<DWORD>(count), &bytesRead, &ol))
 		{
 			return bytesRead;
 		}
 		else
 		{
-			return static_cast<size>(-1);
+			return static_cast<u64>(0);
 		}
 	}
 
-	size FileStream::Write(const void* buffer, size count)
+	u64 FileStream::Write(const void* buffer, u64 count)
 	{
-		if (DWORD bytesWritten; WriteFile(mHandle, buffer, count, &bytesWritten, nullptr))
+		// NOTE: limited to 4gb
+		if (DWORD bytesWritten;
+			WriteFile(mHandle, buffer, gsl::narrow<DWORD>(count), &bytesWritten, nullptr))
 		{
 			return bytesWritten;
 		}
 		else
 		{
-			return static_cast<size>(-1);
+			return static_cast<u64>(0);
 		}
 	}
 
-	size FileStream::WriteAt(const void* buffer, size count, size offset)
+	u64 FileStream::WriteAt(const void* buffer, u64 count, u64 offset)
 	{
 		OVERLAPPED ol = { 0 };
 		ol.Offset = static_cast<DWORD>(offset);
-		// TODO: uncomment if we switch to 64-bit builds
-		// ol.OffsetHigh = static_cast<DWORD>(offset >> 32);
+		ol.OffsetHigh = static_cast<DWORD>(offset >> 32);
 
-		if (DWORD bytesWritten; WriteFile(mHandle, buffer, count, &bytesWritten, &ol))
+		// NOTE: limited to 4gb
+		if (DWORD bytesWritten;
+			WriteFile(mHandle, buffer, gsl::narrow<DWORD>(count), &bytesWritten, &ol))
 		{
 			return bytesWritten;
 		}
 		else
 		{
-			return static_cast<size>(-1);
+			return static_cast<u64>(0);
 		}
 	}
 
-	size FileStream::Seek(ptrdiff offset, StreamSeekOrigin origin)
+	u64 FileStream::Seek(i64 offset, StreamSeekOrigin origin)
 	{
 		DWORD moveMethod;
 		switch (origin)
@@ -111,35 +120,35 @@ namespace noire
 		o.QuadPart = offset;
 		if (LARGE_INTEGER newPos; SetFilePointerEx(mHandle, o, &newPos, moveMethod))
 		{
-			return static_cast<size>(newPos.QuadPart);
+			return static_cast<u64>(newPos.QuadPart);
 		}
 		else
 		{
-			return static_cast<size>(-1);
+			return static_cast<u64>(-1);
 		}
 	}
 
-	size FileStream::Tell()
+	u64 FileStream::Tell()
 	{
 		if (LARGE_INTEGER pos; SetFilePointerEx(mHandle, { 0 }, &pos, FILE_CURRENT))
 		{
-			return static_cast<size>(pos.QuadPart);
+			return static_cast<u64>(pos.QuadPart);
 		}
 		else
 		{
-			return static_cast<size>(-1);
+			return static_cast<u64>(-1);
 		}
 	}
 
-	size FileStream::Size()
+	u64 FileStream::Size()
 	{
 		if (LARGE_INTEGER fsize; GetFileSizeEx(mHandle, &fsize))
 		{
-			return static_cast<size>(fsize.QuadPart);
+			return static_cast<u64>(fsize.QuadPart);
 		}
 		else
 		{
-			return static_cast<size>(-1);
+			return static_cast<u64>(-1);
 		}
 	}
 }
@@ -150,6 +159,7 @@ TEST_SUITE("FileStream")
 
 	void TestStream(FileStream & f)
 	{
+		std::cout << f.Path() << '\n';
 		{
 			u8 data[]{ 0, 1, 2, 3 };
 
@@ -195,7 +205,6 @@ TEST_SUITE("FileStream")
 			FileStream f{ p };
 			TestStream(f);
 		}
-
 		DeleteFileW(p.native().c_str());
 	}
 

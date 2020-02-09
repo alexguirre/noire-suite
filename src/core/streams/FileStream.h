@@ -23,19 +23,22 @@ namespace noire
 		FileStream& operator=(const FileStream&) = delete;
 		FileStream& operator=(FileStream&&) = default;
 
-		size Read(void* dstBuffer, size count) override;
-		size ReadAt(void* dstBuffer, size count, size offset) override;
+		u64 Read(void* dstBuffer, u64 count) override;
+		u64 ReadAt(void* dstBuffer, u64 count, u64 offset) override;
 
-		size Write(const void* buffer, size count) override;
-		size WriteAt(const void* buffer, size count, size offset) override;
+		u64 Write(const void* buffer, u64 count) override;
+		u64 WriteAt(const void* buffer, u64 count, u64 offset) override;
 
-		size Seek(ptrdiff offset, StreamSeekOrigin origin) override;
+		u64 Seek(i64 offset, StreamSeekOrigin origin) override;
 
-		size Tell() override;
+		u64 Tell() override;
 
-		size Size() override;
+		u64 Size() override;
+
+		const std::filesystem::path& Path() const { return mPath; }
 
 	private:
+		std::filesystem::path mPath;
 		HANDLE mHandle;
 	};
 }

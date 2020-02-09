@@ -1,5 +1,6 @@
 #pragma once
 #include "Common.h"
+#include <memory>
 
 namespace noire
 {
@@ -16,18 +17,89 @@ namespace noire
 		virtual ~Stream() = default;
 
 		// Returns number of bytes read
-		virtual size Read(void* dstBuffer, size count) = 0;
-		virtual size ReadAt(void* dstBuffer, size count, size offset) = 0;
+		virtual u64 Read(void* dstBuffer, u64 count) = 0;
+		virtual u64 ReadAt(void* dstBuffer, u64 count, u64 offset) = 0;
 
 		// Returns number of bytes written
-		virtual size Write(const void* buffer, size count) = 0;
-		virtual size WriteAt(const void* buffer, size count, size offset) = 0;
+		virtual u64 Write(const void* buffer, u64 count) = 0;
+		virtual u64 WriteAt(const void* buffer, u64 count, u64 offset) = 0;
 
 		// Returns the new position within the stream
-		virtual size Seek(ptrdiff offset, StreamSeekOrigin origin) = 0;
+		virtual u64 Seek(i64 offset, StreamSeekOrigin origin) = 0;
 
-		virtual size Tell() = 0;
+		virtual u64 Tell() = 0;
 
-		virtual size Size() = 0;
+		virtual u64 Size() = 0;
+
+		void CopyTo(Stream& stream);
+
+		template<class T>
+		T Read()
+		{
+			static_assert(std::is_pod_v<T>, "Expected a POD type for T");
+
+			T tmp;
+			Read(&tmp, sizeof(tmp));
+			return tmp;
+		}
+
+		template<class T>
+		T ReadAt(u64 offset)
+		{
+			static_assert(std::is_pod_v<T>, "Expected a POD type for T");
+
+			T tmp;
+			ReadAt(&tmp, sizeof(tmp), offset);
+			return tmp;
+		}
+
+		template<class T>
+		void Write(T v)
+		{
+			static_assert(std::is_pod_v<T>, "Expected a POD type for T");
+
+			Write(&v, sizeof(v));
+		}
+
+		template<class T>
+		void WriteAt(T v, u64 offset)
+		{
+			static_assert(std::is_pod_v<T>, "Expected a POD type for T");
+
+			WriteAt(&v, sizeof(v), offset);
+		}
+	};
+
+	class SubStream : public Stream
+	{
+	public:
+		SubStream(std::shared_ptr<Stream> baseStream, u64 offset, u64 size);
+
+		u64 Read(void* dstBuffer, u64 count) override;
+		u64 ReadAt(void* dstBuffer, u64 count, u64 offset) override;
+
+		// not implemented
+		u64 Write(const void*, u64) override
+		{
+			Expects(false);
+			return 0;
+		}
+		u64 WriteAt(const void*, u64, u64) override
+		{
+			Expects(false);
+			return 0;
+		}
+
+		u64 Seek(i64 offset, StreamSeekOrigin origin) override;
+
+		u64 Tell() override;
+
+		u64 Size() override;
+
+	private:
+		std::shared_ptr<Stream> mBaseStream;
+		u64 mOffset;
+		u64 mSize;
+		u64 mReadingOffset;
 	};
 }
