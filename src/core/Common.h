@@ -20,4 +20,6 @@ namespace noire
 
 	using size = std::size_t;
 	using ptrdiff = std::ptrdiff_t;
+
+	using byte = std::byte;
 }

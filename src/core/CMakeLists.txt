@@ -14,6 +14,8 @@ file(GLOB CORE_SOURCES
     "files/WAD.h"
     "streams/FileStream.cpp"
     "streams/FileStream.h"
+    "streams/MemoryStream.cpp"
+    "streams/MemoryStream.h"
     "streams/Stream.cpp"
     "streams/Stream.h"
 )
