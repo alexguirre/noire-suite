@@ -18,10 +18,10 @@ namespace noire
 		~FileStream() override;
 
 		FileStream(const FileStream&) = delete;
-		FileStream(FileStream&&) = default;
+		FileStream(FileStream&&) noexcept;
 
 		FileStream& operator=(const FileStream&) = delete;
-		FileStream& operator=(FileStream&&) = default;
+		FileStream& operator=(FileStream&&) noexcept;
 
 		u64 Read(void* dstBuffer, u64 count) override;
 		u64 ReadAt(void* dstBuffer, u64 count, u64 offset) override;

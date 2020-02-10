@@ -3,6 +3,7 @@
 #include <doctest/doctest.h>
 #include <iostream>
 #include <iterator>
+#include <utility>
 
 namespace noire
 {
@@ -39,7 +40,30 @@ namespace noire
 		Ensures(mHandle != INVALID_HANDLE_VALUE);
 	}
 
-	FileStream::~FileStream() { CloseHandle(mHandle); }
+	FileStream::FileStream(FileStream&& other) noexcept
+		: mPath{ std::move(other.mPath) },
+		  mHandle{ std::exchange(other.mHandle, INVALID_HANDLE_VALUE) }
+	{
+	}
+
+	FileStream::~FileStream()
+	{
+		if (mHandle != INVALID_HANDLE_VALUE)
+		{
+			CloseHandle(mHandle);
+		}
+	}
+
+	FileStream& FileStream::operator=(FileStream&& other) noexcept
+	{
+		if (this != &other)
+		{
+			mPath = std::move(other.mPath);
+			mHandle = std::exchange(other.mHandle, INVALID_HANDLE_VALUE);
+		}
+
+		return *this;
+	}
 
 	u64 FileStream::Read(void* dstBuffer, u64 count)
 	{
@@ -85,6 +109,7 @@ namespace noire
 		}
 		else
 		{
+			std::cout << "Error: " << GetLastError() << '\n';
 			return static_cast<u64>(0);
 		}
 	}
