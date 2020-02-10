@@ -14,20 +14,23 @@ namespace noire
 	{
 		Expects(path.IsAbsolute());
 
-		return false;
+		return mVFS.Exists(path);
 	}
+
 	std::shared_ptr<Stream> WAD::Open(PathView path)
 	{
 		Expects(path.IsFile() && path.IsAbsolute());
 
 		return nullptr;
 	}
+
 	std::shared_ptr<Stream> WAD::Create(PathView path)
 	{
 		Expects(path.IsFile() && path.IsAbsolute());
 
 		return nullptr;
 	}
+
 	bool WAD::Delete(PathView path)
 	{
 		Expects(path.IsFile() && path.IsAbsolute());
@@ -216,15 +219,28 @@ TEST_SUITE("WAD")
 		CHECK_EQ(w.Size(), output->Size());
 	}
 
-	TEST_CASE("Load/Delete/Save" * doctest::skip(true))
+	TEST_CASE("Load/Delete/Save" * doctest::skip(false))
 	{
 		std::shared_ptr<Stream> input = std::make_shared<FileStream>(
 			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out.wad.pc");
 
 		WAD w{ input };
 		w.Load();
+
+		CHECK(w.Exists("/out/graphicsdata/"));
+		CHECK(w.Exists("/out/graphicsdata/programs.vfp.dx11"));
+		CHECK(w.Exists("/out/trunk/models/la/environment/weather/"));
+		CHECK(w.Exists("/out/trunk/models/la/environment/weather/sky.trunk.pc"));
+
 		w.Delete("/out/graphicsdata/programs.vfp.dx11");
+
+		CHECK_FALSE(w.Exists("/out/graphicsdata/programs.vfp.dx11"));
+		CHECK(w.Exists("/out/trunk/models/la/environment/weather/sky.trunk.pc"));
+
 		w.Delete("/out/trunk/models/la/environment/weather/sky.trunk.pc");
+
+		CHECK_FALSE(w.Exists("/out/graphicsdata/programs.vfp.dx11"));
+		CHECK_FALSE(w.Exists("/out/trunk/models/la/environment/weather/sky.trunk.pc"));
 
 		std::shared_ptr<Stream> output = std::make_shared<FileStream>(
 			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out_deleted_entry.wad.pc");

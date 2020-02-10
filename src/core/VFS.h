@@ -80,7 +80,7 @@ namespace noire
 		// template<class F>
 		// std::shared_ptr<Stream> Create(PathView path, F createStreamCallback);
 
-		bool Exists(PathView path);
+		bool Exists(PathView path) const;
 
 		// NOTE: only supports deleting files, returns whether the file existed and was deleted
 		bool Delete(PathView filePath);
@@ -108,7 +108,7 @@ namespace noire
 	}
 
 	template<class T>
-	bool VirtualFileSystem<T>::Exists(PathView path)
+	bool VirtualFileSystem<T>::Exists(PathView path) const
 	{
 		Expects(path.IsAbsolute());
 
