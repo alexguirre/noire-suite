@@ -72,6 +72,7 @@ namespace noire
 		}
 	};
 
+	// Wraps a Stream such that only a section can be read/written.
 	class SubStream final : public Stream
 	{
 	public:
@@ -84,11 +85,13 @@ namespace noire
 		u64 Write(const void*, u64) override
 		{
 			Expects(false);
+			// TODO
 			return 0;
 		}
 		u64 WriteAt(const void*, u64, u64) override
 		{
 			Expects(false);
+			// TODO
 			return 0;
 		}
 
@@ -103,5 +106,28 @@ namespace noire
 		u64 mOffset;
 		u64 mSize;
 		u64 mReadingOffset;
+	};
+
+	// Wraps a Stream such that it can only be read. The function calls are passed to the base
+	// stream, except Write/WriteAt which do nothing and always return 0 bytes written.
+	class ReadonlyStream final : public Stream
+	{
+	public:
+		ReadonlyStream(std::shared_ptr<Stream> baseStream);
+
+		u64 Read(void* dstBuffer, u64 count) override;
+		u64 ReadAt(void* dstBuffer, u64 count, u64 offset) override;
+
+		u64 Write(const void* buffer, u64 count) override;
+		u64 WriteAt(const void* buffer, u64 count, u64 offset) override;
+
+		u64 Seek(i64 offset, StreamSeekOrigin origin) override;
+
+		u64 Tell() override;
+
+		u64 Size() override;
+
+	private:
+		std::shared_ptr<Stream> mBaseStream;
 	};
 }

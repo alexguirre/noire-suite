@@ -63,4 +63,32 @@ namespace noire
 	u64 SubStream::Tell() { return mReadingOffset; }
 
 	u64 SubStream::Size() { return mSize; }
+
+	ReadonlyStream::ReadonlyStream(std::shared_ptr<Stream> baseStream) : mBaseStream{ baseStream }
+	{
+		Expects(baseStream != nullptr);
+	}
+
+	u64 ReadonlyStream::Read(void* dstBuffer, u64 count)
+	{
+		return mBaseStream->Read(dstBuffer, count);
+	}
+
+	u64 ReadonlyStream::ReadAt(void* dstBuffer, u64 count, u64 offset)
+	{
+		return mBaseStream->ReadAt(dstBuffer, count, offset);
+	}
+
+	u64 ReadonlyStream::Write(const void* buffer, u64 count) { return 0; }
+
+	u64 ReadonlyStream::WriteAt(const void* buffer, u64 count, u64 offset) { return 0; }
+
+	u64 ReadonlyStream::Seek(i64 offset, StreamSeekOrigin origin)
+	{
+		return mBaseStream->Seek(offset, origin);
+	}
+
+	u64 ReadonlyStream::Tell() { return mBaseStream->Tell(); }
+
+	u64 ReadonlyStream::Size() { return mBaseStream->Size(); }
 }
