@@ -79,9 +79,9 @@ namespace noire
 		return mBaseStream->ReadAt(dstBuffer, count, offset);
 	}
 
-	u64 ReadonlyStream::Write(const void* buffer, u64 count) { return 0; }
+	u64 ReadonlyStream::Write(const void*, u64) { return 0; }
 
-	u64 ReadonlyStream::WriteAt(const void* buffer, u64 count, u64 offset) { return 0; }
+	u64 ReadonlyStream::WriteAt(const void*, u64, u64) { return 0; }
 
 	u64 ReadonlyStream::Seek(i64 offset, StreamSeekOrigin origin)
 	{
