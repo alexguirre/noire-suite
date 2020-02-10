@@ -18,6 +18,8 @@ file(GLOB CORE_SOURCES
     "streams/MemoryStream.h"
     "streams/Stream.cpp"
     "streams/Stream.h"
+    "streams/TempStream.cpp"
+    "streams/TempStream.h"
 )
 file(GLOB CORE_TEST_SOURCES
     ${CORE_SOURCES}
