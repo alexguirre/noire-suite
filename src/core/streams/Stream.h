@@ -18,10 +18,12 @@ namespace noire
 
 		// Returns number of bytes read
 		virtual u64 Read(void* dstBuffer, u64 count) = 0;
+		// Reads at specified offset without modifying stream position
 		virtual u64 ReadAt(void* dstBuffer, u64 count, u64 offset) = 0;
 
 		// Returns number of bytes written
 		virtual u64 Write(const void* buffer, u64 count) = 0;
+		// Writes at specified offset without modifying stream position
 		virtual u64 WriteAt(const void* buffer, u64 count, u64 offset) = 0;
 
 		// Returns the new position within the stream
@@ -70,7 +72,7 @@ namespace noire
 		}
 	};
 
-	class SubStream : public Stream
+	class SubStream final : public Stream
 	{
 	public:
 		SubStream(std::shared_ptr<Stream> baseStream, u64 offset, u64 size);

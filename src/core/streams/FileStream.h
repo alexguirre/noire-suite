@@ -10,7 +10,7 @@ namespace noire
 	{
 	} TempFile;
 
-	class FileStream : public Stream
+	class FileStream final : public Stream
 	{
 	public:
 		FileStream(const std::filesystem::path& path);

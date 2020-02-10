@@ -62,9 +62,11 @@ namespace noire
 		ol.OffsetHigh = static_cast<DWORD>(offset >> 32);
 
 		// NOTE: limited to 4gb
+		const u64 oldPos = Tell();
 		if (DWORD bytesRead;
 			ReadFile(mHandle, dstBuffer, gsl::narrow<DWORD>(count), &bytesRead, &ol))
 		{
+			Seek(gsl::narrow<i64>(oldPos), StreamSeekOrigin::Begin);
 			return bytesRead;
 		}
 		else
@@ -94,9 +96,11 @@ namespace noire
 		ol.OffsetHigh = static_cast<DWORD>(offset >> 32);
 
 		// NOTE: limited to 4gb
+		const u64 oldPos = Tell();
 		if (DWORD bytesWritten;
 			WriteFile(mHandle, buffer, gsl::narrow<DWORD>(count), &bytesWritten, &ol))
 		{
+			Seek(gsl::narrow<i64>(oldPos), StreamSeekOrigin::Begin);
 			return bytesWritten;
 		}
 		else

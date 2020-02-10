@@ -4,6 +4,7 @@
 #include "streams/Stream.h"
 #include <functional>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace noire
@@ -12,7 +13,7 @@ namespace noire
 	class VirtualFileSystem
 	{
 	public:
-		using EntryData = T;
+		using FileEntryInfo = T;
 
 	private:
 		enum class EntryType
@@ -28,6 +29,7 @@ namespace noire
 		{
 		public:
 			Entry(PathView path, EntryType type, DirectoryEntry* parent);
+			virtual ~Entry() = default;
 
 			const std::string& Name() const { return mName; }
 			EntryType Type() const { return mType; }
@@ -39,7 +41,7 @@ namespace noire
 			DirectoryEntry* mParent;
 		};
 
-		class DirectoryEntry : public Entry
+		class DirectoryEntry final : public Entry
 		{
 		public:
 			DirectoryEntry(PathView path, DirectoryEntry* parent);
@@ -53,18 +55,15 @@ namespace noire
 			std::vector<Entry*> mChildren;
 		};
 
-		class FileEntry : public Entry
+		class FileEntry final : public Entry
 		{
 		public:
-			FileEntry(PathView path, DirectoryEntry* parent, const EntryData& data);
+			FileEntry(PathView path, DirectoryEntry* parent, FileEntryInfo info);
 
-			const EntryData& Data() const { return mData; }
+			const FileEntryInfo& Info() const { return mInfo; }
 
 		private:
-			std::shared_ptr<Stream>
-				mStream; // stream returned by Open()/Create(), refers to temp file (or only temp
-						 // file for writing? original stream for reading?)
-			EntryData mData;
+			FileEntryInfo mInfo;
 		};
 
 	public:
@@ -75,8 +74,8 @@ namespace noire
 		VirtualFileSystem& operator=(const VirtualFileSystem&) = delete;
 		VirtualFileSystem& operator=(VirtualFileSystem&&) = default;
 
-		// template<class F> // F equivalent to std::shared_ptr<Stream>(PathView, const EntryData&)
-		// std::shared_ptr<Stream> Open(PathView path, F createStreamCallback);
+		// template<class F> // F equivalent to std::shared_ptr<Stream>(PathView, const
+		// FileEntryInfo&) std::shared_ptr<Stream> Open(PathView path, F createStreamCallback);
 
 		// template<class F>
 		// std::shared_ptr<Stream> Create(PathView path, F createStreamCallback);
@@ -86,14 +85,16 @@ namespace noire
 		// NOTE: only supports deleting files, returns whether the file existed and was deleted
 		bool Delete(PathView filePath);
 
-		void RegisterExistingFile(PathView path, const EntryData& data = EntryData{});
+		const FileEntryInfo& GetFileInfo(PathView path) const;
+		void RegisterExistingFile(PathView path, FileEntryInfo info = FileEntryInfo{});
 
 		// TODO: make ForEachFile recursive
-		bool ForEachFile(PathView dirPath,
-						 std::function<void(PathView path, const EntryData& fileData)> callback);
+		bool
+		ForEachFile(PathView dirPath,
+					std::function<void(PathView path, const FileEntryInfo& fileInfo)> callback);
 
 	private:
-		Entry* FindEntry(PathView path);
+		Entry* FindEntry(PathView path) const;
 		DirectoryEntry* GetDirectory(PathView path, bool create);
 
 		std::unordered_map<std::size_t, std::unique_ptr<Entry>> mEntries;
@@ -139,7 +140,20 @@ namespace noire
 	}
 
 	template<class T>
-	void VirtualFileSystem<T>::RegisterExistingFile(PathView path, const EntryData& data)
+	typename const VirtualFileSystem<T>::FileEntryInfo&
+	VirtualFileSystem<T>::GetFileInfo(PathView path) const
+	{
+		Expects(path.IsFile() && path.IsAbsolute());
+
+		Entry* e = FindEntry(path);
+		Expects(e != nullptr);
+		Ensures(e->Type() == EntryType::File);
+
+		return static_cast<FileEntry*>(e)->Info();
+	}
+
+	template<class T>
+	void VirtualFileSystem<T>::RegisterExistingFile(PathView path, FileEntryInfo info)
 	{
 		Expects(path.IsFile() && path.IsAbsolute());
 
@@ -148,7 +162,7 @@ namespace noire
 
 		DirectoryEntry* parent = GetDirectory(path.Parent(), true);
 		Ensures(parent != nullptr);
-		auto entry = std::make_unique<FileEntry>(path, parent, data);
+		auto entry = std::make_unique<FileEntry>(path, parent, std::move(info));
 		if (auto p = mEntries.emplace(std::hash<PathView>{}(path), std::move(entry)); p.second)
 		{
 			Ensures(p.first->second->Type() == EntryType::File);
@@ -158,7 +172,7 @@ namespace noire
 	template<class T>
 	bool VirtualFileSystem<T>::ForEachFile(
 		PathView dirPath,
-		std::function<void(PathView path, const EntryData& fileData)> callback)
+		std::function<void(PathView path, const FileEntryInfo& fileInfo)> callback)
 	{
 		Expects(dirPath.IsDirectory() && dirPath.IsAbsolute());
 
@@ -169,7 +183,7 @@ namespace noire
 			{
 				if (e->Type() == EntryType::File)
 				{
-					callback(Path{ dirPath } / e->Name(), static_cast<FileEntry*>(e)->Data());
+					callback(Path{ dirPath } / e->Name(), static_cast<FileEntry*>(e)->Info());
 				}
 			}
 
@@ -182,7 +196,7 @@ namespace noire
 	}
 
 	template<class T>
-	typename VirtualFileSystem<T>::Entry* VirtualFileSystem<T>::FindEntry(PathView path)
+	typename VirtualFileSystem<T>::Entry* VirtualFileSystem<T>::FindEntry(PathView path) const
 	{
 		Expects(path.IsAbsolute());
 
@@ -263,8 +277,8 @@ namespace noire
 	template<class T>
 	VirtualFileSystem<T>::FileEntry::FileEntry(PathView path,
 											   DirectoryEntry* parent,
-											   const EntryData& data)
-		: Entry(path, EntryType::File, parent), mStream{ nullptr }, mData{ data }
+											   FileEntryInfo info)
+		: Entry(path, EntryType::File, parent), mInfo{ std::move(info) }
 	{
 		Expects(path.IsFile() && path.IsAbsolute());
 		Expects(parent != nullptr);
