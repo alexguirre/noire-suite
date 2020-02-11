@@ -6,9 +6,11 @@
 
 namespace noire
 {
-	inline constexpr struct TempFileTag
+	struct TempFileTag
 	{
-	} TempFile;
+		constexpr explicit TempFileTag() = default;
+	};
+	inline constexpr TempFileTag TempFile{};
 
 	class FileStream final : public Stream
 	{
