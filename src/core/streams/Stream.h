@@ -110,10 +110,10 @@ namespace noire
 
 	// Wraps a Stream such that it can only be read. The function calls are passed to the base
 	// stream, except Write/WriteAt which do nothing and always return 0 bytes written.
-	class ReadonlyStream final : public Stream
+	class ReadOnlyStream final : public Stream
 	{
 	public:
-		ReadonlyStream(std::shared_ptr<Stream> baseStream);
+		ReadOnlyStream(std::shared_ptr<Stream> baseStream);
 
 		u64 Read(void* dstBuffer, u64 count) override;
 		u64 ReadAt(void* dstBuffer, u64 count, u64 offset) override;
