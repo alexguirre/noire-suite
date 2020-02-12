@@ -11,7 +11,7 @@ namespace noire
 		RawFile();
 		RawFile(std::shared_ptr<Stream> input);
 
-		std::shared_ptr<Stream> Stream();
+		Stream& Stream();
 
 	public:
 		static const Type Type;

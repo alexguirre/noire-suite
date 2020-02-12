@@ -45,7 +45,7 @@ namespace noire
 	{
 	}
 
-	std::shared_ptr<Stream> RawFile::Stream() { return Input(); }
+	Stream& RawFile::Stream() { return *Input(); }
 
 	static bool Validator(std::shared_ptr<Stream> input) { return true; }
 

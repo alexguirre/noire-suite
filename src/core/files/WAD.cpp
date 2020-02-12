@@ -293,12 +293,12 @@ TEST_SUITE("WAD")
 		auto r111 = std::static_pointer_cast<RawFile>(c11->Create("/raw.bin", RawFile::Type.Id));
 		for (u32 n = 0; n < 256; ++n)
 		{
-			r111->Stream()->Write(n);
+			r111->Stream().Write(n);
 		}
 		auto r1 = std::static_pointer_cast<RawFile>(w.Create("/raw.bin", RawFile::Type.Id));
 		for (u32 n = 0; n < 256; ++n)
 		{
-			r1->Stream()->Write(n);
+			r1->Stream().Write(n);
 		}
 
 		CHECK(w.Exists("/out/my_custom_file.wad.pc"));
@@ -335,7 +335,7 @@ TEST_SUITE("WAD")
 			auto r1 = std::static_pointer_cast<RawFile>(c1->Create("/raw.bin", RawFile::Type.Id));
 			for (u32 n = 0; n < 256; ++n)
 			{
-				r1->Stream()->Write(n);
+				r1->Stream().Write(n);
 			};
 
 			w.Save(*output);
