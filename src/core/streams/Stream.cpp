@@ -91,4 +91,13 @@ namespace noire
 	u64 ReadOnlyStream::Tell() { return mBaseStream->Tell(); }
 
 	u64 ReadOnlyStream::Size() { return mBaseStream->Size(); }
+
+	EmptyStream::EmptyStream() {}
+	u64 EmptyStream::Read(void*, u64) { return 0; }
+	u64 EmptyStream::ReadAt(void*, u64, u64) { return 0; }
+	u64 EmptyStream::Write(const void*, u64) { return 0; }
+	u64 EmptyStream::WriteAt(const void*, u64, u64) { return 0; }
+	u64 EmptyStream::Seek(i64, StreamSeekOrigin) { return 0; }
+	u64 EmptyStream::Tell() { return 0; }
+	u64 EmptyStream::Size() { return 0; }
 }

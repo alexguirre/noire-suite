@@ -1,4 +1,5 @@
 #include "WAD.h"
+#include "RawFile.h"
 #include "streams/FileStream.h"
 #include "streams/Stream.h"
 #include <algorithm>
@@ -237,7 +238,7 @@ namespace noire
 	static std::shared_ptr<File> CreatorEmpty() { return std::make_shared<WAD>(); }
 
 	const File::Type WAD::Type{ std::hash<std::string_view>{}("WAD"),
-								0,
+								1,
 								&Validator,
 								&Creator,
 								&CreatorEmpty };
@@ -262,7 +263,7 @@ TEST_SUITE("WAD")
 		CHECK_EQ(w.Size(), output->Size());
 	}
 
-	TEST_CASE("Load/Delete/Create/Save" * doctest::skip(false))
+	TEST_CASE("Load/Delete/Create/Save" * doctest::skip(true))
 	{
 		std::shared_ptr<Stream> input = std::make_shared<FileStream>(
 			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out.wad.pc");
@@ -288,7 +289,18 @@ TEST_SUITE("WAD")
 		CHECK_FALSE(w.Exists("/out/my_custom_file.wad.pc"));
 		auto c1 =
 			std::static_pointer_cast<WAD>(w.Create("/out/my_custom_file.wad.pc", WAD::Type.Id));
-		auto c11 = c1->Create("/other.wad.pc", WAD::Type.Id);
+		auto c11 = std::static_pointer_cast<WAD>(c1->Create("/other.wad.pc", WAD::Type.Id));
+		auto r111 = std::static_pointer_cast<RawFile>(c11->Create("/raw.bin", RawFile::Type.Id));
+		for (u32 n = 0; n < 256; ++n)
+		{
+			r111->Stream()->Write(n);
+		}
+		auto r1 = std::static_pointer_cast<RawFile>(w.Create("/raw.bin", RawFile::Type.Id));
+		for (u32 n = 0; n < 256; ++n)
+		{
+			r1->Stream()->Write(n);
+		}
+
 		CHECK(w.Exists("/out/my_custom_file.wad.pc"));
 
 		std::shared_ptr<Stream> output = std::make_shared<FileStream>(
@@ -320,27 +332,27 @@ TEST_SUITE("WAD")
 			auto c212 = std::static_pointer_cast<WAD>(
 				c21->Create("/another/folder/inner_inner.wad.pc", WAD::Type.Id));
 
+			auto r1 = std::static_pointer_cast<RawFile>(c1->Create("/raw.bin", RawFile::Type.Id));
+			for (u32 n = 0; n < 256; ++n)
+			{
+				r1->Stream()->Write(n);
+			};
+
 			w.Save(*output);
 		}
 
 		{
-			std::shared_ptr<Stream> input = std::make_shared<FileStream>(
-				"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out_modified.wad.pc");
-			WAD w{ input };
+			WAD w{ output };
 			const std::function<void(WAD&, PathView)> traverse = [&traverse](WAD& w,
 																			 PathView parent) {
 				w.Load();
 
 				for (auto& e : w.GetEntries())
 				{
-					Path fullPath = Path{ parent } / e.Path;
-					std::cout << "'" << fullPath.String() << "'";
+					const Path fullPath = Path{ parent } / e.Path;
+					std::cout << "'" << fullPath.String() << "'\n";
 
-					std::shared_ptr<WAD> c = std::dynamic_pointer_cast<WAD>(e.File);
-					//	CHECK(c != nullptr);
-
-					std::cout << '\n';
-					if (c)
+					if (std::shared_ptr<WAD> c = std::dynamic_pointer_cast<WAD>(e.File))
 					{
 						traverse(*c, fullPath);
 					}

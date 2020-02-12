@@ -10,6 +10,8 @@ file(GLOB CORE_SOURCES
     "devices/Device.h"
     "files/File.cpp"
     "files/File.h"
+    "files/RawFile.cpp"
+    "files/RawFile.h"
     "files/WAD.cpp"
     "files/WAD.h"
     "streams/FileStream.cpp"

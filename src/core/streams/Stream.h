@@ -130,4 +130,23 @@ namespace noire
 	private:
 		std::shared_ptr<Stream> mBaseStream;
 	};
+
+	// Streams with size 0 always, that cannot be read or written to.
+	class EmptyStream final : public Stream
+	{
+	public:
+		EmptyStream();
+
+		u64 Read(void* dstBuffer, u64 count) override;
+		u64 ReadAt(void* dstBuffer, u64 count, u64 offset) override;
+
+		u64 Write(const void* buffer, u64 count) override;
+		u64 WriteAt(const void* buffer, u64 count, u64 offset) override;
+
+		u64 Seek(i64 offset, StreamSeekOrigin origin) override;
+
+		u64 Tell() override;
+
+		u64 Size() override;
+	};
 }

@@ -111,39 +111,6 @@ namespace noire
 		DirectoryEntry* mRoot;
 	};
 
-	// Stream that uses a ReadOnlyStream until the user starts writing, then it switches to a
-	// TempStream.
-	// class VFSFileEntryStream final : public Stream
-	//{
-	// public:
-	//	VFSFileEntryStream(std::shared_ptr<ReadOnlyStream> input);
-
-	//	VFSFileEntryStream(const VFSFileEntryStream&) = delete;
-	//	VFSFileEntryStream(VFSFileEntryStream&&) = default;
-
-	//	VFSFileEntryStream& operator=(const VFSFileEntryStream&) = delete;
-	//	VFSFileEntryStream& operator=(VFSFileEntryStream&&) = default;
-
-	//	u64 Read(void* dstBuffer, u64 count) override;
-	//	u64 ReadAt(void* dstBuffer, u64 count, u64 offset) override;
-
-	//	u64 Write(const void* buffer, u64 count) override;
-	//	u64 WriteAt(const void* buffer, u64 count, u64 offset) override;
-
-	//	u64 Seek(i64 offset, StreamSeekOrigin origin) override;
-
-	//	u64 Tell() override;
-
-	//	u64 Size() override;
-
-	// private:
-	//	void UseOutputStream();
-	//	Stream& Current();
-
-	//	std::shared_ptr<ReadOnlyStream> mInput;
-	//	std::optional<TempStream> mOutput;
-	//};
-
 	template<class T>
 	VirtualFileSystem<T>::VirtualFileSystem()
 		: mEntries{}, mRoot{ GetDirectory(PathView::Root, true) }
