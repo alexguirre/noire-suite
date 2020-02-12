@@ -1,30 +1,34 @@
 #include "File.h"
 #include "streams/FileStream.h"
 #include <algorithm>
+#include <unordered_map>
 #include <vector>
 
 namespace noire
 {
-	File::File(std::shared_ptr<Stream> input) : mInput{ input } { Expects(input != nullptr); }
+	File::File(std::shared_ptr<Stream> input) : mInput{ input } {}
 
 	void File::Load()
 	{
 		// empty
 	}
 
-	void File::Save(Stream& output) { mInput->CopyTo(output); }
-
-	u64 File::Size() { return mInput->Size(); }
-
-	static std::vector<const File::Type*>& FileTypes()
+	void File::Save(Stream& output)
 	{
-		static std::vector<const File::Type*> types;
-		return types;
+		if (mInput)
+		{
+			mInput->CopyTo(output);
+		}
 	}
+
+	u64 File::Size() { return mInput ? mInput->Size() : 0; }
+
+	static std::unordered_map<size, const File::Type*> gFileTypes; // key is Type::Id
+	static std::vector<const File::Type*> gSortedFileTypes;
 
 	static void SortFileTypes()
 	{
-		auto& types = FileTypes();
+		auto& types = gSortedFileTypes;
 		std::sort(types.begin(), types.end(), [](const File::Type* a, const File::Type* b) {
 			return a->Priority > b->Priority;
 		});
@@ -33,46 +37,52 @@ namespace noire
 	static void RegisterFileType(const File::Type* type)
 	{
 		Expects(type != nullptr);
+		Expects(gFileTypes.find(type->Id) == gFileTypes.end());
 
-		auto& types = FileTypes();
-		auto it = std::find(types.begin(), types.end(), type);
-		if (it == types.end())
-		{
-			types.push_back(type);
-			SortFileTypes();
-		}
+		gFileTypes.insert({ type->Id, type });
+		gSortedFileTypes.push_back(type);
+		SortFileTypes();
 	}
 
 	static void UnregisterFileType(const File::Type* type)
 	{
 		Expects(type != nullptr);
 
-		auto& types = FileTypes();
-		auto it = std::find(types.begin(), types.end(), type);
-		if (it != types.end())
+		if (gFileTypes.erase(type->Id))
 		{
-			types.erase(it);
+			auto& types = gSortedFileTypes;
+			types.erase(std::find(types.begin(), types.end(), type));
 			SortFileTypes();
 		}
 	}
 
-	File::Type::Type(size priority, IsValidFunc isValidFunc, CreateFunc createFunc)
-		: Priority{ priority }, IsValid{ isValidFunc }, Create{ createFunc }
+	File::Type::Type(size id,
+					 size priority,
+					 IsValidFunc isValidFunc,
+					 CreateFunc createFunc,
+					 CreateEmptyFunc createEmptyFunc)
+		: Id{ id },
+		  Priority{ priority },
+		  IsValid{ isValidFunc },
+		  Create{ createFunc },
+		  CreateEmpty{ createEmptyFunc }
 	{
 		Expects(isValidFunc != nullptr);
 		Expects(createFunc != nullptr);
+		Expects(createEmptyFunc != nullptr);
 
 		RegisterFileType(this);
 	}
 
 	File::Type::~Type() { UnregisterFileType(this); }
 
-	std::shared_ptr<File> File::FromStream(std::shared_ptr<Stream> input, bool fallbackToBaseFile)
+	std::shared_ptr<File> File::NewFromStream(std::shared_ptr<Stream> input,
+											  bool fallbackToBaseFile)
 	{
 		Expects(input != nullptr);
 
 		std::shared_ptr<File> resultFile = nullptr;
-		for (const File::Type* t : FileTypes())
+		for (const File::Type* t : gSortedFileTypes)
 		{
 			if (t->IsValid(input))
 			{
@@ -87,5 +97,14 @@ namespace noire
 		}
 
 		return resultFile;
+	}
+
+	std::shared_ptr<File> File::NewEmpty(size fileTypeId)
+	{
+		auto it = gFileTypes.find(fileTypeId);
+		Expects(it != gFileTypes.end());
+
+		const File::Type* t = it->second;
+		return t->CreateEmpty();
 	}
 }

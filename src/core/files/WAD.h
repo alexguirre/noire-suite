@@ -18,6 +18,8 @@ namespace noire
 		u32 Size;
 		std::shared_ptr<File> File;
 
+		inline WADEntry() : Path{ "" }, PathHash{ 0 }, Offset{ 0 }, Size{ 0 }, File{ nullptr } {}
+
 		inline WADEntry(std::string path, u32 pathHash, u32 offset, u32 size)
 			: Path{ std::move(path) },
 			  PathHash{ pathHash },
@@ -31,11 +33,12 @@ namespace noire
 	class WAD final : public File, Device
 	{
 	public:
+		explicit WAD();
 		WAD(std::shared_ptr<Stream> input);
 
 		bool Exists(PathView path) const override;
-		std::shared_ptr<Stream> Open(PathView path) override;
-		std::shared_ptr<Stream> Create(PathView path) override;
+		std::shared_ptr<File> Open(PathView path) override;
+		std::shared_ptr<File> Create(PathView path, size fileTypeId) override;
 		bool Delete(PathView path) override;
 
 		void Load() override;
@@ -43,6 +46,9 @@ namespace noire
 		u64 Size() override;
 
 		size GetEntryIndex(PathView path) const;
+		size GetEntryIndex(size pathHash) const;
+		const WADEntry& GetEntry(size pathHash) const;
+		const std::vector<WADEntry>& GetEntries() const { return mEntries; }
 
 	private:
 		void FixUpOffsets();

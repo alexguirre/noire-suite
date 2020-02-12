@@ -3,10 +3,14 @@
 #include "streams/Stream.h"
 #include <algorithm>
 #include <doctest/doctest.h>
+#include <functional>
 #include <iostream>
+#include <string_view>
 
 namespace noire
 {
+	WAD::WAD() : File(nullptr) {}
+
 	WAD::WAD(std::shared_ptr<Stream> input) : File(input) {}
 
 	// Device implementation (TODO)
@@ -17,18 +21,27 @@ namespace noire
 		return mVFS.Exists(path);
 	}
 
-	std::shared_ptr<Stream> WAD::Open(PathView path)
+	std::shared_ptr<File> WAD::Open(PathView path)
 	{
 		Expects(path.IsFile() && path.IsAbsolute());
 
-		return nullptr;
+		return mVFS.Open(path, [this](PathView, size pathHash) { return GetEntry(pathHash).File; });
 	}
 
-	std::shared_ptr<Stream> WAD::Create(PathView path)
+	std::shared_ptr<File> WAD::Create(PathView path, size fileTypeId)
 	{
 		Expects(path.IsFile() && path.IsAbsolute());
 
-		return nullptr;
+		WADEntry& newEntry = mEntries.emplace_back();
+		newEntry.File = mVFS.Create(path, fileTypeId, [&newEntry](PathView path) {
+			// remove first '/', paths in WAD file don't contain it
+			newEntry.Path = path.String().substr(1);
+			// TODO: use CRC32 for hashing
+			newEntry.PathHash = gsl::narrow_cast<u32>(std::hash<std::string>{}(newEntry.Path));
+			return newEntry.PathHash;
+		});
+
+		return newEntry.File;
 	}
 
 	bool WAD::Delete(PathView path)
@@ -50,6 +63,11 @@ namespace noire
 	// File implementation
 	void WAD::Load()
 	{
+		if (!Input())
+		{
+			return;
+		}
+
 		Stream& s = *Input();
 
 		s.Seek(0, StreamSeekOrigin::Begin);
@@ -61,37 +79,42 @@ namespace noire
 
 		mEntries.reserve(entryCount);
 
-		// read entries
-		for (size i = 0; i < entryCount; ++i)
+		if (entryCount)
 		{
-			const u32 hash = s.Read<u32>();
-			const u32 offset = s.Read<u32>();
-			const u32 size = s.Read<u32>();
+			// read entries
+			for (size i = 0; i < entryCount; ++i)
+			{
+				const u32 hash = s.Read<u32>();
+				const u32 offset = s.Read<u32>();
+				const u32 size = s.Read<u32>();
 
-			mEntries.emplace_back("", hash, offset, size).File =
-				File::FromStream(std::make_shared<SubStream>(Input(), offset, size));
-		}
+				mEntries.emplace_back("", hash, offset, size).File =
+					File::NewFromStream(std::make_shared<SubStream>(Input(), offset, size));
+			}
 
-		Expects(IsSorted());
+			Expects(IsSorted());
 
-		// read paths
-		const WADEntry& lastEntry = mEntries.back();
-		s.Seek(gsl::narrow<i64>(lastEntry.Offset) + lastEntry.Size, StreamSeekOrigin::Begin);
-		for (size i = 0; i < entryCount; ++i)
-		{
-			const u64 t = s.Tell();
-			const u16 strLength = s.Read<u16>();
-			std::string& str = mEntries[i].Path;
-			str.resize(strLength);
+			// read paths
+			const WADEntry& lastEntry = mEntries.back();
+			s.Seek(gsl::narrow<i64>(lastEntry.Offset) + lastEntry.Size, StreamSeekOrigin::Begin);
+			for (size i = 0; i < entryCount; ++i)
+			{
+				const u64 t = s.Tell();
+				const u16 strLength = s.Read<u16>();
+				std::string& str = mEntries[i].Path;
+				str.resize(strLength);
 
-			s.Read(str.data(), strLength);
+				s.Read(str.data(), strLength);
 
-			mVFS.RegisterExistingFile(Path::Root / str, mEntries[i].PathHash);
+				mVFS.RegisterExistingFile(Path::Root / str, mEntries[i].PathHash);
+			}
 		}
 	}
 
 	void WAD::Save(Stream& s)
 	{
+		FixUpOffsets();
+
 		Ensures(IsSorted());
 
 		s.Write<u32>(HeaderMagic);
@@ -126,6 +149,8 @@ namespace noire
 
 	u64 WAD::Size()
 	{
+		FixUpOffsets();
+
 		// TODO: maybe size should be cached?
 		size total = 0;
 		total += sizeof(u32);                       // magic
@@ -141,17 +166,29 @@ namespace noire
 
 	size WAD::GetEntryIndex(PathView path) const
 	{
-		// TODO: don't use linear search here
 		const size hash = mVFS.GetFileInfo(path);
+		return GetEntryIndex(hash);
+	}
+
+	size WAD::GetEntryIndex(size pathHash) const
+	{
+		// TODO: don't use linear search here
 		for (size i = 0; i < mEntries.size(); ++i)
 		{
-			if (mEntries[i].PathHash == hash)
+			if (mEntries[i].PathHash == pathHash)
 			{
 				return i;
 			}
 		}
 
 		return static_cast<size>(-1);
+	}
+
+	const WADEntry& WAD::GetEntry(size pathHash) const
+	{
+		const size index = GetEntryIndex(pathHash);
+		Expects(index != static_cast<size>(-1));
+		return mEntries[index];
 	}
 
 	void WAD::FixUpOffsets()
@@ -183,7 +220,7 @@ namespace noire
 
 	static bool Validator(std::shared_ptr<Stream> input)
 	{
-		if (input->Size() <= 8) // min required bytes
+		if (input->Size() < 8) // min required bytes
 		{
 			return false;
 		}
@@ -197,7 +234,13 @@ namespace noire
 		return std::make_shared<WAD>(input);
 	}
 
-	const File::Type WAD::Type{ 0, &Validator, &Creator };
+	static std::shared_ptr<File> CreatorEmpty() { return std::make_shared<WAD>(); }
+
+	const File::Type WAD::Type{ std::hash<std::string_view>{}("WAD"),
+								0,
+								&Validator,
+								&Creator,
+								&CreatorEmpty };
 }
 
 TEST_SUITE("WAD")
@@ -219,7 +262,7 @@ TEST_SUITE("WAD")
 		CHECK_EQ(w.Size(), output->Size());
 	}
 
-	TEST_CASE("Load/Delete/Save" * doctest::skip(false))
+	TEST_CASE("Load/Delete/Create/Save" * doctest::skip(false))
 	{
 		std::shared_ptr<Stream> input = std::make_shared<FileStream>(
 			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out.wad.pc");
@@ -242,11 +285,69 @@ TEST_SUITE("WAD")
 		CHECK_FALSE(w.Exists("/out/graphicsdata/programs.vfp.dx11"));
 		CHECK_FALSE(w.Exists("/out/trunk/models/la/environment/weather/sky.trunk.pc"));
 
+		CHECK_FALSE(w.Exists("/out/my_custom_file.wad.pc"));
+		auto c1 =
+			std::static_pointer_cast<WAD>(w.Create("/out/my_custom_file.wad.pc", WAD::Type.Id));
+		auto c11 = c1->Create("/other.wad.pc", WAD::Type.Id);
+		CHECK(w.Exists("/out/my_custom_file.wad.pc"));
+
 		std::shared_ptr<Stream> output = std::make_shared<FileStream>(
-			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out_deleted_entry.wad.pc");
+			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out_modified.wad.pc");
 
 		w.Save(*output);
 		CHECK_EQ(w.Size(), output->Size());
+	}
+
+	TEST_CASE("Create new" * doctest::skip(false))
+	{
+		std::shared_ptr<Stream> output = std::make_shared<FileStream>(
+			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\custom.wad.pc");
+		{
+			WAD w{};
+
+			w.Load();
+
+			auto c1 =
+				std::static_pointer_cast<WAD>(w.Create("/a/really/deep/file.wad.pc", WAD::Type.Id));
+			auto c2 =
+				std::static_pointer_cast<WAD>(w.Create("/wad_with_children.wad.pc", WAD::Type.Id));
+
+			auto c21 = std::static_pointer_cast<WAD>(c2->Create("/inner1.wad.pc", WAD::Type.Id));
+			auto c22 = std::static_pointer_cast<WAD>(c2->Create("/inner2.wad.pc", WAD::Type.Id));
+
+			auto c211 =
+				std::static_pointer_cast<WAD>(c21->Create("/inner_inner.wad.pc", WAD::Type.Id));
+			auto c212 = std::static_pointer_cast<WAD>(
+				c21->Create("/another/folder/inner_inner.wad.pc", WAD::Type.Id));
+
+			w.Save(*output);
+		}
+
+		{
+			std::shared_ptr<Stream> input = std::make_shared<FileStream>(
+				"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out_modified.wad.pc");
+			WAD w{ input };
+			const std::function<void(WAD&, PathView)> traverse = [&traverse](WAD& w,
+																			 PathView parent) {
+				w.Load();
+
+				for (auto& e : w.GetEntries())
+				{
+					Path fullPath = Path{ parent } / e.Path;
+					std::cout << "'" << fullPath.String() << "'";
+
+					std::shared_ptr<WAD> c = std::dynamic_pointer_cast<WAD>(e.File);
+					//	CHECK(c != nullptr);
+
+					std::cout << '\n';
+					if (c)
+					{
+						traverse(*c, fullPath);
+					}
+				}
+			};
+			traverse(w, PathView::Root);
+		}
 	}
 
 	TEST_CASE("Size" * doctest::skip(true))
@@ -267,6 +368,6 @@ TEST_SUITE("WAD")
 
 		CHECK(Validator(input));
 		CHECK(Creator(input) != nullptr);
-		CHECK(File::FromStream(input, false) != nullptr);
+		CHECK(File::NewFromStream(input, false) != nullptr);
 	}
 }

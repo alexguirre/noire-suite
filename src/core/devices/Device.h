@@ -5,7 +5,7 @@
 
 namespace noire
 {
-	class Stream;
+	class File;
 
 	class Device
 	{
@@ -13,8 +13,8 @@ namespace noire
 		virtual ~Device() = default;
 
 		virtual bool Exists(PathView path) const = 0;
-		virtual std::shared_ptr<Stream> Open(PathView path) = 0;
-		virtual std::shared_ptr<Stream> Create(PathView path) = 0;
+		virtual std::shared_ptr<File> Open(PathView path) = 0;
+		virtual std::shared_ptr<File> Create(PathView path, size fileTypeId) = 0;
 		virtual bool Delete(PathView path) = 0;
 	};
 }

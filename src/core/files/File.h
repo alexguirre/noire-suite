@@ -32,8 +32,13 @@ namespace noire
 		{
 			using IsValidFunc = bool (*)(std::shared_ptr<Stream> input);
 			using CreateFunc = std::shared_ptr<File> (*)(std::shared_ptr<Stream> input);
+			using CreateEmptyFunc = std::shared_ptr<File> (*)();
 
-			Type(size priority, IsValidFunc isValidFunc, CreateFunc createFunc);
+			Type(size id,
+				 size priority,
+				 IsValidFunc isValidFunc,
+				 CreateFunc createFunc,
+				 CreateEmptyFunc createEmptyFunc);
 			~Type();
 
 			Type(const Type&) = delete;
@@ -41,6 +46,8 @@ namespace noire
 
 			Type& operator=(const Type&) = delete;
 			Type& operator=(Type&&) = delete;
+
+			size Id;
 
 			// Types with higher priority are checked before ones with lower priority
 			size Priority;
@@ -53,11 +60,15 @@ namespace noire
 			// true. May modify input stream position and initial stream position may not be at the
 			// beginning.
 			CreateFunc Create;
+
+			// Creates an empty File instance.
+			CreateEmptyFunc CreateEmpty;
 		};
 
 		// fallbackToBaseFile: Whether to create File instance if the stream format does not match
 		// any specific file type.
-		static std::shared_ptr<File> FromStream(std::shared_ptr<Stream> input,
+		static std::shared_ptr<File> NewFromStream(std::shared_ptr<Stream> input,
 												bool fallbackToBaseFile = true);
+		static std::shared_ptr<File> NewEmpty(size fileTypeId);
 	};
 }

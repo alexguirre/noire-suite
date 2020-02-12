@@ -2,13 +2,17 @@
 #include "Common.h"
 #include "Path.h"
 #include "streams/Stream.h"
+#include "streams/TempStream.h"
 #include <functional>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
 namespace noire
 {
+	class File;
+
 	template<class T>
 	class VirtualFileSystem
 	{
@@ -61,9 +65,11 @@ namespace noire
 			FileEntry(PathView path, DirectoryEntry* parent, FileEntryInfo info);
 
 			const FileEntryInfo& Info() const { return mInfo; }
+			std::shared_ptr<File>& File() { return mFile; };
 
 		private:
 			FileEntryInfo mInfo;
+			std::shared_ptr<noire::File> mFile;
 		};
 
 	public:
@@ -75,10 +81,14 @@ namespace noire
 		VirtualFileSystem& operator=(VirtualFileSystem&&) = default;
 
 		// template<class F> // F equivalent to std::shared_ptr<Stream>(PathView, const
-		// FileEntryInfo&) std::shared_ptr<Stream> Open(PathView path, F createStreamCallback);
+		// FileEntryInfo&)
+		using OpenCallback =
+			std::function<std::shared_ptr<File>(PathView filePath, const FileEntryInfo& info)>;
+		using CreateCallback = std::function<FileEntryInfo(PathView filePath)>;
 
-		// template<class F>
-		// std::shared_ptr<Stream> Create(PathView path, F createStreamCallback);
+		std::shared_ptr<File> Open(PathView path, OpenCallback cb);
+
+		std::shared_ptr<File> Create(PathView path, size fileTypeId, CreateCallback cb);
 
 		bool Exists(PathView path) const;
 
@@ -101,10 +111,78 @@ namespace noire
 		DirectoryEntry* mRoot;
 	};
 
+	// Stream that uses a ReadOnlyStream until the user starts writing, then it switches to a
+	// TempStream.
+	// class VFSFileEntryStream final : public Stream
+	//{
+	// public:
+	//	VFSFileEntryStream(std::shared_ptr<ReadOnlyStream> input);
+
+	//	VFSFileEntryStream(const VFSFileEntryStream&) = delete;
+	//	VFSFileEntryStream(VFSFileEntryStream&&) = default;
+
+	//	VFSFileEntryStream& operator=(const VFSFileEntryStream&) = delete;
+	//	VFSFileEntryStream& operator=(VFSFileEntryStream&&) = default;
+
+	//	u64 Read(void* dstBuffer, u64 count) override;
+	//	u64 ReadAt(void* dstBuffer, u64 count, u64 offset) override;
+
+	//	u64 Write(const void* buffer, u64 count) override;
+	//	u64 WriteAt(const void* buffer, u64 count, u64 offset) override;
+
+	//	u64 Seek(i64 offset, StreamSeekOrigin origin) override;
+
+	//	u64 Tell() override;
+
+	//	u64 Size() override;
+
+	// private:
+	//	void UseOutputStream();
+	//	Stream& Current();
+
+	//	std::shared_ptr<ReadOnlyStream> mInput;
+	//	std::optional<TempStream> mOutput;
+	//};
+
 	template<class T>
 	VirtualFileSystem<T>::VirtualFileSystem()
 		: mEntries{}, mRoot{ GetDirectory(PathView::Root, true) }
 	{
+	}
+
+	template<class T>
+	std::shared_ptr<File> VirtualFileSystem<T>::Open(PathView path, OpenCallback cb)
+	{
+		Expects(path.IsFile() && path.IsAbsolute());
+
+		if (Entry* e = FindEntry(path); e)
+		{
+			Ensures(e->Type() == EntryType::File);
+
+			FileEntry* fe = static_cast<FileEntry*>(e);
+			std::shared_ptr<File>& f = fe->File();
+			if (f == nullptr)
+			{
+				f = cb(path, fe->Info());
+			}
+
+			return f;
+		}
+
+		return nullptr;
+	}
+
+	template<class T>
+	std::shared_ptr<File>
+	VirtualFileSystem<T>::Create(PathView path, size fileTypeId, CreateCallback cb)
+	{
+		Expects(path.IsFile() && path.IsAbsolute());
+		Expects(FindEntry(path) == nullptr);
+
+		FileEntryInfo info = cb(path);
+		RegisterExistingFile(path, std::move(info));
+
+		return File::NewEmpty(fileTypeId);
 	}
 
 	template<class T>
@@ -278,7 +356,7 @@ namespace noire
 	VirtualFileSystem<T>::FileEntry::FileEntry(PathView path,
 											   DirectoryEntry* parent,
 											   FileEntryInfo info)
-		: Entry(path, EntryType::File, parent), mInfo{ std::move(info) }
+		: Entry(path, EntryType::File, parent), mInfo{ std::move(info) }, mFile{ nullptr }
 	{
 		Expects(path.IsFile() && path.IsAbsolute());
 		Expects(parent != nullptr);
