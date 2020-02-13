@@ -1,4 +1,5 @@
 #include "WAD.h"
+#include "Hash.h"
 #include "RawFile.h"
 #include "streams/FileStream.h"
 #include "streams/Stream.h"
@@ -37,8 +38,7 @@ namespace noire
 		newEntry.File = mVFS.Create(path, fileTypeId, [&newEntry](PathView path) {
 			// remove first '/', paths in WAD file don't contain it
 			newEntry.Path = path.String().substr(1);
-			// TODO: use CRC32 for hashing
-			newEntry.PathHash = gsl::narrow_cast<u32>(std::hash<std::string>{}(newEntry.Path));
+			newEntry.PathHash = crc32(newEntry.Path);
 			return newEntry.PathHash;
 		});
 
@@ -150,6 +150,9 @@ namespace noire
 
 	u64 WAD::Size()
 	{
+		// TODO: hacky way to ensure child WADs also FixUpOffsets when the parent calls
+		// FixUpOffsets, otherwise the total size may be wrong. Implement common way to do this in
+		// Device or File
 		FixUpOffsets();
 
 		// TODO: maybe size should be cached?
@@ -192,6 +195,7 @@ namespace noire
 		return mEntries[index];
 	}
 
+	// TODO: FixUpOffsets is getting called more times than needed
 	void WAD::FixUpOffsets()
 	{
 		const size startingOffset = sizeof(u32) /*magic*/ + sizeof(u32) /*entryCount*/ +
@@ -310,7 +314,7 @@ TEST_SUITE("WAD")
 		CHECK_EQ(w.Size(), output->Size());
 	}
 
-	TEST_CASE("Create new" * doctest::skip(false))
+	TEST_CASE("Create new" * doctest::skip(true))
 	{
 		std::shared_ptr<Stream> output = std::make_shared<FileStream>(
 			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\custom.wad.pc");

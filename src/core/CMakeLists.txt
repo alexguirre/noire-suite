@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 
 file(GLOB CORE_SOURCES
     "Common.h"
+    "Hash.cpp"
+    "Hash.h"
     "Path.cpp"
     "Path.h"
     "VFS.cpp"

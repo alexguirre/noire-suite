@@ -87,10 +87,12 @@ namespace noire
 			if (t->IsValid(input))
 			{
 				resultFile = t->Create(input);
+				Ensures(resultFile != nullptr);
 				break;
 			}
 		}
 
+		// TODO: fallbackToBaseFile may no longer be needed since RawFile accepts any input stream
 		if (!resultFile && fallbackToBaseFile)
 		{
 			resultFile = std::make_shared<File>(input);
