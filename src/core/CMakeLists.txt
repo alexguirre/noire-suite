@@ -48,7 +48,7 @@ if(NOT doctest_FOUND)
     message(FATAL_ERROR "doctest not found")
 endif()
 
-target_compile_definitions(noire-core PRIVATE DOCTEST_CONFIG_DISABLE)
+target_compile_definitions(noire-core PUBLIC DOCTEST_CONFIG_DISABLE)
 
 
 target_include_directories(noire-core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${MSGSL_INCLUDE_DIR})

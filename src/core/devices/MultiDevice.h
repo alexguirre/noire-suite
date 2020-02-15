@@ -13,6 +13,11 @@ namespace noire
 		{
 			Path Path;
 			std::unique_ptr<Device> Device;
+
+			inline MountPoint(PathView path, std::unique_ptr<noire::Device> device)
+				: Path{ path }, Device{ std::move(device) }
+			{
+			}
 		};
 
 		virtual ~MultiDevice() = default;

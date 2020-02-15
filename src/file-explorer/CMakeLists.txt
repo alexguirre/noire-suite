@@ -56,12 +56,12 @@ target_include_directories(noire-file-explorer PRIVATE
     ${DEVIL_INCLUDE_DIR}
 )
 
-get_target_property(FORMATS_INCLUDE_DIR noire-formats SOURCE_DIR)
-get_filename_component(FORMATS_INCLUDE_DIR ${FORMATS_INCLUDE_DIR} DIRECTORY)
-if (FORMATS_INCLUDE_DIR STREQUAL FORMATS_INCLUDE_DIR-NOTFOUND)
-    message(FATAL_ERROR "noire-formats not found")
+get_target_property(CORE_INCLUDE_DIR noire-core SOURCE_DIR)
+get_filename_component(CORE_INCLUDE_DIR ${CORE_INCLUDE_DIR} DIRECTORY)
+if (CORE_INCLUDE_DIR STREQUAL CORE_INCLUDE_DIR-NOTFOUND)
+    message(FATAL_ERROR "noire-core not found")
 else()
-    target_include_directories(noire-file-explorer PRIVATE ${FORMATS_INCLUDE_DIR})
+    target_include_directories(noire-file-explorer PRIVATE ${CORE_INCLUDE_DIR})
 endif()
 
 target_compile_definitions(noire-file-explorer PRIVATE
@@ -98,11 +98,11 @@ set(DEVIL_LIBS
 )
 
 add_dependencies(noire-file-explorer
-    noire-formats
+    noire-core
 )
 
 target_link_libraries(noire-file-explorer PRIVATE
-    noire-formats
+    noire-core
     ${WX_LIBS}
     ${DEVIL_LIBS}
 )

@@ -6,22 +6,25 @@
 #include <wx/icon.h>
 #include <wx/imaglist.h>
 
-wxImageList* CImages::Icons()
+namespace noire::explorer
 {
-	static wxImageList Icons{ 17, 17 };
-
-	// clang-format off
-	wxIcon icons[IconCount];
-	icons[IconBlankFile]  = { BlankFileIcon };
-	icons[IconBlueFolder] = { BlueFolderIcon };
-	icons[IconFolder]     = { FolderIcon };
-	icons[IconNoire]      = { NoireIcon };
-	// clang-format on
-
-	for (const wxIcon& i : icons)
+	wxImageList* Images::Icons()
 	{
-		Icons.Add(i);
-	}
+		static wxImageList Icons{ 17, 17 };
 
-	return &Icons;
+		// clang-format off
+		wxIcon icons[IconCount];
+		icons[IconBlankFile]  = { BlankFileIcon };
+		icons[IconBlueFolder] = { BlueFolderIcon };
+		icons[IconFolder]     = { FolderIcon };
+		icons[IconNoire]      = { NoireIcon };
+		// clang-format on
+
+		for (const wxIcon& i : icons)
+		{
+			Icons.Add(i);
+		}
+
+		return &Icons;
+	}
 }

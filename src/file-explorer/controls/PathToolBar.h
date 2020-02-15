@@ -3,34 +3,38 @@
 #include <wx/toolbar.h>
 
 class wxTextCtrl;
-class CDirectoryEvent;
-class CDirectoryContentsListCtrl;
 
-class CPathToolBar : public wxToolBar
+namespace noire::explorer
 {
-public:
-	CPathToolBar(wxWindow* parent,
-				 wxWindowID id,
-				 const wxPoint& pos = wxDefaultPosition,
-				 const wxSize& size = wxDefaultSize,
-				 long style = wxTB_DEFAULT_STYLE,
-				 const wxString& name = wxToolBarNameStr);
+	class DirectoryEvent;
+	class DirectoryContentsListCtrl;
 
-	void SetDirectoryContentsListCtrl(CDirectoryContentsListCtrl* ctrl)
+	class PathToolBar : public wxToolBar
 	{
-		mDirContentsListCtrl = ctrl;
-	}
+	public:
+		PathToolBar(wxWindow* parent,
+					wxWindowID id,
+					const wxPoint& pos = wxDefaultPosition,
+					const wxSize& size = wxDefaultSize,
+					long style = wxTB_DEFAULT_STYLE,
+					const wxString& name = wxToolBarNameStr);
 
-private:
-	wxTextCtrl* mPathText;
-	bool mResizeQueuedRealize;
-	CDirectoryHistory mDirHistory;
-	CDirectoryContentsListCtrl* mDirContentsListCtrl;
+		void SetDirectoryContentsListCtrl(DirectoryContentsListCtrl* ctrl)
+		{
+			mDirContentsListCtrl = ctrl;
+		}
 
-	void OnWindowResize(wxSizeEvent& e);
-	void OnDirectoryChanged(CDirectoryEvent& e);
-	void OnTool(wxCommandEvent& event);
+	private:
+		wxTextCtrl* mPathText;
+		bool mResizeQueuedRealize;
+		DirectoryHistory mDirHistory;
+		DirectoryContentsListCtrl* mDirContentsListCtrl;
 
-	bool CanHandleCommand(int id) const;
-	void HandleCommand(int id);
-};
+		void OnWindowResize(wxSizeEvent& e);
+		void OnDirectoryChanged(DirectoryEvent& e);
+		void OnTool(wxCommandEvent& event);
+
+		bool CanHandleCommand(int id) const;
+		void HandleCommand(int id);
+	};
+}

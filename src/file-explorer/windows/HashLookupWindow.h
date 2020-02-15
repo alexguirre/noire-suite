@@ -5,15 +5,18 @@ class wxTextCtrl;
 class wxCommandEvent;
 class wxKeyEvent;
 
-class CHashLookupWindow : public wxFrame
+namespace noire::explorer
 {
-public:
-	CHashLookupWindow(wxWindow* parent);
+	class HashLookupWindow : public wxFrame
+	{
+	public:
+		HashLookupWindow(wxWindow* parent);
 
-private:
-	void OnLookup(wxCommandEvent&);
-	void OnInputChar(wxKeyEvent&);
+	private:
+		void OnLookup(wxCommandEvent&);
+		void OnInputChar(wxKeyEvent&);
 
-	wxTextCtrl* mInputTextCtrl;
-	wxTextCtrl* mOutputTextCtrl;
-};
+		wxTextCtrl* mInputTextCtrl;
+		wxTextCtrl* mOutputTextCtrl;
+	};
+}

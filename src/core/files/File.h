@@ -5,6 +5,7 @@
 namespace noire
 {
 	class Stream;
+	class ReadOnlyStream;
 
 	class File
 	{
@@ -21,11 +22,11 @@ namespace noire
 		virtual u64 Size();
 
 		bool IsLoaded() const { return mIsLoaded; }
+		std::shared_ptr<Stream> Input() { return mInput; }
 
 	protected:
 		// default LoadImpl() does nothing
 		virtual void LoadImpl();
-		std::shared_ptr<Stream> Input() { return mInput; }
 
 	private:
 		bool mIsLoaded;

@@ -105,6 +105,8 @@ TEST_SUITE("MemoryStream")
 
 	void TestStream(MemoryStream & s)
 	{
+		(void)s;
+#ifndef DOCTEST_CONFIG_DISABLE
 		{
 			u8 data[]{ 0, 1, 2, 3 };
 
@@ -141,6 +143,7 @@ TEST_SUITE("MemoryStream")
 
 			CHECK_EQ(std::memcmp(readData, data, std::size(readData)), 0);
 		}
+#endif // !DOCTEST_CONFIG_DISABLE
 	}
 
 	TEST_CASE("Basic")

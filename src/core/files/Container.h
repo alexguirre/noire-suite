@@ -43,7 +43,7 @@ namespace noire
 		u64 Size2() const { return static_cast<u64>(Unk2 & 0x7FFFFFFF) + (Unk3 & 0x7FFFFFFF); }
 	};
 
-	class Container final : public File, Device
+	class Container final : public File, public Device
 	{
 	public:
 		explicit Container();

@@ -3,10 +3,10 @@
 #include <ShlObj.h>
 #include <Shlwapi.h>
 #include <algorithm>
-#include <cstddef>
-#include <formats/fs/FileStream.h>
-#include <formats/fs/FileSystem.h>
-#include <gsl/gsl>
+#include <core/Common.h>
+#include <core/devices/Device.h>
+#include <core/files/File.h>
+#include <core/streams/Stream.h>
 #include <iterator>
 #include <memory>
 #include <strsafe.h>
@@ -114,14 +114,11 @@ static bool IsIidFromList(REFIID riid, const IID* aIids[], size_t nCount)
 			return m_cRef;                                          \
 	}
 
-// COM IStream that wraps a noire::fs::IFileStream
+// COM IStream that wraps a noire::Stream
 class CComFileStream : public IStream
 {
 public:
-	CComFileStream(std::unique_ptr<noire::fs::IFileStream> fileStream)
-		: mFileStream{ std::move(fileStream) }
-	{
-	}
+	CComFileStream(std::shared_ptr<noire::File> file) : mFile{ file } {}
 
 	DECLARE_IUNKNOWN_METHODS;
 
@@ -146,7 +143,7 @@ public:
 	STDMETHODIMP Clone(IStream** ppstm) override;
 
 private:
-	std::unique_ptr<noire::fs::IFileStream> mFileStream;
+	std::shared_ptr<noire::File> mFile;
 
 	wxDECLARE_NO_COPY_CLASS(CComFileStream);
 };
@@ -162,16 +159,17 @@ IMPLEMENT_IUNKNOWN_METHODS(CComFileStream);
 STDMETHODIMP CComFileStream::Read(void* pv, ULONG cb, ULONG* pcbRead)
 {
 	wxLogDebug(__FUNCTION__ "(%p, %lu, %p)", pv, cb, pcbRead);
-	const noire::fs::FileStreamSize toRead =
-		std::min<noire::fs::FileStreamSize>(cb, mFileStream->Size() - mFileStream->Tell());
+	noire::Stream& s = *mFile->Input();
+	const noire::u64 toRead = std::min<noire::u64>(cb, s.Size() - s.Tell());
+	noire::u64 read = 0;
 	if (toRead != 0)
 	{
-		mFileStream->Read(pv, toRead);
+		read = s.Read(pv, toRead);
 	}
 
 	if (pcbRead)
 	{
-		*pcbRead = toRead;
+		*pcbRead = read;
 	}
 	return S_OK;
 }
@@ -186,16 +184,17 @@ STDMETHODIMP
 CComFileStream::Seek(LARGE_INTEGER dlibMove, DWORD dwOrigin, ULARGE_INTEGER* plibNewPosition)
 {
 	wxLogDebug(__FUNCTION__ "(%lld, %u, %p)", dlibMove.QuadPart, dwOrigin, plibNewPosition);
-	noire::fs::FileStreamSize newPos = 0;
 
+	noire::StreamSeekOrigin orig;
 	switch (dwOrigin)
 	{
-	case STREAM_SEEK_SET: newPos = dlibMove.QuadPart; break;
-	case STREAM_SEEK_CUR: newPos = mFileStream->Tell() + dlibMove.QuadPart; break;
-	case STREAM_SEEK_END: newPos = mFileStream->Size() - 1 + dlibMove.QuadPart; break;
+	default:
+	case STREAM_SEEK_SET: orig = noire::StreamSeekOrigin::Begin; break;
+	case STREAM_SEEK_CUR: orig = noire::StreamSeekOrigin::Current; break;
+	case STREAM_SEEK_END: orig = noire::StreamSeekOrigin::End; break;
 	}
 
-	mFileStream->Seek(newPos);
+	const noire::u64 newPos = mFile->Input()->Seek(dlibMove.QuadPart, orig);
 	if (plibNewPosition)
 	{
 		plibNewPosition->QuadPart = newPos;
@@ -255,7 +254,7 @@ STDMETHODIMP CComFileStream::Stat(STATSTG* pstatstg, DWORD grfStatFlag)
 		pstatstg->pwcsName = nullptr;
 	}
 	pstatstg->type = STGTY_STREAM;
-	pstatstg->cbSize.QuadPart = mFileStream->Size();
+	pstatstg->cbSize.QuadPart = mFile->Input()->Size();
 	GetSystemTimeAsFileTime(&pstatstg->mtime);
 	GetSystemTimeAsFileTime(&pstatstg->ctime);
 	GetSystemTimeAsFileTime(&pstatstg->atime);
@@ -354,12 +353,12 @@ wxIDataObjectImposter::~wxIDataObjectImposter()
 }
 
 // Based on https://devblogs.microsoft.com/oldnewthing/tag/what-a-drag
-class CVirtualFileComDataObject : public wxIDataObjectImposter
+class VirtualFileComDataObject : public wxIDataObjectImposter
 {
 public:
-	CVirtualFileComDataObject(wxDataObject* obj,
-							  noire::fs::CFileSystem* fileSystem,
-							  const std::vector<noire::fs::SPathView>& paths);
+	VirtualFileComDataObject(wxDataObject* obj,
+							 noire::Device& device,
+							 const std::vector<noire::PathView>& paths);
 
 	// IDataObject
 	STDMETHODIMP GetData(FORMATETC* pformatetcIn, STGMEDIUM* pmedium) override;
@@ -380,8 +379,8 @@ public:
 	HRESULT CreateFileGroupDescriptor(HGLOBAL* outGlobal);
 
 	std::vector<FORMATETC> mFormats;
-	noire::fs::CFileSystem* mFileSystem;
-	std::vector<noire::fs::SPath> mPaths;
+	noire::Device& mDevice;
+	std::vector<noire::Path> mPaths;
 };
 
 static void SetFORMATETC(FORMATETC& pfe,
@@ -398,19 +397,18 @@ static void SetFORMATETC(FORMATETC& pfe,
 	pfe.ptd = ptd;
 }
 
-CVirtualFileComDataObject::CVirtualFileComDataObject(wxDataObject* obj,
-													 noire::fs::CFileSystem* fileSystem,
-													 const std::vector<noire::fs::SPathView>& paths)
-	: wxIDataObjectImposter(obj), mFileSystem{ fileSystem }, mPaths{}
+VirtualFileComDataObject::VirtualFileComDataObject(wxDataObject* obj,
+												   noire::Device& device,
+												   const std::vector<noire::PathView>& paths)
+	: wxIDataObjectImposter(obj), mDevice{ device }, mPaths{}
 {
-	Expects(fileSystem != nullptr);
-	Expects(std::all_of(paths.begin(), paths.end(), [fileSystem](auto p) {
-		return fileSystem->FileExists(p);
+	Expects(std::all_of(paths.begin(), paths.end(), [&device](noire::PathView p) {
+		return p.IsFile() && device.Exists(p);
 	}));
 
 	mPaths.reserve(paths.size());
 	std::transform(paths.begin(), paths.end(), std::back_inserter(mPaths), [](auto p) {
-		return noire::fs::SPath{ p };
+		return noire::Path{ p };
 	});
 
 	mFormats.resize(GetDataCount());
@@ -424,12 +422,12 @@ CVirtualFileComDataObject::CVirtualFileComDataObject(wxDataObject* obj,
 	}
 }
 
-std::size_t CVirtualFileComDataObject::GetDataCount()
+std::size_t VirtualFileComDataObject::GetDataCount()
 {
 	return 1 + mPaths.size(); // one CFSTR_FILEDESCRIPTOR + (one CFSTR_FILECONTENTS for each file);
 }
 
-std::size_t CVirtualFileComDataObject::GetDataIndex(const FORMATETC* pfetc)
+std::size_t VirtualFileComDataObject::GetDataIndex(const FORMATETC* pfetc)
 {
 	for (std::size_t i = 0; i < mFormats.size(); i++)
 	{
@@ -443,7 +441,7 @@ std::size_t CVirtualFileComDataObject::GetDataIndex(const FORMATETC* pfetc)
 	return InvalidIndex;
 }
 
-HRESULT CVirtualFileComDataObject::CreateFileGroupDescriptor(HGLOBAL* outGlobal)
+HRESULT VirtualFileComDataObject::CreateFileGroupDescriptor(HGLOBAL* outGlobal)
 {
 	const std::size_t bufferSize =
 		sizeof(FILEGROUPDESCRIPTOR) + sizeof(FILEDESCRIPTOR) * (mPaths.size() - 1);
@@ -458,7 +456,7 @@ HRESULT CVirtualFileComDataObject::CreateFileGroupDescriptor(HGLOBAL* outGlobal)
 			fgd->cItems = gsl::narrow_cast<UINT>(mPaths.size());
 			for (std::size_t i = 0; i < mPaths.size(); i++)
 			{
-				noire::fs::SPath& path = mPaths[i];
+				noire::Path& path = mPaths[i];
 				FILEDESCRIPTOR& f = fgd->fgd[i];
 
 				std::string_view name = path.Name();
@@ -483,7 +481,7 @@ HRESULT CVirtualFileComDataObject::CreateFileGroupDescriptor(HGLOBAL* outGlobal)
 	return hglob ? S_OK : E_OUTOFMEMORY;
 }
 
-STDMETHODIMP CVirtualFileComDataObject::GetData(FORMATETC* pfe, STGMEDIUM* pmed)
+STDMETHODIMP VirtualFileComDataObject::GetData(FORMATETC* pfe, STGMEDIUM* pmed)
 {
 	ZeroMemory(pmed, sizeof(*pmed));
 	switch (std::size_t i = GetDataIndex(pfe); i)
@@ -501,7 +499,7 @@ STDMETHODIMP CVirtualFileComDataObject::GetData(FORMATETC* pfe, STGMEDIUM* pmed)
 		}
 
 		pmed->tymed = TYMED_ISTREAM;
-		pmed->pstm = new CComFileStream(mFileSystem->OpenFile(mPaths[i - 1]));
+		pmed->pstm = new CComFileStream(mDevice.Open(mPaths[i - 1]));
 		if (pmed->pstm)
 		{
 			pmed->pstm->AddRef();
@@ -515,30 +513,29 @@ STDMETHODIMP CVirtualFileComDataObject::GetData(FORMATETC* pfe, STGMEDIUM* pmed)
 	}
 }
 
-STDMETHODIMP CVirtualFileComDataObject::GetDataHere(FORMATETC*, STGMEDIUM*)
+STDMETHODIMP VirtualFileComDataObject::GetDataHere(FORMATETC*, STGMEDIUM*)
 {
 	return E_NOTIMPL;
 }
 
-STDMETHODIMP CVirtualFileComDataObject::QueryGetData(FORMATETC* pfe)
+STDMETHODIMP VirtualFileComDataObject::QueryGetData(FORMATETC* pfe)
 {
 	return GetDataIndex(pfe) == InvalidIndex ? S_FALSE : S_OK;
 }
 
-STDMETHODIMP CVirtualFileComDataObject::GetCanonicalFormatEtc(FORMATETC* In, FORMATETC* Out)
+STDMETHODIMP VirtualFileComDataObject::GetCanonicalFormatEtc(FORMATETC* In, FORMATETC* Out)
 {
 	*Out = *In;
 	Out->ptd = NULL;
 	return DATA_S_SAMEFORMATETC;
 }
 
-STDMETHODIMP CVirtualFileComDataObject::SetData(FORMATETC*, STGMEDIUM*, BOOL)
+STDMETHODIMP VirtualFileComDataObject::SetData(FORMATETC*, STGMEDIUM*, BOOL)
 {
 	return E_NOTIMPL;
 }
 
-STDMETHODIMP CVirtualFileComDataObject::EnumFormatEtc(DWORD dwDirection,
-													  IEnumFORMATETC** ppenumFEtc)
+STDMETHODIMP VirtualFileComDataObject::EnumFormatEtc(DWORD dwDirection, IEnumFORMATETC** ppenumFEtc)
 {
 	if (dwDirection == DATADIR_GET)
 	{
@@ -548,67 +545,61 @@ STDMETHODIMP CVirtualFileComDataObject::EnumFormatEtc(DWORD dwDirection,
 	return E_NOTIMPL;
 }
 
-STDMETHODIMP CVirtualFileComDataObject::DAdvise(FORMATETC*, DWORD, IAdviseSink*, DWORD*)
+STDMETHODIMP VirtualFileComDataObject::DAdvise(FORMATETC*, DWORD, IAdviseSink*, DWORD*)
 {
 	return OLE_E_ADVISENOTSUPPORTED;
 }
 
-STDMETHODIMP CVirtualFileComDataObject::DUnadvise(DWORD)
+STDMETHODIMP VirtualFileComDataObject::DUnadvise(DWORD)
 {
 	return OLE_E_ADVISENOTSUPPORTED;
 }
 
-STDMETHODIMP CVirtualFileComDataObject::EnumDAdvise(IEnumSTATDATA**)
+STDMETHODIMP VirtualFileComDataObject::EnumDAdvise(IEnumSTATDATA**)
 {
 	return OLE_E_ADVISENOTSUPPORTED;
 }
 
-CVirtualFileDataObject::CVirtualFileDataObject(noire::fs::CFileSystem* fileSystem,
-											   const std::vector<noire::fs::SPathView>& paths)
-	: wxDataObject()
+namespace noire::explorer
 {
-	static_assert(sizeof(wxDataObject) == sizeof(void*) * 2,
-				  "Size of wxDataObject changed, expected sizeof(vtbl*) + sizeof(IDataObject*)");
+	VirtualFileDataObject::VirtualFileDataObject(Device& device, const std::vector<PathView>& paths)
+		: wxDataObject()
+	{
+		static_assert(
+			sizeof(wxDataObject) == sizeof(void*) * 2,
+			"Size of wxDataObject changed, expected sizeof(vtbl*) + sizeof(IDataObject*)");
 
-	IDataObject* origDataObj = GetInterface();
+		IDataObject* origDataObj = GetInterface();
 
-	CVirtualFileComDataObject* newDataObj = new CVirtualFileComDataObject(this, fileSystem, paths);
-	newDataObj->AddRef();
+		VirtualFileComDataObject* newDataObj = new VirtualFileComDataObject(this, device, paths);
+		newDataObj->AddRef();
 
-	// Really hacky workaround:
-	// We replace the internal IDataObject with our own implementation, since the implementation
-	// provided by wxWidgets doesn't seem to support TYMED_ISTREAM or a CFSTR_FILEDESCRIPTOR with
-	// multiple associated CFSTR_FILECONTENTS
-	const std::uintptr_t thisAddr = reinterpret_cast<std::uintptr_t>(this);
-	*reinterpret_cast<IDataObject**>(thisAddr + sizeof(void*)) = newDataObj;
+		// Really hacky workaround:
+		// We replace the internal IDataObject with our own implementation, since the implementation
+		// provided by wxWidgets doesn't seem to support TYMED_ISTREAM or a CFSTR_FILEDESCRIPTOR
+		// with multiple associated CFSTR_FILECONTENTS
+		const std::uintptr_t thisAddr = reinterpret_cast<std::uintptr_t>(this);
+		*reinterpret_cast<IDataObject**>(thisAddr + sizeof(void*)) = newDataObj;
 
-	// delete the original
-	Ensures(origDataObj->Release() == 0);
-}
+		// delete the original
+		Ensures(origDataObj->Release() == 0);
+	}
 
-void CVirtualFileDataObject::GetAllFormats(wxDataFormat*, Direction) const {}
+	void VirtualFileDataObject::GetAllFormats(wxDataFormat*, Direction) const {}
 
-bool CVirtualFileDataObject::GetDataHere(const wxDataFormat&, void*) const
-{
-	return false;
-}
+	bool VirtualFileDataObject::GetDataHere(const wxDataFormat&, void*) const { return false; }
 
-std::size_t CVirtualFileDataObject::GetDataSize(const wxDataFormat&) const
-{
-	return 0;
-}
+	std::size_t VirtualFileDataObject::GetDataSize(const wxDataFormat&) const { return 0; }
 
-std::size_t CVirtualFileDataObject::GetFormatCount(Direction) const
-{
-	return 0;
-}
+	std::size_t VirtualFileDataObject::GetFormatCount(Direction) const { return 0; }
 
-wxDataFormat CVirtualFileDataObject::GetPreferredFormat(Direction) const
-{
-	return wxDataFormat();
-}
+	wxDataFormat VirtualFileDataObject::GetPreferredFormat(Direction) const
+	{
+		return wxDataFormat();
+	}
 
-bool CVirtualFileDataObject::SetData(const wxDataFormat&, std::size_t, const void*)
-{
-	return false;
+	bool VirtualFileDataObject::SetData(const wxDataFormat&, std::size_t, const void*)
+	{
+		return false;
+	}
 }

@@ -2,21 +2,24 @@
 
 class wxImageList;
 
-class CImages
+namespace noire::explorer
 {
-public:
-	enum Icon
+	class Images
 	{
-		IconBlankFile,
-		IconBlueFolder,
-		IconFolder,
-		IconNoire,
+	public:
+		enum Icon
+		{
+			IconBlankFile,
+			IconBlueFolder,
+			IconFolder,
+			IconNoire,
 
-		IconCount,
+			IconCount,
+		};
+
+		static wxImageList* Icons();
+
+	private:
+		Images() = delete;
 	};
-
-	static wxImageList* Icons();
-
-private:
-	CImages() = delete;
-};
+}

@@ -4,55 +4,58 @@
 #include <wx/sizer.h>
 #include <wx/toolbar.h>
 
-static const wxArrayString ResizeQualityNames = []() {
-	wxArrayString arr{};
-	arr.resize(4);
-	arr.at(wxIMAGE_QUALITY_NEAREST) = "Nearest";
-	arr.at(wxIMAGE_QUALITY_BILINEAR) = "Bilinear";
-	arr.at(wxIMAGE_QUALITY_BICUBIC) = "Bicubic";
-	arr.at(wxIMAGE_QUALITY_BOX_AVERAGE) = "Box average";
-	return arr;
-}();
-
-CImageWindow::CImageWindow(wxWindow* parent,
-						   wxWindowID id,
-						   const wxString& title,
-						   const wxImage& img)
-	: wxFrame(parent, id, title),
-	  mImgPanel{ new CImagePanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize) }
+namespace noire::explorer
 {
-	wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
-	sizer->Add(mImgPanel, 1, wxEXPAND);
-	SetSizer(sizer);
+	static const wxArrayString ResizeQualityNames = []() {
+		wxArrayString arr{};
+		arr.resize(4);
+		arr.at(wxIMAGE_QUALITY_NEAREST) = "Nearest";
+		arr.at(wxIMAGE_QUALITY_BILINEAR) = "Bilinear";
+		arr.at(wxIMAGE_QUALITY_BICUBIC) = "Bicubic";
+		arr.at(wxIMAGE_QUALITY_BOX_AVERAGE) = "Box average";
+		return arr;
+	}();
 
-	mImgPanel->SetImage(img);
-	mImgPanel->SetBackgroundColour(wxColour{ 255, 255, 255 });
+	ImageWindow::ImageWindow(wxWindow* parent,
+							 wxWindowID id,
+							 const wxString& title,
+							 const wxImage& img)
+		: wxFrame(parent, id, title),
+		  mImgPanel{ new ImagePanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize) }
+	{
+		wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
+		sizer->Add(mImgPanel, 1, wxEXPAND);
+		SetSizer(sizer);
 
-	CreateToolBar();
-}
+		mImgPanel->SetImage(img);
+		mImgPanel->SetBackgroundColour(wxColour{ 255, 255, 255 });
 
-wxToolBar* CImageWindow::OnCreateToolBar(long style, wxWindowID id, const wxString& name)
-{
-	wxToolBar* toolBar = wxFrame::OnCreateToolBar(style, id, name);
+		CreateToolBar();
+	}
 
-	wxComboBox* qualityCB = new wxComboBox(toolBar,
-										   wxID_ANY,
-										   wxEmptyString,
-										   wxDefaultPosition,
-										   wxDefaultSize,
-										   ResizeQualityNames,
-										   wxCB_READONLY);
-	qualityCB->SetSelection(mImgPanel->GetResizeQuality());
-	qualityCB->SetToolTip("Resize Quality");
-	qualityCB->Bind(wxEVT_COMBOBOX, &CImageWindow::OnResizeQualityCombo, this);
+	wxToolBar* ImageWindow::OnCreateToolBar(long style, wxWindowID id, const wxString& name)
+	{
+		wxToolBar* toolBar = wxFrame::OnCreateToolBar(style, id, name);
 
-	toolBar->AddControl(qualityCB);
-	toolBar->Realize();
+		wxComboBox* qualityCB = new wxComboBox(toolBar,
+											   wxID_ANY,
+											   wxEmptyString,
+											   wxDefaultPosition,
+											   wxDefaultSize,
+											   ResizeQualityNames,
+											   wxCB_READONLY);
+		qualityCB->SetSelection(mImgPanel->GetResizeQuality());
+		qualityCB->SetToolTip("Resize Quality");
+		qualityCB->Bind(wxEVT_COMBOBOX, &ImageWindow::OnResizeQualityCombo, this);
 
-	return toolBar;
-}
+		toolBar->AddControl(qualityCB);
+		toolBar->Realize();
 
-void CImageWindow::OnResizeQualityCombo(wxCommandEvent& event)
-{
-	mImgPanel->SetResizeQuality(static_cast<wxImageResizeQuality>(event.GetSelection()));
+		return toolBar;
+	}
+
+	void ImageWindow::OnResizeQualityCombo(wxCommandEvent& event)
+	{
+		mImgPanel->SetResizeQuality(static_cast<wxImageResizeQuality>(event.GetSelection()));
+	}
 }

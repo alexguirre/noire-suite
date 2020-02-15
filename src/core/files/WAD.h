@@ -30,7 +30,7 @@ namespace noire
 		}
 	};
 
-	class WAD final : public File, Device
+	class WAD final : public File, public Device
 	{
 	public:
 		explicit WAD();

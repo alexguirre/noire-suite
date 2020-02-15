@@ -188,6 +188,8 @@ TEST_SUITE("FileStream")
 
 	void TestStream(FileStream & f)
 	{
+		(void)f;
+#ifndef DOCTEST_CONFIG_DISABLE
 		std::cout << f.Path() << '\n';
 		{
 			u8 data[]{ 0, 1, 2, 3 };
@@ -225,6 +227,7 @@ TEST_SUITE("FileStream")
 
 			CHECK_EQ(std::memcmp(readData, data, std::size(readData)), 0);
 		}
+#endif // !DOCTEST_CONFIG_DISABLE
 	}
 
 	TEST_CASE("Regular files")

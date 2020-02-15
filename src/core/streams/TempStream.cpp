@@ -83,6 +83,8 @@ TEST_SUITE("TempStream")
 
 	void TestStream(TempStream & s)
 	{
+		(void)s;
+#ifndef DOCTEST_CONFIG_DISABLE
 		{
 			u8 data[]{ 0, 1, 2, 3 };
 
@@ -119,6 +121,7 @@ TEST_SUITE("TempStream")
 
 			CHECK_EQ(std::memcmp(readData, data, std::size(readData)), 0);
 		}
+#endif // !DOCTEST_CONFIG_DISABLE
 	}
 
 	TEST_CASE("Basic")

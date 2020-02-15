@@ -1,39 +1,42 @@
 #pragma once
+#include <core/devices/MultiDevice.h>
 #include <filesystem>
-#include <formats/fs/FileSystem.h>
-#include <formats/fs/Path.h>
 #include <memory>
 #include <wx/app.h>
 #include <wx/event.h>
 
-class CMainWindow;
-
 wxDECLARE_EVENT(EVT_FILE_SYSTEM_SCAN_STARTED, wxThreadEvent);
 wxDECLARE_EVENT(EVT_FILE_SYSTEM_SCAN_COMPLETED, wxThreadEvent);
 
-class CApp : public wxApp
+namespace noire::explorer
 {
-public:
-	CApp();
+	class MainWindow;
 
-	virtual bool OnInit();
-	virtual int OnExit();
+	class App : public wxApp
+	{
+	public:
+		App();
 
-	void ChangeRootPath(const std::filesystem::path& path);
-	noire::fs::CFileSystem* FileSystem() { return mFileSystem.get(); }
+		virtual bool OnInit();
+		virtual int OnExit();
 
-	// Opens a window for viewing the file contents.
-	// Returns true if the file format is supported and a window has been opened, otherwise, false.
-	bool OpenFile(noire::fs::SPathView filePath);
+		void ChangeRootPath(const std::filesystem::path& path);
+		MultiDevice* RootDevice() { return mRootDevice.get(); }
 
-private:
-	bool OpenDDSFile(noire::fs::SPathView filePath);
-	bool OpenShaderProgramFile(noire::fs::SPathView filePath);
-	bool OpenAttributeFile(noire::fs::SPathView filePath);
-	bool OpenUniqueTextureVRamFile(noire::fs::SPathView filePath);
+		// Opens a window for viewing the file contents.
+		// Returns true if the file format is supported and a window has been opened, otherwise,
+		// false.
+		bool OpenFile(PathView filePath);
 
-	std::unique_ptr<noire::fs::CFileSystem> mFileSystem;
-	CMainWindow* mMainWindow;
-};
+	private:
+		bool OpenDDSFile(PathView filePath);
+		bool OpenShaderProgramFile(PathView filePath);
+		bool OpenAttributeFile(PathView filePath);
+		bool OpenUniqueTextureVRamFile(PathView filePath);
 
-wxDECLARE_APP(CApp);
+		std::unique_ptr<MultiDevice> mRootDevice;
+		MainWindow* mMainWindow;
+	};
+}
+
+wxDECLARE_APP(noire::explorer::App);
