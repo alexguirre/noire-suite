@@ -62,7 +62,7 @@ namespace noire
 	}
 
 	// File implementation
-	void WAD::Load()
+	void WAD::LoadImpl()
 	{
 		if (!Input())
 		{

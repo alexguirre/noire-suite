@@ -1,5 +1,9 @@
 #pragma once
 #include "Common.h"
+#include <filesystem>
+#include <optional>
+#include <string>
+#include <string_view>
 
 namespace noire
 {
@@ -75,4 +79,31 @@ namespace noire
 	{
 		return ~crc32LowercasePartial(str, hash);
 	}
+
+	class HashLookup
+	{
+	public:
+		static constexpr std::string_view HashPrefix{ "?#" };
+		static constexpr std::string_view HashSuffix{ "#?" };
+
+		HashLookup(const std::filesystem::path& path, bool caseSensitive);
+
+		/// Tries to translate the hash to a string. If no translation is found, the hash converted
+		/// to a hexadecimal string prefixed by 'HashPrefix' is returned.
+		std::string TryGetString(u32 hash) const;
+
+		/// Gets the translation of the hash. If found, the translation string is returned,
+		/// otherwise, `nullopt`.
+		std::optional<std::string> GetString(u32 hash) const;
+
+		u32 GetHash(std::string_view str) const;
+
+		static const HashLookup& Instance(bool caseSensitive = true);
+
+	private:
+		void Load(const std::filesystem::path& path);
+
+		std::unordered_map<u32, std::string> mHashToStr;
+		bool mCaseSensitive;
+	};
 }

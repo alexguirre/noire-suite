@@ -99,9 +99,9 @@ namespace noire
 		void RegisterExistingFile(PathView path, FileEntryInfo info = FileEntryInfo{});
 
 		// TODO: make ForEachFile recursive
-		bool
-		ForEachFile(PathView dirPath,
-					std::function<void(PathView path, const FileEntryInfo& fileInfo)> callback);
+		bool ForEachFile(PathView dirPath,
+						 std::function<void(PathView path, const FileEntryInfo& fileInfo)> callback,
+						 bool recursive = true);
 
 	private:
 		Entry* FindEntry(PathView path) const;
@@ -217,20 +217,36 @@ namespace noire
 	template<class T>
 	bool VirtualFileSystem<T>::ForEachFile(
 		PathView dirPath,
-		std::function<void(PathView path, const FileEntryInfo& fileInfo)> callback)
+		std::function<void(PathView path, const FileEntryInfo& fileInfo)> callback,
+		bool recursive)
 	{
 		Expects(dirPath.IsDirectory() && dirPath.IsAbsolute());
 
 		DirectoryEntry* dir = GetDirectory(dirPath, false);
 		if (dir)
 		{
-			for (Entry* e : dir->Children())
-			{
-				if (e->Type() == EntryType::File)
-				{
-					callback(Path{ dirPath } / e->Name(), static_cast<FileEntry*>(e)->Info());
-				}
-			}
+			const std::function<void(PathView, DirectoryEntry*)> iterDir =
+				[&iterDir, &callback, recursive](PathView dirPath, DirectoryEntry* d) {
+					for (Entry* e : d->Children())
+					{
+						switch (e->Type())
+						{
+						case EntryType::File:
+							callback(Path{ dirPath } / e->Name(),
+									 static_cast<FileEntry*>(e)->Info());
+							break;
+						case EntryType::Directory:
+							if (recursive)
+							{
+								iterDir(Path{ dirPath } / e->Name() + Path::DirectorySeparator,
+										static_cast<DirectoryEntry*>(e));
+							}
+							break;
+						}
+					}
+				};
+
+			iterDir(dirPath, dir);
 
 			return true;
 		}

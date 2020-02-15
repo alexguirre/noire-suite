@@ -13,18 +13,22 @@ namespace noire
 
 		virtual ~File() = default;
 
-		// default Load() does nothing
-		virtual void Load();
+		void Load();
 		// default Save() writes the contents of the input stream to the output stream
 		virtual void Save(Stream& output);
 		// Returns how many bytes will be written when calling Save(). Default Size() gets the size
 		// of the input stream.
 		virtual u64 Size();
 
+		bool IsLoaded() const { return mIsLoaded; }
+
 	protected:
+		// default LoadImpl() does nothing
+		virtual void LoadImpl();
 		std::shared_ptr<Stream> Input() { return mInput; }
 
 	private:
+		bool mIsLoaded;
 		std::shared_ptr<Stream> mInput;
 
 	public:
@@ -68,7 +72,7 @@ namespace noire
 		// fallbackToBaseFile: Whether to create File instance if the stream format does not match
 		// any specific file type.
 		static std::shared_ptr<File> NewFromStream(std::shared_ptr<Stream> input,
-												bool fallbackToBaseFile = true);
+												   bool fallbackToBaseFile = true);
 		static std::shared_ptr<File> NewEmpty(size fileTypeId);
 	};
 }

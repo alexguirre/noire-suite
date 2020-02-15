@@ -41,7 +41,10 @@ namespace noire
 		std::shared_ptr<File> Create(PathView path, size fileTypeId) override;
 		bool Delete(PathView path) override;
 
-		void Load() override;
+	protected:
+		void LoadImpl() override;
+
+	public:
 		void Save(Stream& output) override;
 		u64 Size() override;
 

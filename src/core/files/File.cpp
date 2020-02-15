@@ -6,12 +6,18 @@
 
 namespace noire
 {
-	File::File(std::shared_ptr<Stream> input) : mInput{ input } {}
+	File::File(std::shared_ptr<Stream> input) : mInput{ input }, mIsLoaded{ false } {}
 
 	void File::Load()
 	{
-		// empty
+		if (!mIsLoaded)
+		{
+			LoadImpl();
+			mIsLoaded = true;
+		}
 	}
+
+	void File::LoadImpl() { return; }
 
 	void File::Save(Stream& output)
 	{
@@ -23,12 +29,21 @@ namespace noire
 
 	u64 File::Size() { return mInput ? mInput->Size() : 0; }
 
-	static std::unordered_map<size, const File::Type*> gFileTypes; // key is Type::Id
-	static std::vector<const File::Type*> gSortedFileTypes;
+	static auto& FileTypes() // key is Type::Id
+	{
+		static std::unordered_map<size, const File::Type*> i{};
+		return i;
+	}
+
+	static auto& SortedFileTypes()
+	{
+		static std::vector<const File::Type*> i{};
+		return i;
+	}
 
 	static void SortFileTypes()
 	{
-		auto& types = gSortedFileTypes;
+		auto& types = SortedFileTypes();
 		std::sort(types.begin(), types.end(), [](const File::Type* a, const File::Type* b) {
 			return a->Priority > b->Priority;
 		});
@@ -37,10 +52,10 @@ namespace noire
 	static void RegisterFileType(const File::Type* type)
 	{
 		Expects(type != nullptr);
-		Expects(gFileTypes.find(type->Id) == gFileTypes.end());
+		Expects(FileTypes().find(type->Id) == FileTypes().end());
 
-		gFileTypes.insert({ type->Id, type });
-		gSortedFileTypes.push_back(type);
+		FileTypes().insert({ type->Id, type });
+		SortedFileTypes().push_back(type);
 		SortFileTypes();
 	}
 
@@ -48,9 +63,9 @@ namespace noire
 	{
 		Expects(type != nullptr);
 
-		if (gFileTypes.erase(type->Id))
+		if (FileTypes().erase(type->Id))
 		{
-			auto& types = gSortedFileTypes;
+			auto& types = SortedFileTypes();
 			types.erase(std::find(types.begin(), types.end(), type));
 			SortFileTypes();
 		}
@@ -82,7 +97,7 @@ namespace noire
 		Expects(input != nullptr);
 
 		std::shared_ptr<File> resultFile = nullptr;
-		for (const File::Type* t : gSortedFileTypes)
+		for (const File::Type* t : SortedFileTypes())
 		{
 			if (t->IsValid(input))
 			{
@@ -103,8 +118,8 @@ namespace noire
 
 	std::shared_ptr<File> File::NewEmpty(size fileTypeId)
 	{
-		auto it = gFileTypes.find(fileTypeId);
-		Expects(it != gFileTypes.end());
+		auto it = FileTypes().find(fileTypeId);
+		Expects(it != FileTypes().end());
 
 		const File::Type* t = it->second;
 		return t->CreateEmpty();
