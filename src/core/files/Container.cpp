@@ -214,7 +214,7 @@ TEST_SUITE("Container")
 {
 	using namespace noire;
 
-	TEST_CASE("Load")
+	TEST_CASE("Load" * doctest::skip(true))
 	{
 		std::shared_ptr<Stream> input = std::make_shared<FileStream>(
 			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\vehicles.big.pc");
