@@ -30,6 +30,7 @@ namespace noire::explorer
 		void OnDirectoryTreeSelectionChanged(wxTreeEvent& event);
 		void OnOpenFolder(wxCommandEvent& event);
 		void OnHashLookupTool(wxCommandEvent& event);
+		void OnTestRenderer(wxCommandEvent& event);
 		void OnExit(wxCommandEvent& event);
 		void OnFileSystemScanStarted(wxThreadEvent& event);
 		void OnFileSystemScanCompleted(wxThreadEvent& event);
