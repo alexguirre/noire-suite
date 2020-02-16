@@ -44,6 +44,14 @@ namespace noire
 		return false;
 	}
 
+	void Container::Visit(DeviceVisitCallback visitDirectory,
+						  DeviceVisitCallback visitFile,
+						  PathView path,
+						  bool recursive)
+	{
+		mVFS.Visit(visitDirectory, visitFile, path, recursive);
+	}
+
 	// File implementation
 	void Container::LoadImpl()
 	{
@@ -143,6 +151,13 @@ namespace noire
 		return static_cast<size>(-1);
 	}
 
+	const ContainerEntry& Container::GetEntry(PathView path) const
+	{
+		const size index = GetEntryIndex(path);
+		Expects(index != static_cast<size>(-1));
+		return mEntries[index];
+	}
+
 	const ContainerEntry& Container::GetEntry(size pathHash) const
 	{
 		const size index = GetEntryIndex(pathHash);
@@ -207,26 +222,27 @@ TEST_SUITE("Container")
 		Container c{ input };
 		c.Load();
 
-		c.mVFS.Visit([](PathView path) { std::cout << "Visiting '" << path.String() << "':\n"; },
-					 [&c](PathView path) {
-						 const ContainerEntry& e = c.GetEntry(c.mVFS.GetFileInfo(path));
+		c.Visit([](PathView path) { std::cout << "Visiting '" << path.String() << "':\n"; },
+				[&c](PathView path) {
+					const ContainerEntry& e = c.GetEntry(path);
 
-						 std::array<char, 512> buffer;
-						 std::snprintf(
-							 buffer.data(),
-							 buffer.size(),
-							 "\tHash:%08X Unk1:%08X Unk2:%08X Unk3:%08X Unk4:%08X Offset:%016I64X "
-							 "Size:%016I64X\t",
-							 e.NameHash,
-							 e.Unk1,
-							 e.Unk2,
-							 e.Unk3,
-							 e.Unk4,
-							 e.Offset(),
-							 e.Size());
-						 std::cout << buffer.data() << '"' << path.String() << '"' << std::endl;
-					 },
-					 PathView::Root);
+					std::array<char, 512> buffer;
+					std::snprintf(
+						buffer.data(),
+						buffer.size(),
+						"\tHash:%08X Unk1:%08X Unk2:%08X Unk3:%08X Unk4:%08X Offset:%016I64X "
+						"Size:%016I64X\t",
+						e.NameHash,
+						e.Unk1,
+						e.Unk2,
+						e.Unk3,
+						e.Unk4,
+						e.Offset(),
+						e.Size());
+					std::cout << buffer.data() << '"' << path.String() << '"' << std::endl;
+				},
+				PathView::Root,
+				true);
 
 		std::cout << "input:  " << input->Size() << std::endl;
 		std::cout << "size(): " << c.Size() << std::endl;

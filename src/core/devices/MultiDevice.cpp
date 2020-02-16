@@ -32,6 +32,20 @@ namespace noire
 		return d ? d->Delete(relPath) : false;
 	}
 
+	void MultiDevice::Visit(DeviceVisitCallback visitDirectory,
+							DeviceVisitCallback visitFile,
+							PathView path,
+							bool recursive)
+	{
+		Expects(path.IsDirectory() && path.IsAbsolute());
+
+		PathView relPath;
+		if (Device* d = GetDevice(path, &relPath))
+		{
+			d->Visit(visitDirectory, visitFile, relPath, recursive);
+		}
+	}
+
 	void MultiDevice::Mount(PathView path, std::unique_ptr<Device> device)
 	{
 		Expects(std::find_if(mMounts.begin(), mMounts.end(), [path](const MountPoint& m) {

@@ -53,6 +53,10 @@ namespace noire
 		std::shared_ptr<File> Open(PathView path) override;
 		std::shared_ptr<File> Create(PathView path, size fileTypeId) override;
 		bool Delete(PathView path) override;
+		void Visit(DeviceVisitCallback visitDirectory,
+				   DeviceVisitCallback visitFile,
+				   PathView path,
+				   bool recursive) override;
 
 	protected:
 		void LoadImpl() override;
@@ -63,12 +67,11 @@ namespace noire
 
 		size GetEntryIndex(PathView path) const;
 		size GetEntryIndex(size nameHash) const;
+		const ContainerEntry& GetEntry(PathView path) const;
 		const ContainerEntry& GetEntry(size nameHash) const;
 
 	private:
 		std::vector<ContainerEntry> mEntries;
-
-	public:
 		VirtualFileSystem mVFS; // VFS entry info refers to NameHash of the WADEntry
 
 	public:

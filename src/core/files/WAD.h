@@ -40,6 +40,10 @@ namespace noire
 		std::shared_ptr<File> Open(PathView path) override;
 		std::shared_ptr<File> Create(PathView path, size fileTypeId) override;
 		bool Delete(PathView path) override;
+		void Visit(DeviceVisitCallback visitDirectory,
+				   DeviceVisitCallback visitFile,
+				   PathView path,
+				   bool recursive) override;
 
 	protected:
 		void LoadImpl() override;

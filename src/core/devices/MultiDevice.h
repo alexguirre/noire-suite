@@ -26,6 +26,10 @@ namespace noire
 		std::shared_ptr<File> Open(PathView path) override;
 		std::shared_ptr<File> Create(PathView path, size fileTypeId) override;
 		bool Delete(PathView path) override;
+		void Visit(DeviceVisitCallback visitDirectory,
+				   DeviceVisitCallback visitFile,
+				   PathView path,
+				   bool recursive) override;
 
 		void Mount(PathView path, std::unique_ptr<Device> device);
 		/// Gets the device that contains the specified path or null if none exists.

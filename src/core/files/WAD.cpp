@@ -61,6 +61,14 @@ namespace noire
 		return false;
 	}
 
+	void WAD::Visit(DeviceVisitCallback visitDirectory,
+					DeviceVisitCallback visitFile,
+					PathView path,
+					bool recursive)
+	{
+		mVFS.Visit(visitDirectory, visitFile, path, recursive);
+	}
+
 	// File implementation
 	void WAD::LoadImpl()
 	{
