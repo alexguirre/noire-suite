@@ -2,24 +2,24 @@
 #include <memory>
 #include <wx/frame.h>
 
-//namespace noire
+// namespace noire
 //{
 //	class CAttributeFile;
 //}
 //
-//class wxPropertyGrid;
-//class wxTreeCtrl;
-//class wxTreeEvent;
+// class wxPropertyGrid;
+// class wxTreeCtrl;
+// class wxTreeEvent;
 //
-//class CAttributeWindow : public wxFrame
+// class CAttributeWindow : public wxFrame
 //{
-//public:
+// public:
 //	CAttributeWindow(wxWindow* parent,
 //					 wxWindowID id,
 //					 const wxString& title,
 //					 std::unique_ptr<noire::CAttributeFile> file);
 //
-//private:
+// private:
 //	void OnObjectSelectionChanged(wxTreeEvent& event);
 //
 //	std::unique_ptr<noire::CAttributeFile> mFile;

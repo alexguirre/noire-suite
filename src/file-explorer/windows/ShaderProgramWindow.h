@@ -4,23 +4,23 @@
 #include <wx/frame.h>
 #include <wx/string.h>
 
-//namespace noire
+// namespace noire
 //{
 //	class CShaderProgramFile;
 //}
 //
-//class wxStyledTextCtrl;
-//class wxPropertyGridEvent;
+// class wxStyledTextCtrl;
+// class wxPropertyGridEvent;
 //
-//class CShaderProgramWindow : public wxFrame
+// class CShaderProgramWindow : public wxFrame
 //{
-//public:
+// public:
 //	CShaderProgramWindow(wxWindow* parent,
 //						 wxWindowID id,
 //						 const wxString& title,
 //						 std::unique_ptr<noire::CShaderProgramFile> file);
 //
-//private:
+// private:
 //	void OnPropertyGridSelected(wxPropertyGridEvent& event);
 //
 //	std::unique_ptr<noire::CShaderProgramFile> mFile;
