@@ -1,5 +1,8 @@
 #pragma once
-#include <cstdint>
+#include <core/Common.h>
 #include <string>
 
-std::string BytesToHumanReadable(std::uintmax_t numBytes);
+namespace noire::explorer
+{
+	std::string BytesToHumanReadable(u64 numBytes);
+}

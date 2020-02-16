@@ -1,36 +1,39 @@
 #pragma once
 #include <filesystem>
-#include <formats/fs/FileSystem.h>
 #include <memory>
 #include <wx/menu.h>
 #include <wx/thread.h>
 #include <wx/wx.h>
 
-class CDirectoryTreeCtrl;
-class CDirectoryContentsListCtrl;
-
 class wxTreeEvent;
 class wxTextCtrl;
 
-class CMainWindow : public wxFrame
+namespace noire::explorer
 {
-public:
-	CMainWindow();
+	class DirectoryTreeCtrl;
+	class DirectoryContentsListCtrl;
 
-	wxToolBar* OnCreateToolBar(long style, wxWindowID id, const wxString& name) override;
-	wxStatusBar* OnCreateStatusBar(int, long style, wxWindowID id, const wxString& name) override;
+	class MainWindow : public wxFrame
+	{
+	public:
+		MainWindow();
 
-private:
-	wxMenuBar* mMenuBar;
-	CDirectoryTreeCtrl* mDirTreeCtrl;
-	CDirectoryContentsListCtrl* mDirContentsListCtrl;
+		wxToolBar* OnCreateToolBar(long style, wxWindowID id, const wxString& name) override;
+		wxStatusBar*
+		OnCreateStatusBar(int, long style, wxWindowID id, const wxString& name) override;
 
-	void OnDirectoryTreeSelectionChanged(wxTreeEvent& event);
-	void OnOpenFolder(wxCommandEvent& event);
-	void OnHashLookupTool(wxCommandEvent& event);
-	void OnExit(wxCommandEvent& event);
-	void OnFileSystemScanStarted(wxThreadEvent& event);
-	void OnFileSystemScanCompleted(wxThreadEvent& event);
+	private:
+		wxMenuBar* mMenuBar;
+		DirectoryTreeCtrl* mDirTreeCtrl;
+		DirectoryContentsListCtrl* mDirContentsListCtrl;
 
-	void CreateAccelTable();
-};
+		void OnDirectoryTreeSelectionChanged(wxTreeEvent& event);
+		void OnOpenFolder(wxCommandEvent& event);
+		void OnHashLookupTool(wxCommandEvent& event);
+		void OnExit(wxCommandEvent& event);
+		void OnFileSystemScanStarted(wxThreadEvent& event);
+		void OnFileSystemScanCompleted(wxThreadEvent& event);
+
+		void CreateAccelTable();
+	};
+}

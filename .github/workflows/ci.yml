@@ -41,7 +41,7 @@ jobs:
       - name: Run Tests Debug
         run: |
           cd src/build/bin
-          .\noire-formats-test
+          .\noire-core-test
       - name: Build Release
         run: |
           cd src/build
@@ -49,4 +49,4 @@ jobs:
       - name: Run Tests Release
         run: |
           cd src/build/bin
-          .\noire-formats-test
+          .\noire-core-test

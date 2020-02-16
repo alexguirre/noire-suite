@@ -1,70 +1,63 @@
 #include "DirectoryHistory.h"
-#include <formats/fs/FileSystem.h>
 #include <gsl/gsl>
 
-CDirectoryHistory::CDirectoryHistory() {}
-
-noire::fs::SPathView CDirectoryHistory::Current() const
+namespace noire::explorer
 {
-	Expects(HasCurrent());
+	DirectoryHistory::DirectoryHistory() {}
 
-	return mBackStack.top();
-}
-
-bool CDirectoryHistory::HasCurrent() const
-{
-	return mBackStack.size() > 0;
-}
-
-void CDirectoryHistory::Push(noire::fs::SPathView dir)
-{
-	Expects(dir.IsDirectory());
-
-	mBackStack.emplace(dir);
-	mForwardStack = {}; // clear the forward stack
-}
-
-void CDirectoryHistory::GoBack()
-{
-	Expects(CanGoBack());
-
-	mForwardStack.push(mBackStack.top());
-	mBackStack.pop();
-}
-
-void CDirectoryHistory::GoForward()
-{
-	Expects(CanGoForward());
-
-	mBackStack.push(mForwardStack.top());
-	mForwardStack.pop();
-}
-
-void CDirectoryHistory::GoUp()
-{
-	Expects(CanGoUp());
-
-	Push(Current().Parent());
-}
-
-bool CDirectoryHistory::CanGoBack() const
-{
-	return mBackStack.size() > 1;
-}
-
-bool CDirectoryHistory::CanGoForward() const
-{
-	return mForwardStack.size() > 0;
-}
-
-bool CDirectoryHistory::CanGoUp() const
-{
-	if (HasCurrent())
+	PathView DirectoryHistory::Current() const
 	{
-		return Current().HasParent();
+		Expects(HasCurrent());
+
+		return mBackStack.top();
 	}
-	else
+
+	bool DirectoryHistory::HasCurrent() const { return mBackStack.size() > 0; }
+
+	void DirectoryHistory::Push(PathView dir)
 	{
-		return false;
+		Expects(dir.IsDirectory());
+
+		mBackStack.emplace(dir);
+		mForwardStack = {}; // clear the forward stack
+	}
+
+	void DirectoryHistory::GoBack()
+	{
+		Expects(CanGoBack());
+
+		mForwardStack.push(mBackStack.top());
+		mBackStack.pop();
+	}
+
+	void DirectoryHistory::GoForward()
+	{
+		Expects(CanGoForward());
+
+		mBackStack.push(mForwardStack.top());
+		mForwardStack.pop();
+	}
+
+	void DirectoryHistory::GoUp()
+	{
+		Expects(CanGoUp());
+
+		Push(Current().Parent());
+	}
+
+	bool DirectoryHistory::CanGoBack() const { return mBackStack.size() > 1; }
+
+	bool DirectoryHistory::CanGoForward() const { return mForwardStack.size() > 0; }
+
+	bool DirectoryHistory::CanGoUp() const
+	{
+		if (HasCurrent())
+		{
+			return Current().HasParent();
+		}
+		else
+		{
+			return false;
+		}
 	}
 }

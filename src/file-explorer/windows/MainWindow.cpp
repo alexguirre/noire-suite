@@ -13,165 +13,168 @@
 #include <wx/splitter.h>
 #include <wx/textctrl.h>
 
-CMainWindow::CMainWindow()
-	: wxFrame(nullptr, wxID_ANY, "noire-suite - File Explorer"),
-	  mMenuBar{ new wxMenuBar() },
-	  mDirTreeCtrl{ nullptr },
-	  mDirContentsListCtrl{ nullptr }
+namespace noire::explorer
 {
-	// construct menu bar
+	MainWindow::MainWindow()
+		: wxFrame(nullptr, wxID_ANY, "noire-suite - File Explorer"),
+		  mMenuBar{ new wxMenuBar() },
+		  mDirTreeCtrl{ nullptr },
+		  mDirContentsListCtrl{ nullptr }
 	{
-		wxMenu* fileMenu = new wxMenu();
-		fileMenu->Append(MenuBarOpenFolderId, "&Open folder...");
-		fileMenu->AppendSeparator();
-		fileMenu->Append(wxID_EXIT, "E&xit\tAlt+F4");
+		// construct menu bar
+		{
+			wxMenu* fileMenu = new wxMenu();
+			fileMenu->Append(MenuBarOpenFolderId, "&Open folder...");
+			fileMenu->AppendSeparator();
+			fileMenu->Append(wxID_EXIT, "E&xit\tAlt+F4");
 
-		wxMenu* toolsMenu = new wxMenu();
-		toolsMenu->Append(MenuBarHashLookupId, "Hash &Lookup...");
+			wxMenu* toolsMenu = new wxMenu();
+			toolsMenu->Append(MenuBarHashLookupId, "Hash &Lookup...");
 
-		mMenuBar->Append(fileMenu, "&File");
-		mMenuBar->Append(toolsMenu, "&Tools");
-		SetMenuBar(mMenuBar);
+			mMenuBar->Append(fileMenu, "&File");
+			mMenuBar->Append(toolsMenu, "&Tools");
+			SetMenuBar(mMenuBar);
+		}
+
+		CreateToolBar();
+
+		CreateStatusBar();
+
+		// create main directory tree and contents list within a splitter
+		{
+			wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
+			wxSplitterWindow* splitter = new wxSplitterWindow(this,
+															  wxID_ANY,
+															  wxDefaultPosition,
+															  wxDefaultSize,
+															  wxSP_LIVE_UPDATE);
+			splitter->SetSashGravity(0.0);
+			splitter->SetMinimumPaneSize(50);
+			mainSizer->Add(splitter, 1, wxEXPAND);
+
+			mDirTreeCtrl = { new DirectoryTreeCtrl(splitter, wxID_ANY) };
+			mDirContentsListCtrl = { new DirectoryContentsListCtrl(splitter, wxID_ANY) };
+
+			splitter->SplitVertically(mDirTreeCtrl, mDirContentsListCtrl);
+
+			SetSizer(mainSizer);
+		}
+
+		CreateAccelTable();
+
+		SetMinSize({ 650, 350 });
+
+		// TODO: giving the tool bar non-const access to mDirContentsListCtrl is a bit dirty
+		static_cast<PathToolBar*>(GetToolBar())->SetDirectoryContentsListCtrl(mDirContentsListCtrl);
+
+		mDirTreeCtrl->Bind(wxEVT_TREE_SEL_CHANGED,
+						   &MainWindow::OnDirectoryTreeSelectionChanged,
+						   this);
+
+		Bind(wxEVT_MENU, &MainWindow::OnOpenFolder, this, MenuBarOpenFolderId);
+		Bind(wxEVT_MENU, &MainWindow::OnHashLookupTool, this, MenuBarHashLookupId);
+		Bind(wxEVT_MENU, &MainWindow::OnExit, this, wxID_EXIT);
+		wxGetApp().Bind(EVT_FILE_SYSTEM_SCAN_STARTED, &MainWindow::OnFileSystemScanStarted, this);
+		wxGetApp().Bind(EVT_FILE_SYSTEM_SCAN_COMPLETED,
+						&MainWindow::OnFileSystemScanCompleted,
+						this);
 	}
 
-	CreateToolBar();
-
-	CreateStatusBar();
-
-	// create main directory tree and contents list within a splitter
+	wxToolBar* MainWindow::OnCreateToolBar(long style, wxWindowID id, const wxString& name)
 	{
-		wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
-		wxSplitterWindow* splitter = new wxSplitterWindow(this,
-														  wxID_ANY,
-														  wxDefaultPosition,
-														  wxDefaultSize,
-														  wxSP_LIVE_UPDATE);
-		splitter->SetSashGravity(0.0);
-		splitter->SetMinimumPaneSize(50);
-		mainSizer->Add(splitter, 1, wxEXPAND);
-
-		mDirTreeCtrl = { new CDirectoryTreeCtrl(splitter, wxID_ANY) };
-		mDirContentsListCtrl = { new CDirectoryContentsListCtrl(splitter, wxID_ANY) };
-
-		splitter->SplitVertically(mDirTreeCtrl, mDirContentsListCtrl);
-
-		SetSizer(mainSizer);
+		return new PathToolBar(this, id, wxDefaultPosition, wxDefaultSize, style, name);
 	}
 
-	CreateAccelTable();
-
-	SetMinSize({ 650, 350 });
-
-	// TODO: giving the tool bar non-const access to mDirContentsListCtrl is a bit dirty
-	reinterpret_cast<CPathToolBar*>(GetToolBar())
-		->SetDirectoryContentsListCtrl(mDirContentsListCtrl);
-
-	mDirTreeCtrl->Bind(wxEVT_TREE_SEL_CHANGED, &CMainWindow::OnDirectoryTreeSelectionChanged, this);
-
-	Bind(wxEVT_MENU, &CMainWindow::OnOpenFolder, this, MenuBarOpenFolderId);
-	Bind(wxEVT_MENU, &CMainWindow::OnHashLookupTool, this, MenuBarHashLookupId);
-	Bind(wxEVT_MENU, &CMainWindow::OnExit, this, wxID_EXIT);
-	wxGetApp().Bind(EVT_FILE_SYSTEM_SCAN_STARTED, &CMainWindow::OnFileSystemScanStarted, this);
-	wxGetApp().Bind(EVT_FILE_SYSTEM_SCAN_COMPLETED, &CMainWindow::OnFileSystemScanCompleted, this);
-}
-
-wxToolBar* CMainWindow::OnCreateToolBar(long style, wxWindowID id, const wxString& name)
-{
-	return new CPathToolBar(this, id, wxDefaultPosition, wxDefaultSize, style, name);
-}
-
-wxStatusBar* CMainWindow::OnCreateStatusBar(int, long style, wxWindowID id, const wxString& name)
-{
-	return new CStatusBar(this, id, style, name);
-}
-
-void CMainWindow::OnDirectoryTreeSelectionChanged(wxTreeEvent& event)
-{
-	wxTreeItemId itemId = event.GetItem();
-	Expects(itemId.IsOk());
-
-	const CDirectoryItemData* data =
-		reinterpret_cast<CDirectoryItemData*>(mDirTreeCtrl->GetItemData(itemId));
-
-	if (data)
+	wxStatusBar* MainWindow::OnCreateStatusBar(int, long style, wxWindowID id, const wxString& name)
 	{
-		mDirContentsListCtrl->SetDirectory(data->Path());
+		return new StatusBar(this, id, style, name);
+	}
+
+	void MainWindow::OnDirectoryTreeSelectionChanged(wxTreeEvent& event)
+	{
+		wxTreeItemId itemId = event.GetItem();
+		Expects(itemId.IsOk());
+
+		const DirectoryItemData* data =
+			reinterpret_cast<DirectoryItemData*>(mDirTreeCtrl->GetItemData(itemId));
+
+		if (data)
+		{
+			mDirContentsListCtrl->SetDirectory(data->Path());
+
+			event.Skip();
+		}
+	}
+
+	void MainWindow::OnOpenFolder(wxCommandEvent&)
+	{
+		wxDirDialog dlg(this,
+						"Select the game folder:",
+						wxEmptyString, // TODO: try to find game folder (looking in registry?)
+						wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
+
+		if (dlg.ShowModal() != wxID_OK)
+		{
+			return;
+		}
+
+		std::filesystem::path rootPath = dlg.GetPath().c_str().AsChar();
+		wxGetApp().ChangeRootPath(rootPath);
+	}
+
+	void MainWindow::OnHashLookupTool(wxCommandEvent&)
+	{
+		HashLookupWindow* win = new HashLookupWindow(this);
+		win->Show();
+	}
+
+	void MainWindow::OnExit(wxCommandEvent&) { Close(true); }
+
+	void MainWindow::OnFileSystemScanStarted(wxThreadEvent& event)
+	{
+		wxLogDebug(__FUNCTION__);
+
+		if (StatusBar* statusBar = static_cast<StatusBar*>(GetStatusBar()); statusBar)
+		{
+			statusBar->SetInfo(wxString::Format("Scanning '%ls'...", "path/TBD/"));
+		}
 
 		event.Skip();
 	}
-}
 
-void CMainWindow::OnOpenFolder(wxCommandEvent&)
-{
-	wxDirDialog dlg(this,
-					"Select the game folder:",
-					wxEmptyString, // TODO: try to find game folder (looking in registry?)
-					wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
-
-	if (dlg.ShowModal() != wxID_OK)
+	void MainWindow::OnFileSystemScanCompleted(wxThreadEvent& event)
 	{
-		return;
+		if (mDirTreeCtrl)
+		{
+			mDirTreeCtrl->Refresh();
+		}
+
+		if (mDirContentsListCtrl)
+		{
+			mDirContentsListCtrl->SetDirectoryToRoot();
+		}
+
+		if (StatusBar* statusBar = static_cast<StatusBar*>(GetStatusBar()); statusBar)
+		{
+			statusBar->SetInfo("");
+		}
+
+		event.Skip();
 	}
 
-	std::filesystem::path rootPath = dlg.GetPath().c_str().AsChar();
-	wxGetApp().ChangeRootPath(rootPath);
-}
-
-void CMainWindow::OnHashLookupTool(wxCommandEvent&)
-{
-	CHashLookupWindow* win = new CHashLookupWindow(this);
-	win->Show();
-}
-
-void CMainWindow::OnExit(wxCommandEvent&)
-{
-	Close(true);
-}
-
-void CMainWindow::OnFileSystemScanStarted(wxThreadEvent& event)
-{
-	wxLogDebug(__FUNCTION__);
-
-	if (CStatusBar* statusBar = reinterpret_cast<CStatusBar*>(GetStatusBar()); statusBar)
+	void MainWindow::CreateAccelTable()
 	{
-		statusBar->SetInfo(wxString::Format("Scanning '%ls'...", "path/TBD/"));
+		std::array<wxAcceleratorEntry, 5> entries{};
+		std::size_t i = 0;
+
+		// for path tool bar back and forward buttons
+		// TODO: back/forward accelerators for mouse extra buttons, like windows file explorer
+		entries[i++].Set(wxACCEL_ALT, WXK_LEFT, wxID_BACKWARD);
+		entries[i++].Set(wxACCEL_NORMAL, WXK_BROWSER_BACK, wxID_BACKWARD);
+		entries[i++].Set(wxACCEL_ALT, WXK_RIGHT, wxID_FORWARD);
+		entries[i++].Set(wxACCEL_NORMAL, WXK_BROWSER_FORWARD, wxID_FORWARD);
+		entries[i++].Set(wxACCEL_ALT, WXK_UP, wxID_UP);
+
+		SetAcceleratorTable({ entries.size(), entries.data() });
 	}
-
-	event.Skip();
-}
-
-void CMainWindow::OnFileSystemScanCompleted(wxThreadEvent& event)
-{
-	if (mDirTreeCtrl)
-	{
-		mDirTreeCtrl->Refresh();
-	}
-
-	if (mDirContentsListCtrl)
-	{
-		mDirContentsListCtrl->SetDirectoryToRoot();
-	}
-
-	if (CStatusBar* statusBar = reinterpret_cast<CStatusBar*>(GetStatusBar()); statusBar)
-	{
-		statusBar->SetInfo("");
-	}
-
-	event.Skip();
-}
-
-void CMainWindow::CreateAccelTable()
-{
-	std::array<wxAcceleratorEntry, 5> entries{};
-	std::size_t i = 0;
-
-	// for path tool bar back and forward buttons
-	// TODO: back/forward accelerators for mouse extra buttons, like windows file explorer
-	entries[i++].Set(wxACCEL_ALT, WXK_LEFT, wxID_BACKWARD);
-	entries[i++].Set(wxACCEL_NORMAL, WXK_BROWSER_BACK, wxID_BACKWARD);
-	entries[i++].Set(wxACCEL_ALT, WXK_RIGHT, wxID_FORWARD);
-	entries[i++].Set(wxACCEL_NORMAL, WXK_BROWSER_FORWARD, wxID_FORWARD);
-	entries[i++].Set(wxACCEL_ALT, WXK_UP, wxID_UP);
-
-	SetAcceleratorTable({ entries.size(), entries.data() });
 }

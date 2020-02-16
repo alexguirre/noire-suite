@@ -1,23 +1,26 @@
 #pragma once
-#include <formats/fs/Path.h>
+#include <core/Path.h>
 #include <stack>
 
-class CDirectoryHistory
+namespace noire::explorer
 {
-public:
-	CDirectoryHistory();
+	class DirectoryHistory
+	{
+	public:
+		DirectoryHistory();
 
-	noire::fs::SPathView Current() const;
-	bool HasCurrent() const;
-	void Push(noire::fs::SPathView dir);
-	void GoBack();
-	void GoForward();
-	void GoUp();
-	bool CanGoBack() const;
-	bool CanGoForward() const;
-	bool CanGoUp() const;
+		PathView Current() const;
+		bool HasCurrent() const;
+		void Push(PathView dir);
+		void GoBack();
+		void GoForward();
+		void GoUp();
+		bool CanGoBack() const;
+		bool CanGoForward() const;
+		bool CanGoUp() const;
 
-private:
-	std::stack<noire::fs::SPath> mBackStack;
-	std::stack<noire::fs::SPath> mForwardStack;
-};
+	private:
+		std::stack<Path> mBackStack;
+		std::stack<Path> mForwardStack;
+	};
+}

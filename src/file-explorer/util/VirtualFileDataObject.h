@@ -1,24 +1,26 @@
 #pragma once
+#include <core/Path.h>
 #include <cstdint>
-#include <formats/fs/Path.h>
 #include <vector>
 #include <wx/dataobj.h>
 
-namespace noire::fs
+namespace noire
 {
-	class CFileSystem;
+	class Device;
+
+	namespace explorer
+	{
+		class VirtualFileDataObject : public wxDataObject
+		{
+		public:
+			VirtualFileDataObject(Device& device, const std::vector<PathView>& paths);
+
+			void GetAllFormats(wxDataFormat* formats, Direction dir = Get) const override;
+			bool GetDataHere(const wxDataFormat& format, void* buff) const override;
+			std::size_t GetDataSize(const wxDataFormat& format) const override;
+			std::size_t GetFormatCount(Direction dir = Get) const override;
+			wxDataFormat GetPreferredFormat(Direction dir = Get) const override;
+			bool SetData(const wxDataFormat& format, std::size_t len, const void* buff) override;
+		};
+	}
 }
-
-class CVirtualFileDataObject : public wxDataObject
-{
-public:
-	CVirtualFileDataObject(noire::fs::CFileSystem* fileSystem,
-						   const std::vector<noire::fs::SPathView>& paths);
-
-	void GetAllFormats(wxDataFormat* formats, Direction dir = Get) const override;
-	bool GetDataHere(const wxDataFormat& format, void* buff) const override;
-	std::size_t GetDataSize(const wxDataFormat& format) const override;
-	std::size_t GetFormatCount(Direction dir = Get) const override;
-	wxDataFormat GetPreferredFormat(Direction dir = Get) const override;
-	bool SetData(const wxDataFormat& format, std::size_t len, const void* buff) override;
-};
