@@ -78,6 +78,7 @@ namespace noire
 		using OpenCallback =
 			std::function<std::shared_ptr<File>(PathView filePath, FileEntryInfo info)>;
 		using CreateCallback = std::function<FileEntryInfo(PathView filePath)>;
+		using VisitCallback = std::function<void(PathView)>;
 
 		std::shared_ptr<File> Open(PathView path, OpenCallback cb);
 
@@ -92,11 +93,17 @@ namespace noire
 		FileEntryInfo GetFileInfo(PathView path) const;
 		void RegisterExistingFile(PathView path, FileEntryInfo info = FileEntryInfo{});
 
-		bool ForEachFile(PathView dirPath,
-						 std::function<void(PathView path, FileEntryInfo fileInfo)> callback,
-						 bool recursive = true);
+		void Visit(VisitCallback visitDirectory,
+				   VisitCallback visitFile,
+				   PathView dirPath,
+				   bool recursive = true);
 
 	private:
+		void VisitDirectory(DirectoryEntry* dir,
+							Path dirPath,
+							const VisitCallback& visitDirectory,
+							const VisitCallback& visitFile,
+							bool recursive);
 		Entry* FindEntry(PathView path) const;
 		DirectoryEntry* GetDirectory(PathView path, bool create);
 

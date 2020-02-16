@@ -207,23 +207,26 @@ TEST_SUITE("Container")
 		Container c{ input };
 		c.Load();
 
-		c.mVFS.ForEachFile(PathView::Root, [&c](PathView path, const size& hash) {
-			const ContainerEntry& e = c.GetEntry(hash);
+		c.mVFS.Visit([](PathView path) { std::cout << "Visiting '" << path.String() << "':\n"; },
+					 [&c](PathView path) {
+						 const ContainerEntry& e = c.GetEntry(c.mVFS.GetFileInfo(path));
 
-			std::array<char, 512> buffer;
-			std::snprintf(buffer.data(),
-						  buffer.size(),
-						  "\tHash:%08X Unk1:%08X Unk2:%08X Unk3:%08X Unk4:%08X Offset:%016I64X "
-						  "Size:%016I64X\t",
-						  e.NameHash,
-						  e.Unk1,
-						  e.Unk2,
-						  e.Unk3,
-						  e.Unk4,
-						  e.Offset(),
-						  e.Size());
-			std::cout << buffer.data() << '"' << path.String() << '"' << std::endl;
-		});
+						 std::array<char, 512> buffer;
+						 std::snprintf(
+							 buffer.data(),
+							 buffer.size(),
+							 "\tHash:%08X Unk1:%08X Unk2:%08X Unk3:%08X Unk4:%08X Offset:%016I64X "
+							 "Size:%016I64X\t",
+							 e.NameHash,
+							 e.Unk1,
+							 e.Unk2,
+							 e.Unk3,
+							 e.Unk4,
+							 e.Offset(),
+							 e.Size());
+						 std::cout << buffer.data() << '"' << path.String() << '"' << std::endl;
+					 },
+					 PathView::Root);
 
 		std::cout << "input:  " << input->Size() << std::endl;
 		std::cout << "size(): " << c.Size() << std::endl;

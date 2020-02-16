@@ -93,7 +93,7 @@ namespace noire
 		Expects(path.IsFile() && path.IsAbsolute());
 
 		// TODO: provide override option?
-		Expects(FindEntry(path) == nullptr); // path is not registerted yet
+		Expects(FindEntry(path) == nullptr); // path is not registered yet
 
 		DirectoryEntry* parent = GetDirectory(path.Parent(), true);
 		Ensures(parent != nullptr);
@@ -104,44 +104,46 @@ namespace noire
 		}
 	}
 
-	bool VirtualFileSystem::ForEachFile(
-		PathView dirPath,
-		std::function<void(PathView path, FileEntryInfo fileInfo)> callback,
-		bool recursive)
+	void VirtualFileSystem::Visit(VisitCallback visitDirectory,
+								  VisitCallback visitFile,
+								  PathView dirPath,
+								  bool recursive)
 	{
-		Expects(dirPath.IsDirectory() && dirPath.IsAbsolute());
-
 		DirectoryEntry* dir = GetDirectory(dirPath, false);
 		if (dir)
 		{
-			const std::function<void(PathView, DirectoryEntry*)> iterDir =
-				[&iterDir, &callback, recursive](PathView dirPath, DirectoryEntry* d) {
-					for (Entry* e : d->Children())
-					{
-						switch (e->Type())
-						{
-						case EntryType::File:
-							callback(Path{ dirPath } / e->Name(),
-									 static_cast<FileEntry*>(e)->Info());
-							break;
-						case EntryType::Directory:
-							if (recursive)
-							{
-								iterDir(Path{ dirPath } / e->Name() + Path::DirectorySeparator,
-										static_cast<DirectoryEntry*>(e));
-							}
-							break;
-						}
-					}
-				};
-
-			iterDir(dirPath, dir);
-
-			return true;
+			VisitDirectory(dir, Path{ dirPath }, visitDirectory, visitFile, recursive);
 		}
-		else
+	}
+
+	void VirtualFileSystem::VisitDirectory(DirectoryEntry* dir,
+										   Path dirPath,
+										   const VisitCallback& visitDirectory,
+										   const VisitCallback& visitFile,
+										   bool recursive)
+	{
+		for (Entry* e : dir->Children())
 		{
-			return false;
+			switch (e->Type())
+			{
+			case EntryType::File: visitFile(dirPath / e->Name()); break;
+			case EntryType::Directory:
+			{
+				Path p = dirPath / e->Name() + Path::DirectorySeparator;
+				visitDirectory(p);
+				if (recursive)
+				{
+					VisitDirectory(static_cast<DirectoryEntry*>(e),
+								   std::move(p),
+								   visitDirectory,
+								   visitFile,
+								   recursive);
+				}
+				// TODO: another callback after visiting directory contents may be needed
+				break;
+			}
+			default: Ensures(false); break;
+			}
 		}
 	}
 
@@ -239,17 +241,22 @@ TEST_SUITE("VFS")
 		vfs.RegisterExistingFile("/test2", 2);
 		vfs.RegisterExistingFile("/test3", 3);
 		vfs.RegisterExistingFile("/test4", 4);
+		vfs.RegisterExistingFile("/inside/folder/test5", 5);
+		vfs.RegisterExistingFile("/inside/folder/test6", 6);
+		vfs.RegisterExistingFile("/inside/folder/deep/test7", 7);
+		vfs.RegisterExistingFile("/inside/folder/deep/deeper/test8", 8);
 
-		{
-			const size expected[4]{ 1, 2, 3, 4 };
-			size i = 0;
-			vfs.ForEachFile("/", [&i, &expected](PathView p, size d) {
-				CHECK_EQ(expected[i], d);
-				i++;
-
-				std::cout << p.String() << ": " << d << '\n';
-			});
-		}
+		std::cout << "Visiting '" << PathView::Root.String() << "' recursively\n";
+		vfs.Visit([](PathView p) { std::cout << "Visited Directory '" << p.String() << "'\n"; },
+				  [](PathView p) { std::cout << "Visited File      '" << p.String() << "'\n"; },
+				  PathView::Root);
+		std::cout << "Visiting '"
+				  << "/inside/folder/"
+				  << "\n";
+		vfs.Visit([](PathView p) { std::cout << "Visited Directory '" << p.String() << "'\n"; },
+				  [](PathView p) { std::cout << "Visited File      '" << p.String() << "'\n"; },
+				  "/inside/folder/",
+				  false);
 
 		CHECK(vfs.Exists("/"));
 		CHECK(vfs.Exists("/test1"));
@@ -265,17 +272,5 @@ TEST_SUITE("VFS")
 		CHECK_FALSE(vfs.Exists("/test1"));
 
 		CHECK_FALSE(vfs.Delete("/test5"));
-
-		std::cout << "==============\n";
-		{
-			const size expected[2]{ 2, 3 };
-			size i = 0;
-			vfs.ForEachFile("/", [&i, &expected](PathView p, size d) {
-				CHECK_EQ(expected[i], d);
-				i++;
-
-				std::cout << p.String() << ": " << d << '\n';
-			});
-		}
 	}
 }
