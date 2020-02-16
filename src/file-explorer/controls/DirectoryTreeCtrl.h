@@ -1,7 +1,5 @@
 #pragma once
 #include <core/Path.h>
-#include <string>
-#include <string_view>
 #include <wx/treectrl.h>
 
 namespace noire::explorer
@@ -26,11 +24,5 @@ namespace noire::explorer
 						  const wxSize& size = wxDefaultSize);
 
 		void Refresh();
-
-	private:
-		void OnItemContextMenu(wxTreeEvent& event);
-		void ShowItemContextMenu(wxTreeItemId id, const wxPoint& pos);
-
-		wxDECLARE_EVENT_TABLE();
 	};
 }

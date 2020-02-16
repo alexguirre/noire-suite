@@ -2,9 +2,8 @@
 #include "App.h"
 #include "Identifiers.h"
 #include "Images.h"
-#include <filesystem>
-#include <gsl/gsl>
-#include <string>
+#include <core/devices/Device.h>
+#include <string_view>
 #include <unordered_map>
 #include <wx/icon.h>
 #include <wx/imaglist.h>
@@ -13,13 +12,6 @@
 
 namespace noire::explorer
 {
-	// clang-format off
-wxBEGIN_EVENT_TABLE(DirectoryTreeCtrl, wxTreeCtrl)
-	// for context menu
-	EVT_TREE_ITEM_MENU(wxID_ANY, DirectoryTreeCtrl::OnItemContextMenu)
-wxEND_EVENT_TABLE();
-	// clang-format on
-
 	static constexpr long TreeCtrlStyle = wxTR_HAS_BUTTONS | wxTR_TWIST_BUTTONS | wxTR_NO_LINES |
 										  wxTR_HIDE_ROOT | wxTR_LINES_AT_ROOT | wxTR_SINGLE;
 
@@ -32,109 +24,82 @@ wxEND_EVENT_TABLE();
 		SetImageList(Images::Icons());
 	}
 
-	// TODO: DirectoryTreeCtrl::Refresh
 	void DirectoryTreeCtrl::Refresh()
 	{
 		this->DeleteAllItems();
 
-		//auto* fs = wxGetApp().FileSystem();
-		//if (fs == nullptr)
-		//{
-		//	return;
-		//}
+		Device* dev = wxGetApp().RootDevice();
+		if (dev == nullptr)
+		{
+			return;
+		}
 
-		//// initialize tree
-		//wxTreeItemId root = AddRoot("ROOT");
-		//wxTreeItemId noireItem =
-		//	AppendItem(root, "L.A. Noire", CImages::IconNoire, -1, new CDirectoryItemData("/"));
+		// initialize tree
+		wxTreeItemId root = AddRoot("ROOT");
+		wxTreeItemId noireItem =
+			AppendItem(root, "L.A. Noire", Images::IconNoire, -1, new DirectoryItemData("/"));
 
-		//std::vector<SDirectoryEntry> entries = fs->GetAllEntries();
-		//// string_view key points to the path of a SDirectoryEntry
-		//std::unordered_map<std::string_view, wxTreeItemId> items{};
+		std::unordered_map<size, wxTreeItemId> items{};
 
-		//// get the path of each directory in the input path in order
-		//// for example "/some/deep/folder/" returns { "/some/deep/folder/", "/some/deep/", "/some/"
-		//// }
-		//const auto getDirectoriesFromPath = [](SPathView path,
-		//									   std::vector<SPathView>& directories) {
-		//	SPathView p = path;
-		//	while (!p.IsEmpty() && !p.IsRoot())
-		//	{
-		//		directories.emplace_back(p);
-		//		p = p.Parent();
-		//	}
-		//};
+		// get the path of each directory in the input path in order
+		// for example "/some/deep/folder/" returns { "/some/deep/folder/", "/some/deep/", "/some/"
+		// }
+		const auto getDirectoriesFromPath = [](PathView path, std::vector<PathView>& directories) {
+			PathView p = path;
+			while (!p.IsEmpty() && !p.IsRoot())
+			{
+				directories.emplace_back(p);
+				p = p.Parent();
+			}
+		};
 
-		//const auto addDirectoryToTree = [&](SPathView path, EDirectoryEntryType type) {
-		//	SPathView origPath = path;
+		const auto addDirectoryToTree = [&](PathView path) {
+			PathView origPath = path;
 
-		//	std::vector<SPathView> dirs{};
-		//	getDirectoriesFromPath(path, dirs);
+			std::vector<PathView> dirs{};
+			getDirectoriesFromPath(path, dirs);
 
-		//	wxTreeItemId parent = noireItem;
-		//	// iterate in reverse order so top-most parent is processed first
-		//	for (auto dirIt = dirs.rbegin(); dirIt != dirs.rend(); dirIt++)
-		//	{
-		//		SPathView& p = *dirIt;
-		//		if (auto it = items.find(p.String()); it != items.end())
-		//		{
-		//			// already added
-		//			parent = it->second;
-		//		}
-		//		else
-		//		{
-		//			std::string_view name = p.Name();
-		//			parent = AppendItem(parent,
-		//								{ name.data(), name.size() },
-		//								CImages::IconFolder,
-		//								-1,
-		//								new CDirectoryItemData(p));
-		//			items.emplace(p.String(), parent);
-		//		}
-		//	}
+			wxTreeItemId parent = noireItem;
+			// iterate in reverse order so top-most parent is processed first
+			for (auto dirIt = dirs.rbegin(); dirIt != dirs.rend(); dirIt++)
+			{
+				const PathView p = *dirIt;
+				const size pathHash = std::hash<PathView>{}(p);
 
-		//	if (type == EDirectoryEntryType::Collection)
-		//	{
-		//		if (auto it = items.find(path.String()); it != items.end())
-		//		{
-		//			SetItemImage(it->second, CImages::IconBlueFolder);
-		//		}
-		//	}
-		//};
+				if (auto it = items.find(pathHash); it != items.end())
+				{
+					// already added
+					parent = it->second;
+				}
+				else
+				{
+					std::string_view name = p.Name();
+					parent = AppendItem(parent,
+										{ name.data(), name.size() },
+										Images::IconFolder,
+										-1,
+										new DirectoryItemData(p));
+					items.emplace(pathHash, parent);
+				}
+			}
+		};
 
-		//for (auto& entry : entries)
-		//{
-		//	if (entry.Type != EDirectoryEntryType::File)
-		//	{
-		//		addDirectoryToTree(entry.Path, entry.Type);
-		//	}
-		//}
+		dev->Visit([&addDirectoryToTree](PathView p) { addDirectoryToTree(p); },
+				   [](PathView) {},
+				   PathView::Root,
+				   true);
 
-		//const std::function<void(const wxTreeItemId&)> sortRecursively =
-		//	[this, &sortRecursively](const wxTreeItemId& item) {
-		//		SortChildren(item); // sort in ascending case-sensitive alphabetical order
-		//		wxTreeItemIdValue cookie;
-		//		for (wxTreeItemId c = GetFirstChild(item, cookie); c.IsOk();
-		//			 c = GetNextChild(item, cookie))
-		//		{
-		//			sortRecursively(c);
-		//		}
-		//	};
+		const std::function<void(const wxTreeItemId&)> sortRecursively =
+			[this, &sortRecursively](const wxTreeItemId& item) {
+				SortChildren(item); // sort in ascending case-sensitive alphabetical order
+				wxTreeItemIdValue cookie;
+				for (wxTreeItemId c = GetFirstChild(item, cookie); c.IsOk();
+					 c = GetNextChild(item, cookie))
+				{
+					sortRecursively(c);
+				}
+			};
 
-		//sortRecursively(root);
-	}
-
-	void DirectoryTreeCtrl::OnItemContextMenu(wxTreeEvent& event)
-	{
-		wxTreeItemId itemId = event.GetItem();
-		Expects(itemId.IsOk());
-
-		ShowItemContextMenu(itemId, event.GetPoint());
-		event.Skip();
-	}
-
-	void DirectoryTreeCtrl::ShowItemContextMenu(wxTreeItemId, const wxPoint&)
-	{
-		// nothing
+		sortRecursively(root);
 	}
 }
