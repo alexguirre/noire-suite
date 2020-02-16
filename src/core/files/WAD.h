@@ -59,7 +59,7 @@ namespace noire
 		void Sort();
 
 		std::vector<WADEntry> mEntries;
-		VirtualFileSystem<size> mVFS; // VFS entry info refers to PathHash of the WADEntry
+		VirtualFileSystem mVFS; // VFS entry info refers to PathHash of the WADEntry
 
 	public:
 		static constexpr u32 HeaderMagic{ 0x01444157 }; // WAD\01

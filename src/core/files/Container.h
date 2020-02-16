@@ -69,7 +69,7 @@ namespace noire
 		std::vector<ContainerEntry> mEntries;
 
 	public:
-		VirtualFileSystem<size> mVFS; // VFS entry info refers to NameHash of the WADEntry
+		VirtualFileSystem mVFS; // VFS entry info refers to NameHash of the WADEntry
 
 	public:
 		static constexpr u32 EntriesHeaderMagic{ 3 }; // WAD\01
