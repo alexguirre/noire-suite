@@ -7,4 +7,5 @@ namespace noire::explorer
 	inline constexpr wxWindowID DirectoryContentsExportMenuId = FileTreeExportMenuId + 1;
 	inline constexpr wxWindowID MenuBarOpenFolderId = DirectoryContentsExportMenuId + 1;
 	inline constexpr wxWindowID MenuBarHashLookupId = MenuBarOpenFolderId + 1;
+	inline constexpr wxWindowID MenuBarTestRendererId = MenuBarHashLookupId + 1;
 }

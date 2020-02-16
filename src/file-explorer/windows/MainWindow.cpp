@@ -5,6 +5,7 @@
 #include "controls/ImagePanel.h"
 #include "controls/PathToolBar.h"
 #include "controls/StatusBar.h"
+#include "rendering/Renderer.h"
 #include <App.h>
 #include <gsl/gsl>
 #include <windows/HashLookupWindow.h>
@@ -30,6 +31,7 @@ namespace noire::explorer
 
 			wxMenu* toolsMenu = new wxMenu();
 			toolsMenu->Append(MenuBarHashLookupId, "Hash &Lookup...");
+			toolsMenu->Append(MenuBarTestRendererId, "Test &Renderer...");
 
 			mMenuBar->Append(fileMenu, "&File");
 			mMenuBar->Append(toolsMenu, "&Tools");
@@ -73,6 +75,7 @@ namespace noire::explorer
 
 		Bind(wxEVT_MENU, &MainWindow::OnOpenFolder, this, MenuBarOpenFolderId);
 		Bind(wxEVT_MENU, &MainWindow::OnHashLookupTool, this, MenuBarHashLookupId);
+		Bind(wxEVT_MENU, &MainWindow::OnTestRenderer, this, MenuBarTestRendererId);
 		Bind(wxEVT_MENU, &MainWindow::OnExit, this, wxID_EXIT);
 		wxGetApp().Bind(EVT_FILE_SYSTEM_SCAN_STARTED, &MainWindow::OnFileSystemScanStarted, this);
 		wxGetApp().Bind(EVT_FILE_SYSTEM_SCAN_COMPLETED,
@@ -126,6 +129,26 @@ namespace noire::explorer
 	{
 		HashLookupWindow* win = new HashLookupWindow(this);
 		win->Show();
+	}
+
+	void MainWindow::OnTestRenderer(wxCommandEvent&)
+	{
+		class RendererWindow : public wxFrame
+		{
+		public:
+			RendererWindow(wxWindow* parent) : wxFrame(parent, wxID_ANY, "D3D11 Renderer")
+			{
+				wxWindow* renderPanel = new wxWindow(this, wxID_ANY);
+				mRenderer =
+					std::make_unique<Renderer>(renderPanel->GetHWND(), [](Renderer& r, float) {
+						r.Clear(0.2f, 0.2f, 0.7f);
+					});
+			}
+
+			std::unique_ptr<Renderer> mRenderer;
+		};
+
+		(new RendererWindow(this))->Show();
 	}
 
 	void MainWindow::OnExit(wxCommandEvent&) { Close(true); }
