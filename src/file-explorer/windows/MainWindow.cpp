@@ -139,12 +139,13 @@ namespace noire::explorer
 			RendererWindow(wxWindow* parent) : wxFrame(parent, wxID_ANY, "D3D11 Renderer")
 			{
 				wxWindow* renderPanel = new wxWindow(this, wxID_ANY);
-				mRenderer = std::make_unique<CRenderer>(
-					renderPanel->GetHWND(),
-					[](CRenderer& r, float) { r.Clear(0.2f, 0.2f, 0.7f); });
+				mRenderer =
+					std::make_unique<Renderer>(renderPanel->GetHWND(), [](Renderer& r, float) {
+						r.Clear(0.2f, 0.2f, 0.7f);
+					});
 			}
 
-			std::unique_ptr<CRenderer> mRenderer;
+			std::unique_ptr<Renderer> mRenderer;
 		};
 
 		(new RendererWindow(this))->Show();

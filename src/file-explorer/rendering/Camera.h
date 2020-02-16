@@ -1,33 +1,36 @@
 #pragma once
 #include "Math.h"
-#include <cstddef>
+#include <core/Common.h>
 
-class CCamera final
+namespace noire::explorer
 {
-public:
-	CCamera() noexcept;
-	CCamera(const CCamera&) noexcept = default;
-	CCamera(CCamera&&) noexcept = default;
+	class Camera final
+	{
+	public:
+		Camera() noexcept;
+		Camera(const Camera&) noexcept = default;
+		Camera(Camera&&) noexcept = default;
 
-	CCamera& operator=(const CCamera&) noexcept = default;
-	CCamera& operator=(CCamera&&) noexcept = default;
+		Camera& operator=(const Camera&) noexcept = default;
+		Camera& operator=(Camera&&) noexcept = default;
 
-	void Transform(const Matrix& t) noexcept;
-	const Matrix& Transform() const noexcept { return mTransform; }
+		void Transform(const Matrix& t) noexcept;
+		const Matrix& Transform() const noexcept { return mTransform; }
 
-	const Matrix& Projection() const noexcept { return mProjection; }
-	const Matrix& View() const noexcept { return mView; }
-	const Matrix& ViewProjection() const noexcept { return mViewProjection; }
+		const Matrix& Projection() const noexcept { return mProjection; }
+		const Matrix& View() const noexcept { return mView; }
+		const Matrix& ViewProjection() const noexcept { return mViewProjection; }
 
-	void Resize(std::size_t width, std::size_t height) noexcept;
+		void Resize(size width, size height) noexcept;
 
-private:
-	void UpdateMatrices() noexcept;
+	private:
+		void UpdateMatrices() noexcept;
 
-	Matrix mTransform;
-	Matrix mProjection;
-	Matrix mView;
-	Matrix mViewProjection;
-	std::size_t mClientWidth;
-	std::size_t mClientHeight;
-};
+		Matrix mTransform;
+		Matrix mProjection;
+		Matrix mView;
+		Matrix mViewProjection;
+		size mClientWidth;
+		size mClientHeight;
+	};
+}

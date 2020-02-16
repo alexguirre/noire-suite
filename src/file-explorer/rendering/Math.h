@@ -5,4 +5,7 @@
 #include "SimpleMath.h"
 // clang-format on
 
-using namespace DirectX::SimpleMath;
+namespace noire::explorer
+{
+	using namespace DirectX::SimpleMath;
+}

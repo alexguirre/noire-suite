@@ -1,57 +1,60 @@
-
 #include "Camera.h"
 
-CCamera::CCamera() noexcept
-	: mTransform{},
-	  mProjection{},
-	  mView{},
-	  mViewProjection{},
-	  mClientWidth{ 1920 },
-	  mClientHeight{ 1080 }
+namespace noire::explorer
 {
-	Transform(Matrix::Identity);
-}
-
-void CCamera::Transform(const Matrix& t) noexcept
-{
-	mTransform = t;
-	UpdateMatrices();
-}
-
-void CCamera::Resize(std::size_t width, std::size_t height) noexcept
-{
-	if (mClientWidth != width || mClientHeight != height)
+	Camera::Camera() noexcept
+		: mTransform{},
+		  mProjection{},
+		  mView{},
+		  mViewProjection{},
+		  mClientWidth{ 1920 },
+		  mClientHeight{ 1080 }
 	{
-		mClientWidth = width;
-		mClientHeight = height;
+		Transform(Matrix::Identity);
+	}
 
+	void Camera::Transform(const Matrix& t) noexcept
+	{
+		mTransform = t;
 		UpdateMatrices();
 	}
-}
 
-void CCamera::UpdateMatrices() noexcept
-{
-	// calculate projection
+	void Camera::Resize(size width, size height) noexcept
 	{
-		constexpr float FOV{ DirectX::XMConvertToRadians(45.0f) };
-		constexpr float NearPlane{ 0.01f };
-		constexpr float FarPlane{ 1000.0f };
+		if (mClientWidth != width || mClientHeight != height)
+		{
+			mClientWidth = width;
+			mClientHeight = height;
 
-		const float aspectRatio = static_cast<float>(mClientWidth) / mClientHeight;
-		mProjection = Matrix::CreatePerspectiveFieldOfView(FOV, aspectRatio, NearPlane, FarPlane);
+			UpdateMatrices();
+		}
 	}
 
-	// calculate view
+	void Camera::UpdateMatrices() noexcept
 	{
-		const Vector3 pos = mTransform.Translation();
-		const Vector3 up = mTransform.Up();
-		const Vector3 target = pos + mTransform.Forward();
+		// calculate projection
+		{
+			constexpr float FOV{ DirectX::XMConvertToRadians(45.0f) };
+			constexpr float NearPlane{ 0.01f };
+			constexpr float FarPlane{ 1000.0f };
 
-		mView = Matrix::CreateLookAt(pos, target, up);
-	}
+			const float aspectRatio = static_cast<float>(mClientWidth) / mClientHeight;
+			mProjection =
+				Matrix::CreatePerspectiveFieldOfView(FOV, aspectRatio, NearPlane, FarPlane);
+		}
 
-	// calculate view-projection
-	{
-		mViewProjection = mView * mProjection;
+		// calculate view
+		{
+			const Vector3 pos = mTransform.Translation();
+			const Vector3 up = mTransform.Up();
+			const Vector3 target = pos + mTransform.Forward();
+
+			mView = Matrix::CreateLookAt(pos, target, up);
+		}
+
+		// calculate view-projection
+		{
+			mViewProjection = mView * mProjection;
+		}
 	}
 }
