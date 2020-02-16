@@ -48,7 +48,9 @@ namespace noire::explorer
 
 			const std::filesystem::path wadPath =
 				"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out.wad.pc";
-			d->Mount(PathView::Root, std::make_unique<WAD>(std::make_shared<FileStream>(wadPath)));
+			std::unique_ptr wad = std::make_unique<WAD>(std::make_shared<FileStream>(wadPath));
+			wad->Load();
+			d->Mount(PathView::Root, std::move(wad));
 
 			mRootDevice = std::move(d);
 			wxQueueEvent(this, new wxThreadEvent(EVT_FILE_SYSTEM_SCAN_COMPLETED));
@@ -115,6 +117,8 @@ namespace noire::explorer
 		}
 
 		Stream& s = file->Stream();
+		s.Seek(0, StreamSeekOrigin::Begin);
+
 		constexpr u32 DDSHeaderMagic{ 0x20534444 }; // 'DDS '
 		const u32 headerMagic = s.Read<u32>();
 

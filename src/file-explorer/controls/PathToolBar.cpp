@@ -1,7 +1,6 @@
 #include "PathToolBar.h"
 #include "DirectoryContentsListCtrl.h"
 #include <array>
-#include <formats/WADFile.h>
 #include <wx/artprov.h>
 #include <wx/textctrl.h>
 #include <wx/wx.h>

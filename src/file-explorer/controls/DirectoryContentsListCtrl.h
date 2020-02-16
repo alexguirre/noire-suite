@@ -58,8 +58,15 @@ namespace noire::explorer
 
 		wxDataObject* CreateSelectedFilesDataObject() const;
 
+		struct Entry
+		{
+			Path Path;
+			bool IsDirectory;
+			u64 Size;
+		};
+
 		Path mDirPath;
-		// std::vector<noire::fs::SDirectoryEntry> mDirEntries;
+		std::vector<Entry> mDirEntries;
 		std::array<bool, 3> mColSortDescending;
 
 		wxDECLARE_EVENT_TABLE();

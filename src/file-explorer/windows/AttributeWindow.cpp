@@ -1,6 +1,5 @@
 #include "AttributeWindow.h"
 #include "Hash.h"
-#include <formats/AttributeFile.h>
 #include <gsl/gsl>
 #include <wx/log.h>
 #include <wx/propgrid/propgrid.h>

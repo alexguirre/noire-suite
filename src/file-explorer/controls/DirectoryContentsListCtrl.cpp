@@ -4,10 +4,11 @@
 #include "util/Format.h"
 #include "util/VirtualFileDataObject.h"
 #include <App.h>
+#include <core/devices/Device.h>
+#include <core/files/File.h>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
-#include <formats/fs/NativeDevice.h>
 #include <functional>
 #include <gsl/gsl>
 #include <vector>
@@ -77,7 +78,7 @@ wxEND_EVENT_TABLE();
 														 const wxSize& size)
 		: wxListCtrl(parent, id, pos, size, wxLC_REPORT | wxLC_VIRTUAL),
 		  mDirPath{},
-		  // mDirEntries{},
+		  mDirEntries{},
 		  mColSortDescending{}
 	{
 		SetImageList(Images::Icons(), wxIMAGE_LIST_SMALL);
@@ -123,18 +124,16 @@ wxEND_EVENT_TABLE();
 
 	void DirectoryContentsListCtrl::OnItemActivated(wxListEvent& event)
 	{
-		// TODO: DirectoryContentsListCtrl::OnItemActivated
-		// const SDirectoryEntry& entry = mDirEntries[event.GetIndex()];
+		const Entry& entry = mDirEntries[event.GetIndex()];
 
-		// SPathView path = entry.Path;
-		// if (entry.Type == EDirectoryEntryType::File)
-		//{
-		//	wxGetApp().OpenFile(path);
-		//}
-		// else
-		//{
-		//	SetDirectory(path);
-		//}
+		if (entry.IsDirectory)
+		{
+			SetDirectory(entry.Path);
+		}
+		else
+		{
+			wxGetApp().OpenFile(entry.Path);
+		}
 
 		event.Skip();
 	}
@@ -167,65 +166,42 @@ wxEND_EVENT_TABLE();
 
 	wxString DirectoryContentsListCtrl::OnGetItemText(long item, long column) const
 	{
-		(void)item;
-		(void)column;
-		return "WIP";
-
-		// TODO: DirectoryContentsListCtrl::OnGetItemText
-		// const SDirectoryEntry& e = mDirEntries[item];
-		// if (e.Type == EDirectoryEntryType::File)
-		//{
-		//	switch (column)
-		//	{
-		//	case NameCol:
-		//	{
-		//		std::string_view name = e.Path.Name();
-		//		return { name.data(), name.size() };
-		//	}
-		//	case TypeCol: return "File";
-		//	case SizeCol: return BytesToHumanReadable(wxGetApp().FileSystem()->FileSize(e.Path));
-		//	}
-		//}
-		// else
-		//{
-		//	switch (column)
-		//	{
-		//	case NameCol:
-		//	{
-		//		std::string_view name = e.Path.Name();
-		//		return { name.data(), name.size() };
-		//	}
-		//	case TypeCol: return "Folder";
-		//	case SizeCol:
-		//	{
-		//		std::string_view path = e.Path.String();
-		//		return e.Type == EDirectoryEntryType::Collection ?
-		//				   BytesToHumanReadable(
-		//					   // remove last '/' and pass it to FileSize
-		//					   wxGetApp().FileSystem()->FileSize(path.substr(0, path.size() - 1))) :
-		//				   "TBD";
-		//	}
-		//	}
-		//}
+		const Entry& e = mDirEntries[item];
+		if (!e.IsDirectory)
+		{
+			switch (column)
+			{
+			case NameCol:
+			{
+				std::string_view name = e.Path.Name();
+				return { name.data(), name.size() };
+			}
+			case TypeCol: return "File";
+			case SizeCol: return BytesToHumanReadable(e.Size);
+			}
+		}
+		else
+		{
+			switch (column)
+			{
+			case NameCol:
+			{
+				std::string_view name = e.Path.Name();
+				return { name.data(), name.size() };
+			}
+			case TypeCol: return "Folder";
+			case SizeCol: return "";
+			}
+		}
 
 		// should never get here
-		// Expects(false);
+		Expects(false);
 	}
 
 	int DirectoryContentsListCtrl::OnGetItemImage(long item) const
 	{
-		(void)item;
-		return Images::IconBlankFile;
-
-		// TODO: DirectoryContentsListCtrl::OnGetItemImage
-		// const SDirectoryEntry& e = mDirEntries[item];
-		// switch (e.Type)
-		//{
-		// case EDirectoryEntryType::Directory: return Images::IconFolder;
-		// case EDirectoryEntryType::Collection: return Images::IconBlueFolder;
-		// default:
-		// case EDirectoryEntryType::File: return Images::IconBlankFile;
-		//}
+		const Entry& e = mDirEntries[item];
+		return e.IsDirectory ? Images::IconFolder : Images::IconBlankFile;
 	}
 
 	void DirectoryContentsListCtrl::OnColClick(wxListEvent& e)
@@ -262,182 +238,139 @@ wxEND_EVENT_TABLE();
 
 	void DirectoryContentsListCtrl::UpdateContents()
 	{
-		// TODO: DirectoryContentsListCtrl::UpdateContents
-		// auto* fs = wxGetApp().FileSystem();
-		// if (fs == nullptr || mDirPath.IsEmpty())
-		//{
-		//	SetItemCount(0);
-		//	return;
-		//}
+		Device* dev = wxGetApp().RootDevice();
+		if (!dev || mDirPath.IsEmpty())
+		{
+			SetItemCount(0);
+			return;
+		}
 
-		// Freeze();
-		// const auto _ = ShowWaitingCursor(this);
+		Freeze();
+		const auto _ = ShowWaitingCursor(this);
 
-		// mDirEntries = fs->GetEntries(mDirPath);
+		// TODO: mounted devices not considered as directories yet
+		mDirEntries.clear();
+		dev->Visit(
+			[this](PathView p) {
+				mDirEntries.emplace_back(Entry{ Path{ p }, true, 0 });
+			},
+			[this, dev](PathView p) {
+				mDirEntries.emplace_back(Entry{ Path{ p }, false, dev->Open(p)->Size() });
+			},
+			mDirPath,
+			false);
 
-		// SetItemCount(mDirEntries.size());
+		SetItemCount(mDirEntries.size());
 
-		// std::fill(mColSortDescending.begin(), mColSortDescending.end(), false);
-		// SortContents(NameCol, true);
+		std::fill(mColSortDescending.begin(), mColSortDescending.end(), false);
+		SortContents(NameCol, true);
 
-		// Thaw();
+		Thaw();
 	}
 
 	void DirectoryContentsListCtrl::SortContents(long column, bool ascending)
 	{
-		(void)column;
-		(void)ascending;
+		static const auto typeToOrder = [](bool isDirectory) -> int {
+			// priority so directories appear before files by default
+			return isDirectory ? 0 : 1;
+		};
+		static const auto sortByNameAscending = [](std::vector<Entry>& dirEntries) {
+			std::stable_sort(
+				dirEntries.begin(),
+				dirEntries.end(),
+				[](const Entry& a, const Entry& b) { return a.Path.Name() < b.Path.Name(); });
+		};
+		static const auto sortByNameDescending = [](std::vector<Entry>& dirEntries) {
+			std::stable_sort(
+				dirEntries.begin(),
+				dirEntries.end(),
+				[](const Entry& a, const Entry& b) { return a.Path.Name() > b.Path.Name(); });
+		};
+		static const auto sortByTypeAscending = [](std::vector<Entry>& dirEntries) {
+			std::stable_sort(dirEntries.begin(),
+							 dirEntries.end(),
+							 [](const Entry& a, const Entry& b) {
+								 return typeToOrder(a.IsDirectory) < typeToOrder(b.IsDirectory);
+							 });
+		};
+		static const auto sortByTypeDescending = [](std::vector<Entry>& dirEntries) {
+			std::stable_sort(dirEntries.begin(),
+							 dirEntries.end(),
+							 [](const Entry& a, const Entry& b) {
+								 return typeToOrder(a.IsDirectory) > typeToOrder(b.IsDirectory);
+							 });
+		};
+		static const auto sortBySizeAscending = [](std::vector<Entry>& dirEntries) {
+			std::stable_sort(dirEntries.begin(),
+							 dirEntries.end(),
+							 [](const Entry& a, const Entry& b) { return a.Size < b.Size; });
+		};
+		static const auto sortBySizeDescending = [](std::vector<Entry>& dirEntries) {
+			std::stable_sort(dirEntries.begin(),
+							 dirEntries.end(),
+							 [](const Entry& a, const Entry& b) { return a.Size > b.Size; });
+		};
 
-		// TODO: DirectoryContentsListCtrl::SortContents
-		// static const auto typeToOrder = [](EDirectoryEntryType type) -> int {
-		//	// get the priority for each entry type
-		//	switch (type)
-		//	{
-		//	case EDirectoryEntryType::Directory: return 0;
-		//	case EDirectoryEntryType::Collection: return 1;
-		//	default:
-		//	case EDirectoryEntryType::File: return 2;
-		//	}
-		//};
-		// static const auto sortByNameAscending = [](std::vector<SDirectoryEntry>& dirEntries) {
-		//	std::stable_sort(dirEntries.begin(),
-		//					 dirEntries.end(),
-		//					 [](const SDirectoryEntry& a, const SDirectoryEntry& b) {
-		//						 return a.Path.Name() < b.Path.Name();
-		//					 });
-		//};
-		// static const auto sortByNameDescending = [](std::vector<SDirectoryEntry>& dirEntries) {
-		//	std::stable_sort(dirEntries.begin(),
-		//					 dirEntries.end(),
-		//					 [](const SDirectoryEntry& a, const SDirectoryEntry& b) {
-		//						 return a.Path.Name() > b.Path.Name();
-		//					 });
-		//};
-		// static const auto sortByTypeAscending = [](std::vector<SDirectoryEntry>& dirEntries) {
-		//	std::stable_sort(dirEntries.begin(),
-		//					 dirEntries.end(),
-		//					 [](const SDirectoryEntry& a, const SDirectoryEntry& b) {
-		//						 return typeToOrder(a.Type) < typeToOrder(b.Type);
-		//					 });
-		//};
-		// static const auto sortByTypeDescending = [](std::vector<SDirectoryEntry>& dirEntries) {
-		//	std::stable_sort(dirEntries.begin(),
-		//					 dirEntries.end(),
-		//					 [](const SDirectoryEntry& a, const SDirectoryEntry& b) {
-		//						 return typeToOrder(a.Type) > typeToOrder(b.Type);
-		//					 });
-		//};
-		// static const auto sortBySizeAscending = [](std::vector<SDirectoryEntry>& dirEntries) {
-		//	std::stable_sort(
-		//		dirEntries.begin(),
-		//		dirEntries.end(),
-		//		[](const SDirectoryEntry& a, const SDirectoryEntry& b) {
-		//			auto* fs = wxGetApp().FileSystem();
-		//			const SPathView pathA = a.Path;
-		//			const SPathView pathB = b.Path;
-		//			const FileStreamSize sizeA =
-		//				a.Type == EDirectoryEntryType::File ?
-		//					fs->FileSize(pathA) :
-		//					a.Type == EDirectoryEntryType::Collection ?
-		//					fs->FileSize(pathA.String().substr(0, pathA.String().size() - 1)) :
-		//					0;
-		//			const FileStreamSize sizeB =
-		//				b.Type == EDirectoryEntryType::File ?
-		//					fs->FileSize(pathB) :
-		//					b.Type == EDirectoryEntryType::Collection ?
-		//					fs->FileSize(pathB.String().substr(0, pathB.String().size() - 1)) :
-		//					0;
+		switch (column)
+		{
+		case NameCol:
+		{
+			ascending ? sortByNameAscending(mDirEntries) : sortByNameDescending(mDirEntries);
 
-		//			return sizeA < sizeB;
-		//		});
-		//};
-		// static const auto sortBySizeDescending = [](std::vector<SDirectoryEntry>& dirEntries) {
-		//	std::stable_sort(
-		//		dirEntries.begin(),
-		//		dirEntries.end(),
-		//		[](const SDirectoryEntry& a, const SDirectoryEntry& b) {
-		//			auto* fs = wxGetApp().FileSystem();
-		//			const SPathView pathA = a.Path;
-		//			const SPathView pathB = b.Path;
-		//			const FileStreamSize sizeA =
-		//				a.Type == EDirectoryEntryType::File ?
-		//					fs->FileSize(pathA) :
-		//					a.Type == EDirectoryEntryType::Collection ?
-		//					fs->FileSize(pathA.String().substr(0, pathA.String().size() - 1)) :
-		//					0;
-		//			const FileStreamSize sizeB =
-		//				b.Type == EDirectoryEntryType::File ?
-		//					fs->FileSize(pathB) :
-		//					b.Type == EDirectoryEntryType::Collection ?
-		//					fs->FileSize(pathB.String().substr(0, pathB.String().size() - 1)) :
-		//					0;
+			sortByTypeAscending(mDirEntries);
+			break;
+		}
+		case TypeCol:
+		{
+			sortByNameAscending(mDirEntries);
 
-		//			return sizeA > sizeB;
-		//		});
-		//};
+			ascending ? sortByTypeAscending(mDirEntries) : sortByTypeDescending(mDirEntries);
+			break;
+		}
+		case SizeCol:
+		{
+			ascending ? sortBySizeAscending(mDirEntries) : sortBySizeDescending(mDirEntries);
 
-		// switch (column)
-		//{
-		// case NameCol:
-		//{
-		//	ascending ? sortByNameAscending(mDirEntries) : sortByNameDescending(mDirEntries);
+			ascending ? sortByTypeAscending(mDirEntries) : sortByTypeDescending(mDirEntries);
+			break;
+		}
+		default: Expects(false);
+		}
 
-		//	sortByTypeAscending(mDirEntries);
-		//	break;
-		//}
-		// case TypeCol:
-		//{
-		//	sortByNameAscending(mDirEntries);
-
-		//	ascending ? sortByTypeAscending(mDirEntries) : sortByTypeDescending(mDirEntries);
-		//	break;
-		//}
-		// case SizeCol:
-		//{
-		//	ascending ? sortBySizeAscending(mDirEntries) : sortBySizeDescending(mDirEntries);
-
-		//	ascending ? sortByTypeAscending(mDirEntries) : sortByTypeDescending(mDirEntries);
-		//	break;
-		//}
-		// default: Expects(false);
-		//}
-
-		// RefreshItems(0, mDirEntries.size() - 1);
+		RefreshItems(0, mDirEntries.size() - 1);
 	}
 
 	wxDataObject* DirectoryContentsListCtrl::CreateSelectedFilesDataObject() const
 	{
 		wxLogDebug(__FUNCTION__);
-		return nullptr;
 
-		// TODO: DirectoryContentsListCtrl::CreateSelectedFilesDataObject
-		// std::vector<const SDirectoryEntry*> entries{};
-		// long item = -1;
-		// while ((item = GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED)) != wxNOT_FOUND)
-		//{
-		//	wxLogDebug("> '%s'", GetItemText(item));
-		//	const SDirectoryEntry* entry = &mDirEntries[item];
-		//	if (entry && entry->Type == EDirectoryEntryType::File)
-		//	{
-		//		entries.push_back(entry);
-		//	}
-		//}
+		std::vector<const Entry*> selected{};
+		long item = -1;
+		while ((item = GetNextItem(item, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED)) != wxNOT_FOUND)
+		{
+			wxLogDebug("> '%s'", GetItemText(item));
+			const Entry* entry = &mDirEntries[item];
+			if (entry && &entry->IsDirectory)
+			{
+				selected.push_back(entry);
+			}
+		}
 
-		// if (entries.size() == 0)
-		//{
-		//	return nullptr;
-		//}
+		if (selected.size() == 0)
+		{
+			return nullptr;
+		}
 
-		// auto* fs = wxGetApp().FileSystem();
-		//// get device based on the path of the first selected item because all selected items
-		/// should / have the same device since they are in the same directory
-		// IDevice* device = fs->FindDevice(entries[0]->Path);
-		// if (device == fs->FindDevice("/"))
+		Device& dev = *wxGetApp().RootDevice();
+		// get device based on the path of the first selected item because all selected items should
+		// have the same device since they are in the same directory
+
+		// if physical files selected
 		//{
 		//	wxFileDataObject* dataObj = new wxFileDataObject;
 		//	const std::filesystem::path& rootPath =
 		//		reinterpret_cast<noire::fs::CNativeDevice*>(device)->RootDirectory();
-		//	for (const SDirectoryEntry* e : entries)
+		//	for (const Entry* e : selected)
 		//	{
 		//		PathView relPath = e->Path.RelativeTo("/");
 		//		std::filesystem::path fullPath = rootPath / relPath.String();
@@ -448,15 +381,15 @@ wxEND_EVENT_TABLE();
 		//	return dataObj;
 		//}
 		// else
-		//{
-		//	std::vector<PathView> paths{};
-		//	paths.reserve(entries.size());
-		//	std::transform(entries.begin(),
-		//				   entries.end(),
-		//				   std::back_inserter(paths),
-		//				   [](const SDirectoryEntry* e) { return SPathView{ e->Path }; });
+		{
+			std::vector<PathView> paths{};
+			paths.reserve(selected.size());
+			std::transform(selected.begin(),
+						   selected.end(),
+						   std::back_inserter(paths),
+						   [](const Entry* e) { return PathView{ e->Path }; });
 
-		//	return new VirtualFileDataObject{ fs, paths };
-		//}
+			return new VirtualFileDataObject{ dev, paths };
+		}
 	}
 }
