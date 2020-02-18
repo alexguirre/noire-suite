@@ -22,6 +22,8 @@ namespace noire
 		virtual u64 Size();
 
 		bool IsLoaded() const { return mIsLoaded; }
+		// TODO: File's input stream shouldn't be public, required for now by CComFileStream from
+		// file-explorer
 		std::shared_ptr<Stream> Input() { return mInput; }
 
 	protected:

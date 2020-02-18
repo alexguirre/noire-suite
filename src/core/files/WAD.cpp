@@ -122,6 +122,8 @@ namespace noire
 
 	void WAD::Save(Stream& s)
 	{
+		// TODO: just copy input stream to s if the file has not been changed
+
 		FixUpOffsets();
 
 		Ensures(IsSorted());
