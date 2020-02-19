@@ -20,6 +20,8 @@ file(GLOB CORE_SOURCES
     "files/RawFile.h"
     "files/WAD.cpp"
     "files/WAD.h"
+    "streams/BufferedStream.cpp"
+    "streams/BufferedStream.h"
     "streams/FileStream.cpp"
     "streams/FileStream.h"
     "streams/MemoryStream.cpp"
