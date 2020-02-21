@@ -33,8 +33,7 @@ namespace noire
 	class WAD final : public File, public Device
 	{
 	public:
-		explicit WAD();
-		WAD(std::shared_ptr<Stream> input);
+		WAD(Device& parent, PathView path);
 
 		bool Exists(PathView path) const override;
 		std::shared_ptr<File> Open(PathView path) override;
@@ -44,6 +43,7 @@ namespace noire
 				   DeviceVisitCallback visitFile,
 				   PathView path,
 				   bool recursive) override;
+		std::shared_ptr<ReadOnlyStream> OpenStream(PathView path) override;
 
 	protected:
 		void LoadImpl() override;
@@ -54,6 +54,7 @@ namespace noire
 
 		size GetEntryIndex(PathView path) const;
 		size GetEntryIndex(size pathHash) const;
+		const WADEntry& GetEntry(PathView path) const;
 		const WADEntry& GetEntry(size pathHash) const;
 		const std::vector<WADEntry>& GetEntries() const { return mEntries; }
 

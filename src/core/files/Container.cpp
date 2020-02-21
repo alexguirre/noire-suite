@@ -8,9 +8,7 @@
 
 namespace noire
 {
-	Container::Container() : File(nullptr) {}
-
-	Container::Container(std::shared_ptr<Stream> input) : File(input) {}
+	Container::Container(Device& parent, PathView path) : File(parent, path) {}
 
 	// Device implementation (TODO)
 	bool Container::Exists(PathView path) const
@@ -52,6 +50,15 @@ namespace noire
 		mVFS.Visit(visitDirectory, visitFile, path, recursive);
 	}
 
+	std::shared_ptr<ReadOnlyStream> Container::OpenStream(PathView path)
+	{
+		const ContainerEntry& e = GetEntry(path);
+		const bool newEntry = e.Offset() == 0 && e.Size() == 0;
+		return std::make_shared<ReadOnlyStream>(
+			newEntry ? std::static_pointer_cast<Stream>(std::make_shared<EmptyStream>()) :
+					   std::make_shared<SubStream>(Input(), e.Offset(), e.Size()));
+	}
+
 	// File implementation
 	void Container::LoadImpl()
 	{
@@ -87,11 +94,12 @@ namespace noire
 			const u32 unk4 = s.Read<u32>();
 
 			ContainerEntry& e = mEntries.emplace_back(nameHash, unk1, unk2, unk3, unk4);
-			e.File =
-				File::NewFromStream(std::make_shared<SubStream>(Input(), e.Offset(), e.Size()));
 
-			mVFS.RegisterExistingFile(Path::Root / HashLookup::Instance().TryGetString(nameHash),
-									  nameHash);
+			Path filePath = Path::Root / HashLookup::Instance().TryGetString(nameHash);
+			mVFS.RegisterExistingFile(filePath, nameHash);
+
+			SubStream entryStream{ Input(), e.Offset(), e.Size() };
+			e.File = File::New(*this, filePath, File::FindTypeOfStream(entryStream));
 		}
 	}
 
@@ -165,9 +173,9 @@ namespace noire
 		return mEntries[index];
 	}
 
-	static bool Validator(std::shared_ptr<Stream> input)
+	static bool Validator(Stream& input)
 	{
-		const u64 size = input->Size();
+		const u64 size = input.Size();
 		if (size < 12) // min required bytes
 		{
 			return false;
@@ -179,9 +187,9 @@ namespace noire
 			return false;
 		}
 
-		input->Seek(pos, StreamSeekOrigin::Begin);
+		input.Seek(pos, StreamSeekOrigin::Begin);
 
-		const u32 entriesOffset = input->Read<u32>();
+		const u32 entriesOffset = input.Read<u32>();
 		const i64 entriesPos = size - entriesOffset;
 		if (entriesPos < 0 ||
 			entriesPos + 4 >=
@@ -190,24 +198,21 @@ namespace noire
 			return false;
 		}
 
-		input->Seek(entriesPos, StreamSeekOrigin::Begin);
+		input.Seek(entriesPos, StreamSeekOrigin::Begin);
 
-		const u32 magic = input->Read<u32>();
+		const u32 magic = input.Read<u32>();
 		return magic == Container::EntriesHeaderMagic;
 	}
 
-	static std::shared_ptr<File> Creator(std::shared_ptr<Stream> input)
+	static std::shared_ptr<File> Creator(Device& parent, PathView path)
 	{
-		return std::make_shared<Container>(input);
+		return std::make_shared<Container>(parent, path);
 	}
-
-	static std::shared_ptr<File> CreatorEmpty() { return std::make_shared<Container>(); }
 
 	const File::Type Container::Type{ std::hash<std::string_view>{}("Container"),
 									  2,
 									  &Validator,
-									  &Creator,
-									  &CreatorEmpty };
+									  &Creator };
 }
 
 TEST_SUITE("Container")

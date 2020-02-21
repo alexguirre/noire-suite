@@ -8,10 +8,9 @@ namespace noire
 	class RawFile : public File
 	{
 	public:
-		RawFile();
-		RawFile(std::shared_ptr<Stream> input);
+		RawFile(Device& parent, PathView path);
 
-		Stream& Stream();
+		std::shared_ptr<Stream> Stream();
 
 	public:
 		static const Type Type;

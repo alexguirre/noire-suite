@@ -46,6 +46,13 @@ namespace noire
 		}
 	}
 
+	std::shared_ptr<ReadOnlyStream> MultiDevice::OpenStream(PathView path)
+	{
+		PathView relPath;
+		Device* d = GetDevice(path, &relPath);
+		return d ? d->OpenStream(relPath) : nullptr;
+	}
+
 	void MultiDevice::Mount(PathView path, std::unique_ptr<Device> device)
 	{
 		Expects(std::find_if(mMounts.begin(), mMounts.end(), [path](const MountPoint& m) {
