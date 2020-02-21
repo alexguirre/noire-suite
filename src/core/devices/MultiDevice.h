@@ -20,8 +20,6 @@ namespace noire
 			}
 		};
 
-		virtual ~MultiDevice() = default;
-
 		bool Exists(PathView path) const override;
 		std::shared_ptr<File> Open(PathView path) override;
 		std::shared_ptr<File> Create(PathView path, size fileTypeId) override;
@@ -30,7 +28,7 @@ namespace noire
 				   DeviceVisitCallback visitFile,
 				   PathView path,
 				   bool recursive) override;
-		virtual std::shared_ptr<ReadOnlyStream> OpenStream(PathView path) override;
+		std::shared_ptr<ReadOnlyStream> OpenStream(PathView path) override;
 
 	public:
 		void Mount(PathView path, std::unique_ptr<Device> device);

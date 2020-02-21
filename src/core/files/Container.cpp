@@ -215,49 +215,49 @@ namespace noire
 									  &Creator };
 }
 
-TEST_SUITE("Container")
-{
-	using namespace noire;
-
-	TEST_CASE("Load" * doctest::skip(true))
-	{
-		std::shared_ptr<Stream> input = std::make_shared<FileStream>(
-			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\vehicles.big.pc");
-
-		Container c{ input };
-		c.Load();
-
-		c.Visit([](PathView path) { std::cout << "Visiting '" << path.String() << "':\n"; },
-				[&c](PathView path) {
-					const ContainerEntry& e = c.GetEntry(path);
-
-					std::array<char, 512> buffer;
-					std::snprintf(
-						buffer.data(),
-						buffer.size(),
-						"\tHash:%08X Unk1:%08X Unk2:%08X Unk3:%08X Unk4:%08X Offset:%016I64X "
-						"Size:%016I64X\t",
-						e.NameHash,
-						e.Unk1,
-						e.Unk2,
-						e.Unk3,
-						e.Unk4,
-						e.Offset(),
-						e.Size());
-					std::cout << buffer.data() << '"' << path.String() << '"' << std::endl;
-				},
-				PathView::Root,
-				true);
-
-		std::cout << "input:  " << input->Size() << std::endl;
-		std::cout << "size(): " << c.Size() << std::endl;
-
-		// CHECK_EQ(input->Size(), c.Size()); // NOTE: Container::Size() doesn't work properly yet
-
-		// std::shared_ptr<Stream> output = std::make_shared<FileStream>(
-		//	"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\vehicles_copy.big.pc");
-
-		// c.Save(*output);
-		// CHECK_EQ(c.Size(), output->Size());
-	}
-}
+// TEST_SUITE("Container")
+//{
+//	using namespace noire;
+//
+//	TEST_CASE("Load" * doctest::skip(true))
+//	{
+//		std::shared_ptr<Stream> input = std::make_shared<FileStream>(
+//			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\vehicles.big.pc");
+//
+//		Container c{ input };
+//		c.Load();
+//
+//		c.Visit([](PathView path) { std::cout << "Visiting '" << path.String() << "':\n"; },
+//				[&c](PathView path) {
+//					const ContainerEntry& e = c.GetEntry(path);
+//
+//					std::array<char, 512> buffer;
+//					std::snprintf(
+//						buffer.data(),
+//						buffer.size(),
+//						"\tHash:%08X Unk1:%08X Unk2:%08X Unk3:%08X Unk4:%08X Offset:%016I64X "
+//						"Size:%016I64X\t",
+//						e.NameHash,
+//						e.Unk1,
+//						e.Unk2,
+//						e.Unk3,
+//						e.Unk4,
+//						e.Offset(),
+//						e.Size());
+//					std::cout << buffer.data() << '"' << path.String() << '"' << std::endl;
+//				},
+//				PathView::Root,
+//				true);
+//
+//		std::cout << "input:  " << input->Size() << std::endl;
+//		std::cout << "size(): " << c.Size() << std::endl;
+//
+//		// CHECK_EQ(input->Size(), c.Size()); // NOTE: Container::Size() doesn't work properly yet
+//
+//		// std::shared_ptr<Stream> output = std::make_shared<FileStream>(
+//		//	"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\vehicles_copy.big.pc");
+//
+//		// c.Save(*output);
+//		// CHECK_EQ(c.Size(), output->Size());
+//	}
+//}

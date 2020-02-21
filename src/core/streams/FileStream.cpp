@@ -7,15 +7,15 @@
 
 namespace noire
 {
-	FileStream::FileStream(const std::filesystem::path& path)
-		: mHandle{ CreateFileW(path.native().c_str(),
+	FileStream::FileStream(std::filesystem::path path)
+		: mPath{ std::move(path) },
+		  mHandle{ CreateFileW(mPath.native().c_str(),
 							   FILE_GENERIC_READ | FILE_GENERIC_WRITE,
 							   FILE_SHARE_READ,
 							   nullptr,
 							   OPEN_ALWAYS,
 							   FILE_ATTRIBUTE_NORMAL,
-							   nullptr) },
-		  mPath{ path }
+							   nullptr) }
 	{
 		Ensures(mHandle != INVALID_HANDLE_VALUE);
 	}

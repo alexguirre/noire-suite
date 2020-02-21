@@ -1,0 +1,32 @@
+#pragma once
+#include "Device.h"
+#include "Path.h"
+#include <filesystem>
+#include <memory>
+#include <vector>
+
+namespace noire
+{
+	class LocalDevice : public Device
+	{
+	public:
+		LocalDevice(const std::filesystem::path& rootPath);
+
+		bool Exists(PathView path) const override;
+		std::shared_ptr<File> Open(PathView path) override;
+		std::shared_ptr<File> Create(PathView path, size fileTypeId) override;
+		bool Delete(PathView path) override;
+		void Visit(DeviceVisitCallback visitDirectory,
+				   DeviceVisitCallback visitFile,
+				   PathView path,
+				   bool recursive) override;
+		std::shared_ptr<ReadOnlyStream> OpenStream(PathView path) override;
+
+		inline const std::filesystem::path& RootPath() const { return mRootPath; }
+
+	private:
+		std::filesystem::path FullPath(PathView path) const;
+
+		std::filesystem::path mRootPath;
+	};
+}
