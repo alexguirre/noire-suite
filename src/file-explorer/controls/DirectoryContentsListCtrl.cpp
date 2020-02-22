@@ -130,6 +130,22 @@ wxEND_EVENT_TABLE();
 		{
 			SetDirectory(entry.Path);
 		}
+		else if (entry.IsDevice)
+		{
+			const Path p = entry.Path + Path::DirectorySeparator;
+			if (MultiDevice* dev = wxGetApp().RootDevice(); !dev->Exists(p))
+			{
+				std::shared_ptr f = dev->Open(entry.Path);
+				if (!f->IsLoaded())
+				{
+					f->Load();
+				}
+
+				dev->Mount(p, std::dynamic_pointer_cast<Device>(f));
+			}
+
+			SetDirectory(p);
+		}
 		else
 		{
 			wxGetApp().OpenFile(entry.Path);
@@ -201,7 +217,8 @@ wxEND_EVENT_TABLE();
 	int DirectoryContentsListCtrl::OnGetItemImage(long item) const
 	{
 		const Entry& e = mDirEntries[item];
-		return e.IsDirectory ? Images::IconFolder : Images::IconBlankFile;
+		return e.IsDirectory ? Images::IconFolder :
+							   (e.IsDevice ? Images::IconBlueFolder : Images::IconBlankFile);
 	}
 
 	void DirectoryContentsListCtrl::OnColClick(wxListEvent& e)
@@ -252,10 +269,12 @@ wxEND_EVENT_TABLE();
 		mDirEntries.clear();
 		dev->Visit(
 			[this](PathView p) {
-				mDirEntries.emplace_back(Entry{ Path{ p }, true, 0 });
+				mDirEntries.emplace_back(Entry{ Path{ p }, true, false, 0 });
 			},
 			[this, dev](PathView p) {
-				mDirEntries.emplace_back(Entry{ Path{ p }, false, dev->Open(p)->Size() });
+				std::shared_ptr f = dev->Open(p);
+				const bool isDevice = std::dynamic_pointer_cast<Device>(f) != nullptr;
+				mDirEntries.emplace_back(Entry{ Path{ p }, false, isDevice, f->Size() });
 			},
 			mDirPath,
 			false);
@@ -270,9 +289,9 @@ wxEND_EVENT_TABLE();
 
 	void DirectoryContentsListCtrl::SortContents(long column, bool ascending)
 	{
-		static const auto typeToOrder = [](bool isDirectory) -> int {
+		static const auto typeToOrder = [](bool isDirectory, bool isDevice) -> int {
 			// priority so directories appear before files by default
-			return isDirectory ? 0 : 1;
+			return isDirectory ? 0 : (isDevice ? 1 : 2);
 		};
 		static const auto sortByNameAscending = [](std::vector<Entry>& dirEntries) {
 			std::stable_sort(
@@ -290,14 +309,16 @@ wxEND_EVENT_TABLE();
 			std::stable_sort(dirEntries.begin(),
 							 dirEntries.end(),
 							 [](const Entry& a, const Entry& b) {
-								 return typeToOrder(a.IsDirectory) < typeToOrder(b.IsDirectory);
+								 return typeToOrder(a.IsDirectory, a.IsDevice) <
+										typeToOrder(b.IsDirectory, a.IsDevice);
 							 });
 		};
 		static const auto sortByTypeDescending = [](std::vector<Entry>& dirEntries) {
 			std::stable_sort(dirEntries.begin(),
 							 dirEntries.end(),
 							 [](const Entry& a, const Entry& b) {
-								 return typeToOrder(a.IsDirectory) > typeToOrder(b.IsDirectory);
+								 return typeToOrder(a.IsDirectory, a.IsDevice) >
+										typeToOrder(b.IsDirectory, a.IsDevice);
 							 });
 		};
 		static const auto sortBySizeAscending = [](std::vector<Entry>& dirEntries) {
@@ -350,7 +371,7 @@ wxEND_EVENT_TABLE();
 		{
 			wxLogDebug("> '%s'", GetItemText(item));
 			const Entry* entry = &mDirEntries[item];
-			if (entry && &entry->IsDirectory)
+			if (entry && !entry->IsDirectory)
 			{
 				selected.push_back(entry);
 			}

@@ -5,8 +5,8 @@
 #include "windows/ShaderProgramWindow.h"
 #include <IL/il.h>
 #include <core/Common.h>
+#include <core/devices/LocalDevice.h>
 #include <core/files/RawFile.h>
-#include <core/files/WAD.h>
 #include <core/streams/FileStream.h>
 #include <processthreadsapi.h>
 #include <thread>
@@ -46,11 +46,7 @@ namespace noire::explorer
 
 			std::unique_ptr d = std::make_unique<MultiDevice>();
 
-			const std::filesystem::path wadPath =
-				"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out.wad.pc";
-			std::unique_ptr wad = std::make_unique<WAD>(std::make_shared<FileStream>(wadPath));
-			wad->Load();
-			d->Mount(PathView::Root, std::move(wad));
+			d->Mount(PathView::Root, std::make_shared<LocalDevice>(path));
 
 			mRootDevice = std::move(d);
 			wxQueueEvent(this, new wxThreadEvent(EVT_FILE_SYSTEM_SCAN_COMPLETED));
@@ -116,19 +112,19 @@ namespace noire::explorer
 			return false;
 		}
 
-		Stream& s = file->Stream();
-		s.Seek(0, StreamSeekOrigin::Begin);
+		std::shared_ptr<Stream> s = file->Stream();
+		s->Seek(0, StreamSeekOrigin::Begin);
 
 		constexpr u32 DDSHeaderMagic{ 0x20534444 }; // 'DDS '
-		const u32 headerMagic = s.Read<u32>();
+		const u32 headerMagic = s->Read<u32>();
 
 		if (headerMagic == DDSHeaderMagic)
 		{
-			const size ddsSize = gsl::narrow<size>(s.Size());
+			const size ddsSize = gsl::narrow<size>(s->Size());
 
 			std::unique_ptr buffer = std::make_unique<byte[]>(ddsSize);
-			s.Seek(0, StreamSeekOrigin::Begin);
-			s.Read(buffer.get(), ddsSize);
+			s->Seek(0, StreamSeekOrigin::Begin);
+			s->Read(buffer.get(), ddsSize);
 
 			const wxImage img = CreateImageFromDDS({ buffer.get(), gsl::narrow<ptrdiff>(ddsSize) });
 			ImageWindow* imgWin =
