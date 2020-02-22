@@ -1,6 +1,7 @@
 #include "WAD.h"
 #include "Hash.h"
 #include "RawFile.h"
+#include "devices/LocalDevice.h"
 #include "streams/FileStream.h"
 #include "streams/Stream.h"
 #include <algorithm>
@@ -70,17 +71,17 @@ namespace noire
 	std::shared_ptr<ReadOnlyStream> WAD::OpenStream(PathView path)
 	{
 		const WADEntry& e = GetEntry(path);
-		const bool newEntry = e.Offset == 0 && e.Size == 0;
+		const bool emptyEntry = e.Size == 0;
 		return std::make_shared<ReadOnlyStream>(
-			newEntry ? std::static_pointer_cast<Stream>(std::make_shared<EmptyStream>()) :
-					   std::make_shared<SubStream>(Input(), e.Offset, e.Size));
+			emptyEntry ? std::static_pointer_cast<Stream>(std::make_shared<EmptyStream>()) :
+						 std::make_shared<SubStream>(Input(), e.Offset, e.Size));
 	}
 
 	// File implementation
 	void WAD::LoadImpl()
 	{
 		std::shared_ptr stream = Input();
-		if (!stream)
+		if (!stream || stream->Size() == 0)
 		{
 			return;
 		}
@@ -271,151 +272,152 @@ namespace noire
 	const File::Type WAD::Type{ std::hash<std::string_view>{}("WAD"), 1, &Validator, &Creator };
 }
 
-// TEST_SUITE("WAD")
-//{
-//	using namespace noire;
-//
-//	TEST_CASE("Load/Save" * doctest::skip(true))
-//	{
-//		std::shared_ptr<Stream> input = std::make_shared<FileStream>(
-//			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out.wad.pc");
-//
-//		WAD w{ input };
-//		w.Load();
-//
-//		std::shared_ptr<Stream> output = std::make_shared<FileStream>(
-//			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out_copy.wad.pc");
-//
-//		w.Save(*output);
-//		CHECK_EQ(w.Size(), output->Size());
-//	}
-//
-//	TEST_CASE("Load/Delete/Create/Save" * doctest::skip(true))
-//	{
-//		std::shared_ptr<Stream> input = std::make_shared<FileStream>(
-//			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out.wad.pc");
-//
-//		WAD w{ input };
-//		w.Load();
-//
-//		CHECK(w.Exists("/out/graphicsdata/"));
-//		CHECK(w.Exists("/out/graphicsdata/programs.vfp.dx11"));
-//		CHECK(w.Exists("/out/trunk/models/la/environment/weather/"));
-//		CHECK(w.Exists("/out/trunk/models/la/environment/weather/sky.trunk.pc"));
-//
-//		w.Delete("/out/graphicsdata/programs.vfp.dx11");
-//
-//		CHECK_FALSE(w.Exists("/out/graphicsdata/programs.vfp.dx11"));
-//		CHECK(w.Exists("/out/trunk/models/la/environment/weather/sky.trunk.pc"));
-//
-//		w.Delete("/out/trunk/models/la/environment/weather/sky.trunk.pc");
-//
-//		CHECK_FALSE(w.Exists("/out/graphicsdata/programs.vfp.dx11"));
-//		CHECK_FALSE(w.Exists("/out/trunk/models/la/environment/weather/sky.trunk.pc"));
-//
-//		CHECK_FALSE(w.Exists("/out/my_custom_file.wad.pc"));
-//		auto c1 =
-//			std::static_pointer_cast<WAD>(w.Create("/out/my_custom_file.wad.pc", WAD::Type.Id));
-//		auto c11 = std::static_pointer_cast<WAD>(c1->Create("/other.wad.pc", WAD::Type.Id));
-//		auto r111 = std::static_pointer_cast<RawFile>(c11->Create("/raw.bin", RawFile::Type.Id));
-//		{
-//			auto r111S = r111->Stream();
-//			for (u32 n = 0; n < 256; ++n)
-//			{
-//				r111S->Write(n);
-//			}
-//		}
-//		auto r1 = std::static_pointer_cast<RawFile>(w.Create("/raw.bin", RawFile::Type.Id));
-//		{
-//			auto r1S = r1->Stream();
-//			for (u32 n = 0; n < 256; ++n)
-//			{
-//				r1S->Write(n);
-//			}
-//		}
-//
-//		CHECK(w.Exists("/out/my_custom_file.wad.pc"));
-//
-//		std::shared_ptr<Stream> output = std::make_shared<FileStream>(
-//			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out_modified.wad.pc");
-//
-//		w.Save(*output);
-//		CHECK_EQ(w.Size(), output->Size());
-//	}
-//
-//	TEST_CASE("Create new" * doctest::skip(true))
-//	{
-//		std::shared_ptr<Stream> output = std::make_shared<FileStream>(
-//			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\custom.wad.pc");
-//		{
-//			WAD w{};
-//
-//			w.Load();
-//
-//			auto c1 =
-//				std::static_pointer_cast<WAD>(w.Create("/a/really/deep/file.wad.pc", WAD::Type.Id));
-//			auto c2 =
-//				std::static_pointer_cast<WAD>(w.Create("/wad_with_children.wad.pc", WAD::Type.Id));
-//
-//			auto c21 = std::static_pointer_cast<WAD>(c2->Create("/inner1.wad.pc", WAD::Type.Id));
-//			auto c22 = std::static_pointer_cast<WAD>(c2->Create("/inner2.wad.pc", WAD::Type.Id));
-//
-//			auto c211 =
-//				std::static_pointer_cast<WAD>(c21->Create("/inner_inner.wad.pc", WAD::Type.Id));
-//			auto c212 = std::static_pointer_cast<WAD>(
-//				c21->Create("/another/folder/inner_inner.wad.pc", WAD::Type.Id));
-//
-//			auto r1 = std::static_pointer_cast<RawFile>(c1->Create("/raw.bin", RawFile::Type.Id));
-//			{
-//				auto r1S = r1->Stream();
-//				for (u32 n = 0; n < 256; ++n)
-//				{
-//					r1S->Write(n);
-//				}
-//			}
-//
-//			w.Save(*output);
-//		}
-//
-//		{
-//			WAD w{ output };
-//			const std::function<void(WAD&, PathView)> traverse = [&traverse](WAD& w,
-//																			 PathView parent) {
-//				w.Load();
-//
-//				for (auto& e : w.GetEntries())
-//				{
-//					const Path fullPath = Path{ parent } / e.Path;
-//					std::cout << "'" << fullPath.String() << "'\n";
-//
-//					if (std::shared_ptr<WAD> c = std::dynamic_pointer_cast<WAD>(e.File))
-//					{
-//						traverse(*c, fullPath);
-//					}
-//				}
-//			};
-//			traverse(w, PathView::Root);
-//		}
-//	}
-//
-//	TEST_CASE("Size" * doctest::skip(true))
-//	{
-//		std::shared_ptr<Stream> input = std::make_shared<FileStream>(
-//			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out.wad.pc");
-//
-//		WAD w{ input };
-//		w.Load();
-//
-//		CHECK_EQ(w.Size(), input->Size());
-//	}
-//
-//	TEST_CASE("Creator/Validator" * doctest::skip(true))
-//	{
-//		std::shared_ptr<Stream> input = std::make_shared<FileStream>(
-//			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out.wad.pc");
-//
-//		CHECK(Validator(input));
-//		CHECK(Creator(input) != nullptr);
-//		CHECK(File::NewFromStream(input, false) != nullptr);
-//	}
-//}
+TEST_SUITE("WAD")
+{
+	using namespace noire;
+
+	TEST_CASE("Load/Save" * doctest::skip(true))
+	{
+		LocalDevice d{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\" };
+		std::shared_ptr wad = std::dynamic_pointer_cast<WAD>(d.Open("/out.wad.pc"));
+		CHECK(wad != nullptr);
+		WAD& w = *wad;
+
+		w.Load();
+
+		std::shared_ptr<Stream> output = std::make_shared<FileStream>(
+			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out_copy.wad.pc");
+
+		w.Save(*output);
+		CHECK_EQ(w.Size(), output->Size());
+	}
+
+	TEST_CASE("Load/Delete/Create/Save" * doctest::skip(true))
+	{
+		LocalDevice d{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\" };
+		std::shared_ptr wad = std::dynamic_pointer_cast<WAD>(d.Open("/out.wad.pc"));
+		CHECK(wad != nullptr);
+		WAD& w = *wad;
+
+		w.Load();
+
+		CHECK(w.Exists("/out/graphicsdata/"));
+		CHECK(w.Exists("/out/graphicsdata/programs.vfp.dx11"));
+		CHECK(w.Exists("/out/trunk/models/la/environment/weather/"));
+		CHECK(w.Exists("/out/trunk/models/la/environment/weather/sky.trunk.pc"));
+
+		w.Delete("/out/graphicsdata/programs.vfp.dx11");
+
+		CHECK_FALSE(w.Exists("/out/graphicsdata/programs.vfp.dx11"));
+		CHECK(w.Exists("/out/trunk/models/la/environment/weather/sky.trunk.pc"));
+
+		w.Delete("/out/trunk/models/la/environment/weather/sky.trunk.pc");
+
+		CHECK_FALSE(w.Exists("/out/graphicsdata/programs.vfp.dx11"));
+		CHECK_FALSE(w.Exists("/out/trunk/models/la/environment/weather/sky.trunk.pc"));
+
+		CHECK_FALSE(w.Exists("/out/my_custom_file.wad.pc"));
+		auto c1 =
+			std::static_pointer_cast<WAD>(w.Create("/out/my_custom_file.wad.pc", WAD::Type.Id));
+		auto c11 = std::static_pointer_cast<WAD>(c1->Create("/other.wad.pc", WAD::Type.Id));
+		auto r111 = std::static_pointer_cast<RawFile>(c11->Create("/raw.bin", RawFile::Type.Id));
+		{
+			auto r111S = r111->Stream();
+			for (u32 n = 0; n < 256; ++n)
+			{
+				r111S->Write(n);
+			}
+		}
+		auto r1 = std::static_pointer_cast<RawFile>(w.Create("/raw.bin", RawFile::Type.Id));
+		{
+			auto r1S = r1->Stream();
+			for (u32 n = 0; n < 256; ++n)
+			{
+				r1S->Write(n);
+			}
+		}
+
+		CHECK(w.Exists("/out/my_custom_file.wad.pc"));
+
+		std::shared_ptr<Stream> output = std::make_shared<FileStream>(
+			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out_modified.wad.pc");
+
+		w.Save(*output);
+		CHECK_EQ(w.Size(), output->Size());
+	}
+
+	TEST_CASE("Create new" * doctest::skip(true))
+	{
+		LocalDevice d{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\" };
+		{
+			d.Delete("/custom.wad.pc");
+
+			std::shared_ptr wad =
+				std::dynamic_pointer_cast<WAD>(d.Create("/custom.wad.pc", WAD::Type.Id));
+			CHECK(wad != nullptr);
+			WAD& w = *wad;
+
+			w.Load();
+
+			auto c1 =
+				std::static_pointer_cast<WAD>(w.Create("/a/really/deep/file.wad.pc", WAD::Type.Id));
+			auto c2 =
+				std::static_pointer_cast<WAD>(w.Create("/wad_with_children.wad.pc", WAD::Type.Id));
+
+			auto c21 = std::static_pointer_cast<WAD>(c2->Create("/inner1.wad.pc", WAD::Type.Id));
+			auto c22 = std::static_pointer_cast<WAD>(c2->Create("/inner2.wad.pc", WAD::Type.Id));
+
+			auto c211 =
+				std::static_pointer_cast<WAD>(c21->Create("/inner_inner.wad.pc", WAD::Type.Id));
+			auto c212 = std::static_pointer_cast<WAD>(
+				c21->Create("/another/folder/inner_inner.wad.pc", WAD::Type.Id));
+
+			auto r1 = std::static_pointer_cast<RawFile>(c1->Create("/raw.bin", RawFile::Type.Id));
+			{
+				auto r1S = r1->Stream();
+				for (u32 n = 0; n < 256; ++n)
+				{
+					r1S->Write(n);
+				}
+			}
+
+			FileStream fs{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\custom.wad.pc" };
+			w.Save(fs);
+		}
+
+		{
+			std::shared_ptr wad = std::dynamic_pointer_cast<WAD>(d.Open("/custom.wad.pc"));
+			CHECK(wad != nullptr);
+			WAD& w = *wad;
+
+			const std::function<void(WAD&, PathView)> traverse = [&traverse](WAD& w,
+																			 PathView parent) {
+				w.Load();
+
+				for (auto& e : w.GetEntries())
+				{
+					const Path fullPath = Path{ parent } / e.Path;
+					std::cout << "'" << fullPath.String() << "'\n";
+
+					if (std::shared_ptr<WAD> c = std::dynamic_pointer_cast<WAD>(e.File))
+					{
+						traverse(*c, fullPath);
+					}
+				}
+			};
+			traverse(w, PathView::Root);
+		}
+	}
+
+	TEST_CASE("Size" * doctest::skip(true))
+	{
+		LocalDevice d{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\" };
+		std::shared_ptr wad = std::dynamic_pointer_cast<WAD>(d.Open("/out.wad.pc"));
+		CHECK(wad != nullptr);
+		WAD& w = *wad;
+
+		w.Load();
+
+		CHECK_EQ(w.Size(), 151'574'057);
+	}
+}

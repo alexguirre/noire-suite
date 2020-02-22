@@ -36,6 +36,7 @@ namespace noire
 		Device& mParent;
 		Path mPath;
 		bool mIsLoaded;
+		std::weak_ptr<ReadOnlyStream> mInput;
 
 	public:
 		struct Type final

@@ -7,7 +7,8 @@
 
 namespace noire
 {
-	File::File(Device& parent, PathView path) : mParent{ parent }, mPath{ path }, mIsLoaded{ false }
+	File::File(Device& parent, PathView path)
+		: mParent{ parent }, mPath{ path }, mIsLoaded{ false }, mInput{}
 	{
 	}
 
@@ -32,7 +33,19 @@ namespace noire
 
 	u64 File::Size() { return Input()->Size(); }
 
-	std::shared_ptr<ReadOnlyStream> File::Input() { return mParent.OpenStream(mPath); }
+	std::shared_ptr<ReadOnlyStream> File::Input()
+	{
+		if (std::shared_ptr p = mInput.lock())
+		{
+			return p;
+		}
+		else
+		{
+			std::shared_ptr s = mParent.OpenStream(mPath);
+			mInput = s;
+			return s;
+		}
+	}
 
 	static auto& FileTypes() // key is Type::Id
 	{

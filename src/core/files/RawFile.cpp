@@ -38,9 +38,22 @@ namespace noire
 		std::optional<TempStream> mOutput;
 	};
 
-	RawFile::RawFile(Device& parent, PathView path) : File(parent, path) {}
+	RawFile::RawFile(Device& parent, PathView path) : File(parent, path), mStream{ nullptr } {}
 
-	std::shared_ptr<Stream> RawFile::Stream() { return std::make_shared<RawFileStream>(Input()); }
+	void RawFile::Save(noire::Stream& output)
+	{
+		if (std::shared_ptr s = Stream())
+		{
+			s->CopyTo(output);
+		}
+	}
+
+	u64 RawFile::Size() { return Stream()->Size(); }
+
+	std::shared_ptr<Stream> RawFile::Stream()
+	{
+		return mStream ? mStream : (mStream = std::make_shared<RawFileStream>(Input()));
+	}
 
 	static bool Validator(Stream&) { return true; }
 

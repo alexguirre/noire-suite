@@ -12,6 +12,12 @@ namespace noire
 
 		std::shared_ptr<Stream> Stream();
 
+		void Save(noire::Stream& output) override;
+		u64 Size() override;
+
+	private:
+		std::shared_ptr<noire::Stream> mStream;
+
 	public:
 		static const Type Type;
 	};

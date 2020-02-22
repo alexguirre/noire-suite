@@ -1,10 +1,12 @@
 #include "LocalDevice.h"
 #include "files/File.h"
+#include "files/RawFile.h"
 #include "files/WAD.h"
 #include "streams/FileStream.h"
 #include <algorithm>
 #include <doctest/doctest.h>
 #include <iostream>
+#include <string>
 
 namespace noire
 {
@@ -40,10 +42,10 @@ namespace noire
 	std::shared_ptr<File> LocalDevice::Create(PathView path, size fileTypeId)
 	{
 		Expects(path.IsFile() && path.IsAbsolute());
-		(void)fileTypeId;
 
-		// TODO: LocalDevice::Create
-		return nullptr;
+		Expects(!fs::exists(FullPath(path)));
+
+		return File::New(*this, path, fileTypeId);
 	}
 
 	bool LocalDevice::Delete(PathView path)
@@ -130,5 +132,27 @@ TEST_SUITE("LocalDevice")
 				 [](PathView p) { std::cout << "\tVisit File:      '" << p.String() << "'\n"; },
 				 "/",
 				 true);
+	}
+
+	TEST_CASE("Create" * doctest::skip(true))
+	{
+		LocalDevice d{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\" };
+		std::shared_ptr f = d.Create("/test/my_custom_file.txt", RawFile::Type.Id);
+		CHECK(f != nullptr);
+		std::shared_ptr r = std::dynamic_pointer_cast<RawFile>(f);
+		CHECK(r != nullptr);
+
+		r->Load();
+
+		const std::string str{ "hello world" };
+		r->Stream()->Write(str.data(), str.size());
+
+		// TODO: implement a Flush in LocalDevice that saves the files automatically?
+		// the LocalDevice should have to keep track of Open/Create'd files to be able to save them
+		// during the flush
+		FileStream fs{
+			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\my_custom_file.txt"
+		};
+		r->Save(fs);
 	}
 }
