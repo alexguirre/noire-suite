@@ -12,10 +12,10 @@ namespace noire
 		struct MountPoint
 		{
 			Path Path;
-			std::unique_ptr<Device> Device;
+			std::shared_ptr<Device> Device;
 
-			inline MountPoint(PathView path, std::unique_ptr<noire::Device> device)
-				: Path{ path }, Device{ std::move(device) }
+			inline MountPoint(PathView path, std::shared_ptr<noire::Device> device)
+				: Path{ path }, Device{ device }
 			{
 			}
 		};
@@ -30,11 +30,12 @@ namespace noire
 				   bool recursive) override;
 		std::shared_ptr<ReadOnlyStream> OpenStream(PathView path) override;
 
-	public:
-		void Mount(PathView path, std::unique_ptr<Device> device);
+		void Mount(PathView path, std::shared_ptr<Device> device);
 		/// Gets the device that contains the specified path or null if none exists.
 		/// 'outRelPath': returns the 'path' relative to the device mount path.
-		Device* GetDevice(PathView path, PathView* outRelPath = nullptr) const;
+		Device* GetDevice(PathView path,
+						  PathView* outRelPath = nullptr,
+						  PathView* outDeviceMountPath = nullptr) const;
 
 	private:
 		std::vector<MountPoint> mMounts;
