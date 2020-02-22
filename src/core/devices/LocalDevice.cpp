@@ -5,6 +5,7 @@
 #include "streams/FileStream.h"
 #include <algorithm>
 #include <doctest/doctest.h>
+#include <functional>
 #include <iostream>
 #include <string>
 
@@ -29,10 +30,22 @@ namespace noire
 	{
 		Expects(path.IsFile() && path.IsAbsolute());
 
-		if (fs::path fullPath = FullPath(path); fs::exists(fullPath))
+		if (Exists(path))
 		{
-			FileStream f{ std::move(fullPath) };
-			return File::New(*this, path, File::FindTypeOfStream(f));
+			const size h = std::hash<PathView>{}(path);
+			std::shared_ptr<File> file{ nullptr };
+			if (auto it = mCachedFiles.find(h); it != mCachedFiles.end())
+			{
+				file = it->second;
+			}
+			else
+			{
+				FileStream f{ FullPath(path) };
+				file = File::New(*this, path, File::FindTypeOfStream(f));
+				mCachedFiles.try_emplace(h, file);
+			}
+
+			return file;
 		}
 		else
 		{
@@ -44,9 +57,11 @@ namespace noire
 	{
 		Expects(path.IsFile() && path.IsAbsolute());
 
-		Expects(!fs::exists(FullPath(path)));
+		Expects(!Exists(path));
 
-		return File::New(*this, path, fileTypeId);
+		std::shared_ptr file = File::New(*this, path, fileTypeId);
+		mCachedFiles.try_emplace(std::hash<PathView>{}(path), file);
+		return file;
 	}
 
 	bool LocalDevice::Delete(PathView path)

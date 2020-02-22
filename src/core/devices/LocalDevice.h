@@ -3,6 +3,7 @@
 #include "Path.h"
 #include <filesystem>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 namespace noire
@@ -28,5 +29,6 @@ namespace noire
 		std::filesystem::path FullPath(PathView path) const;
 
 		std::filesystem::path mRootPath;
+		std::unordered_map<size, std::shared_ptr<File>> mCachedFiles;
 	};
 }
