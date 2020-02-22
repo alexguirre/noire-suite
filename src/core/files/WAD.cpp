@@ -272,6 +272,9 @@ namespace noire
 	const File::Type WAD::Type{ std::hash<std::string_view>{}("WAD"), 1, &Validator, &Creator };
 }
 
+// ifndef because line 'WAD& w = *wad;' gets compiler error 'illegal indirection' when
+// compiling with tests disabled
+#ifndef DOCTEST_CONFIG_DISABLE
 TEST_SUITE("WAD")
 {
 	using namespace noire;
@@ -421,3 +424,4 @@ TEST_SUITE("WAD")
 		CHECK_EQ(w.Size(), 151'574'057);
 	}
 }
+#endif

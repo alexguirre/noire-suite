@@ -217,6 +217,9 @@ namespace noire
 									  &Creator };
 }
 
+// ifndef because line 'Container& c = *cont;' gets compiler error 'illegal indirection' when
+// compiling with tests disabled
+#ifndef DOCTEST_CONFIG_DISABLE
 TEST_SUITE("Container")
 {
 	using namespace noire;
@@ -264,3 +267,4 @@ TEST_SUITE("Container")
 		// CHECK_EQ(c.Size(), output->Size());
 	}
 }
+#endif
