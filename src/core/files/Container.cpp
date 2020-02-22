@@ -221,7 +221,7 @@ TEST_SUITE("Container")
 {
 	using namespace noire;
 
-	TEST_CASE("Load" * doctest::skip(false))
+	TEST_CASE("Load" * doctest::skip(true))
 	{
 		LocalDevice d{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\" };
 		std::shared_ptr cont = std::dynamic_pointer_cast<Container>(d.Open("/vehicles.big.pc"));
