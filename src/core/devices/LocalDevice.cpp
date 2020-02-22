@@ -21,7 +21,8 @@ namespace noire
 	{
 		Expects(path.IsAbsolute());
 
-		return fs::exists(FullPath(path));
+		const fs::path fullPath = FullPath(path);
+		return path.IsDirectory() ? fs::is_directory(fullPath) : fs::is_regular_file(fullPath);
 	}
 
 	std::shared_ptr<File> LocalDevice::Open(PathView path)
