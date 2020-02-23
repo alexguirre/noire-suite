@@ -115,3 +115,6 @@ target_link_libraries(noire-file-explorer PRIVATE
     ${DEVIL_LIBS}
     d3d11.lib
 )
+
+# required for all File::Type's to be linked even if they are not referenced directly
+set_target_properties(noire-file-explorer PROPERTIES LINK_FLAGS "/WHOLEARCHIVE:noire-core.lib")
