@@ -62,6 +62,7 @@ namespace noire::explorer
 		{
 			Path Path;
 			bool IsDirectory;
+			bool IsDevice;
 			u64 Size;
 		};
 

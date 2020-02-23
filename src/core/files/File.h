@@ -1,16 +1,18 @@
 #pragma once
 #include "Common.h"
+#include "Path.h"
 #include <memory>
 
 namespace noire
 {
+	class Device;
 	class Stream;
 	class ReadOnlyStream;
 
 	class File
 	{
 	public:
-		File(std::shared_ptr<Stream> input);
+		File(Device& parent, PathView path);
 
 		virtual ~File() = default;
 
@@ -24,28 +26,25 @@ namespace noire
 		bool IsLoaded() const { return mIsLoaded; }
 		// TODO: File's input stream shouldn't be public, required for now by CComFileStream from
 		// file-explorer
-		std::shared_ptr<Stream> Input() { return mInput; }
+		std::shared_ptr<ReadOnlyStream> Input();
 
 	protected:
 		// default LoadImpl() does nothing
 		virtual void LoadImpl();
 
 	private:
+		Device& mParent;
+		Path mPath;
 		bool mIsLoaded;
-		std::shared_ptr<Stream> mInput;
+		std::weak_ptr<ReadOnlyStream> mInput;
 
 	public:
 		struct Type final
 		{
-			using IsValidFunc = bool (*)(std::shared_ptr<Stream> input);
-			using CreateFunc = std::shared_ptr<File> (*)(std::shared_ptr<Stream> input);
-			using CreateEmptyFunc = std::shared_ptr<File> (*)();
+			using IsValidFunc = bool (*)(Stream& input);
+			using CreateFunc = std::shared_ptr<File> (*)(Device& parent, PathView path);
 
-			Type(size id,
-				 size priority,
-				 IsValidFunc isValidFunc,
-				 CreateFunc createFunc,
-				 CreateEmptyFunc createEmptyFunc);
+			Type(size id, size priority, IsValidFunc isValidFunc, CreateFunc createFunc);
 			~Type();
 
 			Type(const Type&) = delete;
@@ -64,18 +63,13 @@ namespace noire
 			IsValidFunc IsValid;
 
 			// Creates a File instance. Assume IsValid was called before calling this and returned
-			// true. May modify input stream position and initial stream position may not be at the
-			// beginning.
+			// true.
 			CreateFunc Create;
-
-			// Creates an empty File instance.
-			CreateEmptyFunc CreateEmpty;
 		};
 
-		// fallbackToBaseFile: Whether to create File instance if the stream format does not match
-		// any specific file type.
-		static std::shared_ptr<File> NewFromStream(std::shared_ptr<Stream> input,
-												   bool fallbackToBaseFile = true);
-		static std::shared_ptr<File> NewEmpty(size fileTypeId);
+		static constexpr size InvalidTypeId{ static_cast<size>(-1) };
+
+		static size FindTypeOfStream(Stream& input);
+		static std::shared_ptr<File> New(Device& parent, PathView path, size fileTypeId);
 	};
 }

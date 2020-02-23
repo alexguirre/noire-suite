@@ -1,6 +1,7 @@
 #include "WAD.h"
 #include "Hash.h"
 #include "RawFile.h"
+#include "devices/LocalDevice.h"
 #include "streams/FileStream.h"
 #include "streams/Stream.h"
 #include <algorithm>
@@ -11,9 +12,7 @@
 
 namespace noire
 {
-	WAD::WAD() : File(nullptr) {}
-
-	WAD::WAD(std::shared_ptr<Stream> input) : File(input) {}
+	WAD::WAD(Device& parent, PathView path) : File(parent, path) {}
 
 	// Device implementation (TODO)
 	bool WAD::Exists(PathView path) const
@@ -35,7 +34,7 @@ namespace noire
 		Expects(path.IsFile() && path.IsAbsolute());
 
 		WADEntry& newEntry = mEntries.emplace_back();
-		newEntry.File = mVFS.Create(path, fileTypeId, [&newEntry](PathView path) {
+		newEntry.File = mVFS.Create(*this, path, fileTypeId, [&newEntry](PathView path) {
 			// remove first '/', paths in WAD file don't contain it
 			newEntry.Path = path.String().substr(1);
 			newEntry.PathHash = crc32(newEntry.Path);
@@ -69,15 +68,25 @@ namespace noire
 		mVFS.Visit(visitDirectory, visitFile, path, recursive);
 	}
 
+	std::shared_ptr<ReadOnlyStream> WAD::OpenStream(PathView path)
+	{
+		const WADEntry& e = GetEntry(path);
+		const bool emptyEntry = e.Size == 0;
+		return std::make_shared<ReadOnlyStream>(
+			emptyEntry ? std::static_pointer_cast<Stream>(std::make_shared<EmptyStream>()) :
+						 std::make_shared<SubStream>(Input(), e.Offset, e.Size));
+	}
+
 	// File implementation
 	void WAD::LoadImpl()
 	{
-		if (!Input())
+		std::shared_ptr stream = Input();
+		if (!stream || stream->Size() == 0)
 		{
 			return;
 		}
 
-		Stream& s = *Input();
+		Stream& s = *stream;
 
 		s.Seek(0, StreamSeekOrigin::Begin);
 
@@ -97,8 +106,7 @@ namespace noire
 				const u32 offset = s.Read<u32>();
 				const u32 size = s.Read<u32>();
 
-				mEntries.emplace_back("", hash, offset, size).File =
-					File::NewFromStream(std::make_shared<SubStream>(Input(), offset, size));
+				mEntries.emplace_back("", hash, offset, size);
 			}
 
 			Expects(IsSorted());
@@ -110,12 +118,17 @@ namespace noire
 			{
 				const u64 t = s.Tell();
 				const u16 strLength = s.Read<u16>();
-				std::string& str = mEntries[i].Path;
+				WADEntry& e = mEntries[i];
+				std::string& str = e.Path;
 				str.resize(strLength);
 
 				s.Read(str.data(), strLength);
 
-				mVFS.RegisterExistingFile(Path::Root / str, mEntries[i].PathHash);
+				const Path filePath = Path::Root / str;
+				mVFS.RegisterExistingFile(filePath, mEntries[i].PathHash);
+
+				SubStream entryStream{ stream, e.Offset, e.Size };
+				e.File = File::New(*this, filePath, File::FindTypeOfStream(entryStream));
 			}
 		}
 	}
@@ -198,6 +211,13 @@ namespace noire
 		return static_cast<size>(-1);
 	}
 
+	const WADEntry& WAD::GetEntry(PathView path) const
+	{
+		const size index = GetEntryIndex(path);
+		Expects(index != static_cast<size>(-1));
+		return mEntries[index];
+	}
+
 	const WADEntry& WAD::GetEntry(size pathHash) const
 	{
 		const size index = GetEntryIndex(pathHash);
@@ -233,41 +253,39 @@ namespace noire
 
 	void WAD::Sort() { std::sort(mEntries.begin(), mEntries.end(), &WADEntryComparer); }
 
-	static bool Validator(std::shared_ptr<Stream> input)
+	static bool Validator(Stream& input)
 	{
-		if (input->Size() < 8) // min required bytes
+		if (input.Size() < 8) // min required bytes
 		{
 			return false;
 		}
 
-		const u32 magic = input->ReadAt<u32>(0);
+		const u32 magic = input.ReadAt<u32>(0);
 		return magic == WAD::HeaderMagic;
 	}
 
-	static std::shared_ptr<File> Creator(std::shared_ptr<Stream> input)
+	static std::shared_ptr<File> Creator(Device& parent, PathView path)
 	{
-		return std::make_shared<WAD>(input);
+		return std::make_shared<WAD>(parent, path);
 	}
 
-	static std::shared_ptr<File> CreatorEmpty() { return std::make_shared<WAD>(); }
-
-	const File::Type WAD::Type{ std::hash<std::string_view>{}("WAD"),
-								1,
-								&Validator,
-								&Creator,
-								&CreatorEmpty };
+	const File::Type WAD::Type{ std::hash<std::string_view>{}("WAD"), 1, &Validator, &Creator };
 }
 
+// ifndef because line 'WAD& w = *wad;' gets compiler error 'illegal indirection' when
+// compiling with tests disabled
+#ifndef DOCTEST_CONFIG_DISABLE
 TEST_SUITE("WAD")
 {
 	using namespace noire;
 
 	TEST_CASE("Load/Save" * doctest::skip(true))
 	{
-		std::shared_ptr<Stream> input = std::make_shared<FileStream>(
-			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out.wad.pc");
+		LocalDevice d{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\" };
+		std::shared_ptr wad = std::dynamic_pointer_cast<WAD>(d.Open("/out.wad.pc"));
+		CHECK(wad != nullptr);
+		WAD& w = *wad;
 
-		WAD w{ input };
 		w.Load();
 
 		std::shared_ptr<Stream> output = std::make_shared<FileStream>(
@@ -279,10 +297,11 @@ TEST_SUITE("WAD")
 
 	TEST_CASE("Load/Delete/Create/Save" * doctest::skip(true))
 	{
-		std::shared_ptr<Stream> input = std::make_shared<FileStream>(
-			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out.wad.pc");
+		LocalDevice d{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\" };
+		std::shared_ptr wad = std::dynamic_pointer_cast<WAD>(d.Open("/out.wad.pc"));
+		CHECK(wad != nullptr);
+		WAD& w = *wad;
 
-		WAD w{ input };
 		w.Load();
 
 		CHECK(w.Exists("/out/graphicsdata/"));
@@ -305,14 +324,20 @@ TEST_SUITE("WAD")
 			std::static_pointer_cast<WAD>(w.Create("/out/my_custom_file.wad.pc", WAD::Type.Id));
 		auto c11 = std::static_pointer_cast<WAD>(c1->Create("/other.wad.pc", WAD::Type.Id));
 		auto r111 = std::static_pointer_cast<RawFile>(c11->Create("/raw.bin", RawFile::Type.Id));
-		for (u32 n = 0; n < 256; ++n)
 		{
-			r111->Stream().Write(n);
+			auto r111S = r111->Stream();
+			for (u32 n = 0; n < 256; ++n)
+			{
+				r111S->Write(n);
+			}
 		}
 		auto r1 = std::static_pointer_cast<RawFile>(w.Create("/raw.bin", RawFile::Type.Id));
-		for (u32 n = 0; n < 256; ++n)
 		{
-			r1->Stream().Write(n);
+			auto r1S = r1->Stream();
+			for (u32 n = 0; n < 256; ++n)
+			{
+				r1S->Write(n);
+			}
 		}
 
 		CHECK(w.Exists("/out/my_custom_file.wad.pc"));
@@ -326,10 +351,14 @@ TEST_SUITE("WAD")
 
 	TEST_CASE("Create new" * doctest::skip(true))
 	{
-		std::shared_ptr<Stream> output = std::make_shared<FileStream>(
-			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\custom.wad.pc");
+		LocalDevice d{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\" };
 		{
-			WAD w{};
+			d.Delete("/custom.wad.pc");
+
+			std::shared_ptr wad =
+				std::dynamic_pointer_cast<WAD>(d.Create("/custom.wad.pc", WAD::Type.Id));
+			CHECK(wad != nullptr);
+			WAD& w = *wad;
 
 			w.Load();
 
@@ -347,16 +376,23 @@ TEST_SUITE("WAD")
 				c21->Create("/another/folder/inner_inner.wad.pc", WAD::Type.Id));
 
 			auto r1 = std::static_pointer_cast<RawFile>(c1->Create("/raw.bin", RawFile::Type.Id));
-			for (u32 n = 0; n < 256; ++n)
 			{
-				r1->Stream().Write(n);
-			};
+				auto r1S = r1->Stream();
+				for (u32 n = 0; n < 256; ++n)
+				{
+					r1S->Write(n);
+				}
+			}
 
-			w.Save(*output);
+			FileStream fs{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\custom.wad.pc" };
+			w.Save(fs);
 		}
 
 		{
-			WAD w{ output };
+			std::shared_ptr wad = std::dynamic_pointer_cast<WAD>(d.Open("/custom.wad.pc"));
+			CHECK(wad != nullptr);
+			WAD& w = *wad;
+
 			const std::function<void(WAD&, PathView)> traverse = [&traverse](WAD& w,
 																			 PathView parent) {
 				w.Load();
@@ -378,22 +414,14 @@ TEST_SUITE("WAD")
 
 	TEST_CASE("Size" * doctest::skip(true))
 	{
-		std::shared_ptr<Stream> input = std::make_shared<FileStream>(
-			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out.wad.pc");
+		LocalDevice d{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\" };
+		std::shared_ptr wad = std::dynamic_pointer_cast<WAD>(d.Open("/out.wad.pc"));
+		CHECK(wad != nullptr);
+		WAD& w = *wad;
 
-		WAD w{ input };
 		w.Load();
 
-		CHECK_EQ(w.Size(), input->Size());
-	}
-
-	TEST_CASE("Creator/Validator" * doctest::skip(true))
-	{
-		std::shared_ptr<Stream> input = std::make_shared<FileStream>(
-			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out.wad.pc");
-
-		CHECK(Validator(input));
-		CHECK(Creator(input) != nullptr);
-		CHECK(File::NewFromStream(input, false) != nullptr);
+		CHECK_EQ(w.Size(), 151'574'057);
 	}
 }
+#endif

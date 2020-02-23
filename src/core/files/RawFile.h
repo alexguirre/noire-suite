@@ -8,10 +8,15 @@ namespace noire
 	class RawFile : public File
 	{
 	public:
-		RawFile();
-		RawFile(std::shared_ptr<Stream> input);
+		RawFile(Device& parent, PathView path);
 
-		Stream& Stream();
+		std::shared_ptr<Stream> Stream();
+
+		void Save(noire::Stream& output) override;
+		u64 Size() override;
+
+	private:
+		std::shared_ptr<noire::Stream> mStream;
 
 	public:
 		static const Type Type;

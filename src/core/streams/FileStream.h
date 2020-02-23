@@ -15,7 +15,7 @@ namespace noire
 	class FileStream final : public Stream
 	{
 	public:
-		FileStream(const std::filesystem::path& path);
+		FileStream(std::filesystem::path path);
 		FileStream(TempFileTag);
 		~FileStream() override;
 

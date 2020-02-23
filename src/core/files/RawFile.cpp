@@ -38,29 +38,34 @@ namespace noire
 		std::optional<TempStream> mOutput;
 	};
 
-	RawFile::RawFile() : RawFile(std::make_shared<EmptyStream>()) {}
+	RawFile::RawFile(Device& parent, PathView path) : File(parent, path), mStream{ nullptr } {}
 
-	RawFile::RawFile(std::shared_ptr<noire::Stream> input)
-		: File(std::make_shared<RawFileStream>(std::make_shared<ReadOnlyStream>(input)))
+	void RawFile::Save(noire::Stream& output)
 	{
+		if (std::shared_ptr s = Stream())
+		{
+			s->CopyTo(output);
+		}
 	}
 
-	Stream& RawFile::Stream() { return *Input(); }
+	u64 RawFile::Size() { return Stream()->Size(); }
 
-	static bool Validator(std::shared_ptr<Stream> input) { return true; }
-
-	static std::shared_ptr<File> Creator(std::shared_ptr<Stream> input)
+	std::shared_ptr<Stream> RawFile::Stream()
 	{
-		return std::make_shared<RawFile>(input);
+		return mStream ? mStream : (mStream = std::make_shared<RawFileStream>(Input()));
 	}
 
-	static std::shared_ptr<File> CreatorEmpty() { return std::make_shared<RawFile>(); }
+	static bool Validator(Stream&) { return true; }
+
+	static std::shared_ptr<File> Creator(Device& parent, PathView path)
+	{
+		return std::make_shared<RawFile>(parent, path);
+	}
 
 	const File::Type RawFile::Type{ std::hash<std::string_view>{}("RawFile"),
 									0,
 									&Validator,
-									&Creator,
-									&CreatorEmpty };
+									&Creator };
 
 	RawFileStream::RawFileStream(std::shared_ptr<ReadOnlyStream> input)
 		: mInput{ input }, mOutput{ std::nullopt }

@@ -1,4 +1,5 @@
 #include "File.h"
+#include "devices/Device.h"
 #include "streams/FileStream.h"
 #include <algorithm>
 #include <unordered_map>
@@ -6,7 +7,10 @@
 
 namespace noire
 {
-	File::File(std::shared_ptr<Stream> input) : mInput{ input }, mIsLoaded{ false } {}
+	File::File(Device& parent, PathView path)
+		: mParent{ parent }, mPath{ path }, mIsLoaded{ false }, mInput{}
+	{
+	}
 
 	void File::Load()
 	{
@@ -17,17 +21,31 @@ namespace noire
 		}
 	}
 
-	void File::LoadImpl() { return; }
+	void File::LoadImpl() {}
 
 	void File::Save(Stream& output)
 	{
-		if (mInput)
+		if (std::shared_ptr i = Input())
 		{
-			mInput->CopyTo(output);
+			i->CopyTo(output);
 		}
 	}
 
-	u64 File::Size() { return mInput ? mInput->Size() : 0; }
+	u64 File::Size() { return Input()->Size(); }
+
+	std::shared_ptr<ReadOnlyStream> File::Input()
+	{
+		if (std::shared_ptr p = mInput.lock())
+		{
+			return p;
+		}
+		else
+		{
+			std::shared_ptr s = mParent.OpenStream(mPath);
+			mInput = s;
+			return s;
+		}
+	}
 
 	static auto& FileTypes() // key is Type::Id
 	{
@@ -71,57 +89,39 @@ namespace noire
 		}
 	}
 
-	File::Type::Type(size id,
-					 size priority,
-					 IsValidFunc isValidFunc,
-					 CreateFunc createFunc,
-					 CreateEmptyFunc createEmptyFunc)
-		: Id{ id },
-		  Priority{ priority },
-		  IsValid{ isValidFunc },
-		  Create{ createFunc },
-		  CreateEmpty{ createEmptyFunc }
+	File::Type::Type(size id, size priority, IsValidFunc isValidFunc, CreateFunc createFunc)
+		: Id{ id }, Priority{ priority }, IsValid{ isValidFunc }, Create{ createFunc }
 	{
+		Expects(id != InvalidTypeId);
 		Expects(isValidFunc != nullptr);
 		Expects(createFunc != nullptr);
-		Expects(createEmptyFunc != nullptr);
 
 		RegisterFileType(this);
 	}
 
 	File::Type::~Type() { UnregisterFileType(this); }
 
-	std::shared_ptr<File> File::NewFromStream(std::shared_ptr<Stream> input,
-											  bool fallbackToBaseFile)
+	size File::FindTypeOfStream(Stream& input)
 	{
-		Expects(input != nullptr);
-
-		std::shared_ptr<File> resultFile = nullptr;
 		for (const File::Type* t : SortedFileTypes())
 		{
 			if (t->IsValid(input))
 			{
-				resultFile = t->Create(input);
-				Ensures(resultFile != nullptr);
-				break;
+				return t->Id;
 			}
 		}
 
-		// TODO: fallbackToBaseFile may no longer be needed since RawFile accepts any input stream
-		if (!resultFile && fallbackToBaseFile)
-		{
-			resultFile = std::make_shared<File>(input);
-		}
-
-		return resultFile;
+		return InvalidTypeId;
 	}
 
-	std::shared_ptr<File> File::NewEmpty(size fileTypeId)
+	std::shared_ptr<File> File::New(Device& parent, PathView path, size fileTypeId)
 	{
+		Expects(fileTypeId != InvalidTypeId);
+
 		auto it = FileTypes().find(fileTypeId);
 		Expects(it != FileTypes().end());
 
-		const File::Type* t = it->second;
-		return t->CreateEmpty();
+		const File::Type& t = *it->second;
+		return t.Create(parent, path);
 	}
 }

@@ -7,6 +7,7 @@
 
 namespace noire
 {
+	class Device;
 	class File;
 
 	class VirtualFileSystem
@@ -82,7 +83,8 @@ namespace noire
 
 		std::shared_ptr<File> Open(PathView path, OpenCallback cb);
 
-		std::shared_ptr<File> Create(PathView path, size fileTypeId, CreateCallback cb);
+		std::shared_ptr<File>
+		Create(Device& parent, PathView path, size fileTypeId, CreateCallback cb);
 
 		bool Exists(PathView path) const;
 

@@ -7,6 +7,7 @@
 namespace noire
 {
 	class File;
+	class ReadOnlyStream;
 
 	using DeviceVisitCallback = std::function<void(PathView)>;
 
@@ -23,5 +24,6 @@ namespace noire
 						   DeviceVisitCallback visitFile,
 						   PathView path,
 						   bool recursive = true) = 0;
+		virtual std::shared_ptr<ReadOnlyStream> OpenStream(PathView path) = 0;
 	};
 }

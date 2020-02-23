@@ -39,20 +39,40 @@ namespace noire
 	{
 		Expects(path.IsDirectory() && path.IsAbsolute());
 
-		PathView relPath;
-		if (Device* d = GetDevice(path, &relPath))
+		PathView relPath, mountPath;
+		if (Device* d = GetDevice(path, &relPath, &mountPath))
 		{
-			d->Visit(visitDirectory, visitFile, relPath, recursive);
+			Path tmpPath{};
+			d->Visit(
+				[&](PathView p) {
+					tmpPath = mountPath;
+					tmpPath /= p.RelativeTo(PathView::Root);
+					visitDirectory(tmpPath);
+				},
+				[&](PathView p) {
+					tmpPath = mountPath;
+					tmpPath /= p.RelativeTo(PathView::Root);
+					visitFile(tmpPath);
+				},
+				relPath,
+				recursive);
 		}
 	}
 
-	void MultiDevice::Mount(PathView path, std::unique_ptr<Device> device)
+	std::shared_ptr<ReadOnlyStream> MultiDevice::OpenStream(PathView path)
+	{
+		PathView relPath;
+		Device* d = GetDevice(path, &relPath);
+		return d ? d->OpenStream(relPath) : nullptr;
+	}
+
+	void MultiDevice::Mount(PathView path, std::shared_ptr<Device> device)
 	{
 		Expects(std::find_if(mMounts.begin(), mMounts.end(), [path](const MountPoint& m) {
 					return m.Path == path;
 				}) == mMounts.end());
 
-		mMounts.emplace_back(path, std::move(device));
+		mMounts.emplace_back(path, device);
 
 		// sort the mounts, longest paths first
 		std::sort(mMounts.begin(), mMounts.end(), [](auto& a, auto& b) {
@@ -65,7 +85,8 @@ namespace noire
 		return str.compare(0, prefix.size(), prefix) == 0;
 	}
 
-	Device* MultiDevice::GetDevice(PathView path, PathView* outRelPath) const
+	Device*
+	MultiDevice::GetDevice(PathView path, PathView* outRelPath, PathView* outDeviceMountPath) const
 	{
 		for (const MountPoint& m : mMounts)
 		{
@@ -75,6 +96,12 @@ namespace noire
 				{
 					*outRelPath = path.String().substr(m.Path.String().size() - 1);
 				}
+
+				if (outDeviceMountPath)
+				{
+					*outDeviceMountPath = m.Path;
+				}
+
 				return m.Device.get();
 			}
 		}
@@ -83,6 +110,12 @@ namespace noire
 		{
 			*outRelPath = PathView{};
 		}
+
+		if (outDeviceMountPath)
+		{
+			*outDeviceMountPath = PathView{};
+		}
+
 		return nullptr;
 	}
 }

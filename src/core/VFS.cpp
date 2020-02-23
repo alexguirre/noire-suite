@@ -36,7 +36,7 @@ namespace noire
 	}
 
 	std::shared_ptr<File>
-	VirtualFileSystem::Create(PathView path, size fileTypeId, CreateCallback cb)
+	VirtualFileSystem::Create(Device& parent, PathView path, size fileTypeId, CreateCallback cb)
 	{
 		Expects(path.IsFile() && path.IsAbsolute());
 		Expects(FindEntry(path) == nullptr);
@@ -44,7 +44,7 @@ namespace noire
 		FileEntryInfo info = cb(path);
 		RegisterExistingFile(path, std::move(info));
 
-		return File::NewEmpty(fileTypeId);
+		return File::New(parent, path, fileTypeId);
 	}
 
 	bool VirtualFileSystem::Exists(PathView path) const

@@ -46,8 +46,7 @@ namespace noire
 	class Container final : public File, public Device
 	{
 	public:
-		explicit Container();
-		Container(std::shared_ptr<Stream> input);
+		Container(Device& parent, PathView path);
 
 		bool Exists(PathView path) const override;
 		std::shared_ptr<File> Open(PathView path) override;
@@ -57,6 +56,7 @@ namespace noire
 				   DeviceVisitCallback visitFile,
 				   PathView path,
 				   bool recursive) override;
+		std::shared_ptr<ReadOnlyStream> OpenStream(PathView path) override;
 
 	protected:
 		void LoadImpl() override;

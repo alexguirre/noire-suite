@@ -10,6 +10,8 @@ file(GLOB CORE_SOURCES
     "VFS.h"
     "devices/Device.cpp"
     "devices/Device.h"
+    "devices/LocalDevice.cpp"
+    "devices/LocalDevice.h"
     "devices/MultiDevice.cpp"
     "devices/MultiDevice.h"
     "files/Container.cpp"
