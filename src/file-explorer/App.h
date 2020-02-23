@@ -5,9 +5,6 @@
 #include <wx/app.h>
 #include <wx/event.h>
 
-wxDECLARE_EVENT(EVT_FILE_SYSTEM_SCAN_STARTED, wxThreadEvent);
-wxDECLARE_EVENT(EVT_FILE_SYSTEM_SCAN_COMPLETED, wxThreadEvent);
-
 namespace noire::explorer
 {
 	class MainWindow;

@@ -22,6 +22,8 @@ namespace noire::explorer
 		wxStatusBar*
 		OnCreateStatusBar(int, long style, wxWindowID id, const wxString& name) override;
 
+		void OnRootPathChanged();
+
 	private:
 		wxMenuBar* mMenuBar;
 		DirectoryTreeCtrl* mDirTreeCtrl;
@@ -32,8 +34,6 @@ namespace noire::explorer
 		void OnHashLookupTool(wxCommandEvent& event);
 		void OnTestRenderer(wxCommandEvent& event);
 		void OnExit(wxCommandEvent& event);
-		void OnFileSystemScanStarted(wxThreadEvent& event);
-		void OnFileSystemScanCompleted(wxThreadEvent& event);
 
 		void CreateAccelTable();
 	};

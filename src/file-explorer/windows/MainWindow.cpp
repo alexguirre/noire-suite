@@ -77,10 +77,6 @@ namespace noire::explorer
 		Bind(wxEVT_MENU, &MainWindow::OnHashLookupTool, this, MenuBarHashLookupId);
 		Bind(wxEVT_MENU, &MainWindow::OnTestRenderer, this, MenuBarTestRendererId);
 		Bind(wxEVT_MENU, &MainWindow::OnExit, this, wxID_EXIT);
-		wxGetApp().Bind(EVT_FILE_SYSTEM_SCAN_STARTED, &MainWindow::OnFileSystemScanStarted, this);
-		wxGetApp().Bind(EVT_FILE_SYSTEM_SCAN_COMPLETED,
-						&MainWindow::OnFileSystemScanCompleted,
-						this);
 	}
 
 	wxToolBar* MainWindow::OnCreateToolBar(long style, wxWindowID id, const wxString& name)
@@ -153,19 +149,7 @@ namespace noire::explorer
 
 	void MainWindow::OnExit(wxCommandEvent&) { Close(true); }
 
-	void MainWindow::OnFileSystemScanStarted(wxThreadEvent& event)
-	{
-		wxLogDebug(__FUNCTION__);
-
-		if (StatusBar* statusBar = static_cast<StatusBar*>(GetStatusBar()); statusBar)
-		{
-			statusBar->SetInfo(wxString::Format("Scanning '%ls'...", "path/TBD/"));
-		}
-
-		event.Skip();
-	}
-
-	void MainWindow::OnFileSystemScanCompleted(wxThreadEvent& event)
+	void MainWindow::OnRootPathChanged()
 	{
 		if (mDirTreeCtrl)
 		{
@@ -176,13 +160,6 @@ namespace noire::explorer
 		{
 			mDirContentsListCtrl->SetDirectoryToRoot();
 		}
-
-		if (StatusBar* statusBar = static_cast<StatusBar*>(GetStatusBar()); statusBar)
-		{
-			statusBar->SetInfo("");
-		}
-
-		event.Skip();
 	}
 
 	void MainWindow::CreateAccelTable()

@@ -13,9 +13,6 @@
 
 wxIMPLEMENT_APP(noire::explorer::App);
 
-wxDEFINE_EVENT(EVT_FILE_SYSTEM_SCAN_STARTED, wxThreadEvent);
-wxDEFINE_EVENT(EVT_FILE_SYSTEM_SCAN_COMPLETED, wxThreadEvent);
-
 namespace noire::explorer
 {
 	App::App() : mRootDevice{ nullptr }, mMainWindow{ nullptr } {}
@@ -41,19 +38,10 @@ namespace noire::explorer
 	{
 		// TODO: remember last opened folder after closing the application
 
-		std::thread t{ [this, path]() {
-			wxQueueEvent(this, new wxThreadEvent(EVT_FILE_SYSTEM_SCAN_STARTED));
+		mRootDevice = std::make_unique<MultiDevice>();
+		mRootDevice->Mount(PathView::Root, std::make_shared<LocalDevice>(path));
 
-			std::unique_ptr d = std::make_unique<MultiDevice>();
-
-			d->Mount(PathView::Root, std::make_shared<LocalDevice>(path));
-
-			mRootDevice = std::move(d);
-			wxQueueEvent(this, new wxThreadEvent(EVT_FILE_SYSTEM_SCAN_COMPLETED));
-		} };
-
-		SetThreadPriority(t.native_handle(), THREAD_PRIORITY_TIME_CRITICAL);
-		t.detach();
+		mMainWindow->OnRootPathChanged();
 	}
 
 	static wxImage CreateImageFromDDS(gsl::span<byte> ddsData)
