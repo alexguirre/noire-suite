@@ -423,5 +423,32 @@ TEST_SUITE("WAD")
 
 		CHECK_EQ(w.Size(), 151'574'057);
 	}
+
+	TEST_CASE("Modify 'atlas01.dds'" * doctest::skip(true))
+	{
+		LocalDevice d{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\" };
+		std::shared_ptr wad = std::dynamic_pointer_cast<WAD>(d.Open("/out.wad.pc"));
+		CHECK(wad != nullptr);
+		WAD& w = *wad;
+
+		w.Load();
+
+		Path ddsPath{ "/out/textures/dyndecals/atlas01.dds" };
+
+		CHECK(w.Exists(ddsPath));
+
+		auto rf = std::static_pointer_cast<RawFile>(w.Open(ddsPath));
+
+		CHECK(w.Exists(ddsPath));
+
+		std::shared_ptr newDDS = std::make_shared<FileStream>("atlas01_custom.dds");
+		auto s = rf->Stream();
+		newDDS->CopyTo(*s);
+
+		std::shared_ptr output = std::make_shared<FileStream>(
+			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out_atlas_modified.wad.pc");
+
+		w.Save(*output);
+	}
 }
 #endif
