@@ -17,15 +17,28 @@ namespace noire
 		u32 Offset;
 		u32 Size;
 		std::shared_ptr<File> File;
+		u32 NewOffset;
+		u32 NewSize;
 
-		inline WADEntry() : Path{ "" }, PathHash{ 0 }, Offset{ 0 }, Size{ 0 }, File{ nullptr } {}
+		inline WADEntry()
+			: Path{ "" },
+			  PathHash{ 0 },
+			  Offset{ 0 },
+			  Size{ 0 },
+			  File{ nullptr },
+			  NewOffset{ 0 },
+			  NewSize{ 0 }
+		{
+		}
 
 		inline WADEntry(std::string path, u32 pathHash, u32 offset, u32 size)
 			: Path{ std::move(path) },
 			  PathHash{ pathHash },
 			  Offset{ offset },
 			  Size{ size },
-			  File{ nullptr }
+			  File{ nullptr },
+			  NewOffset{ 0 },
+			  NewSize{ 0 }
 		{
 		}
 	};
@@ -61,7 +74,6 @@ namespace noire
 	private:
 		void FixUpOffsets();
 		bool IsSorted() const;
-		void Sort();
 
 		std::vector<WADEntry> mEntries;
 		VirtualFileSystem mVFS; // VFS entry info refers to PathHash of the WADEntry

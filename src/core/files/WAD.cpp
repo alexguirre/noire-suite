@@ -109,7 +109,7 @@ namespace noire
 				mEntries.emplace_back("", hash, offset, size);
 			}
 
-			Expects(IsSorted());
+			Ensures(IsSorted());
 
 			// read paths
 			const WADEntry& lastEntry = mEntries.back();
@@ -133,6 +133,8 @@ namespace noire
 		}
 	}
 
+	// TODO: File::Save should save to the original stream to another stream
+	// once ^ that's done, we should update the entries Offset/Size to NewOffset/NewSize
 	void WAD::Save(Stream& s)
 	{
 		// TODO: just copy input stream to s if the file has not been changed
@@ -151,15 +153,17 @@ namespace noire
 		{
 			const WADEntry& e = mEntries[i];
 			s.Write<u32>(e.PathHash);
-			s.Write<u32>(e.Offset);
-			s.Write<u32>(e.Size);
+			s.Write<u32>(e.NewOffset);
+			s.Write<u32>(e.NewSize);
 		}
 
 		// write data
 		for (size i = 0; i < entryCount; ++i)
 		{
 			const WADEntry& e = mEntries[i];
+			Ensures(e.NewOffset == s.Tell());
 			e.File->Save(s);
+			Ensures((e.NewOffset + e.NewSize) == s.Tell());
 		}
 
 		// write path
@@ -185,7 +189,7 @@ namespace noire
 		total += sizeof(u32) * 3 * mEntries.size(); // entries
 		for (const WADEntry& e : mEntries)
 		{
-			total += e.Size;                      // entry data
+			total += e.NewSize;                   // entry data
 			total += sizeof(u16) + e.Path.size(); // entry path
 		}
 		return total;
@@ -233,25 +237,29 @@ namespace noire
 		size currOffset = startingOffset;
 		for (WADEntry& e : mEntries)
 		{
-			e.Offset = currOffset;
-			e.Size = gsl::narrow<u32>(e.File->Size());
-			currOffset += e.Size;
+			// NOTE: writing to NewOffset/NewSize because we still need the original Offset/Size
+			// when calling Save() to open the streams at the appropriate locations
+			e.NewOffset = currOffset;
+			e.NewSize = gsl::narrow<u32>(e.File->Size());
+			currOffset += e.NewSize;
 		}
 
-		Sort();
+		Ensures(IsSorted());
 	}
 
 	static bool WADEntryComparer(const WADEntry& a, const WADEntry& b)
 	{
-		return a.Offset < b.Offset;
+		const bool useNewValuesA = a.NewOffset != 0;
+		const bool useNewValuesB = b.NewOffset != 0;
+		const u32 offsetA = useNewValuesA ? a.NewOffset : a.Offset;
+		const u32 offsetB = useNewValuesB ? b.NewOffset : b.Offset;
+		return offsetA < offsetB;
 	}
 
 	bool WAD::IsSorted() const
 	{
 		return std::is_sorted(mEntries.begin(), mEntries.end(), &WADEntryComparer);
 	}
-
-	void WAD::Sort() { std::sort(mEntries.begin(), mEntries.end(), &WADEntryComparer); }
 
 	static bool Validator(Stream& input)
 	{
@@ -447,6 +455,37 @@ TEST_SUITE("WAD")
 
 		std::shared_ptr output = std::make_shared<FileStream>(
 			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out_atlas_modified.wad.pc");
+
+		w.Save(*output);
+	}
+
+	TEST_CASE("Delete and create 'atlas01.dds'" * doctest::skip(true))
+	{
+		LocalDevice d{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\" };
+		std::shared_ptr wad = std::dynamic_pointer_cast<WAD>(d.Open("/out.wad.pc"));
+		CHECK(wad != nullptr);
+		WAD& w = *wad;
+
+		w.Load();
+
+		Path ddsPath{ "/out/textures/dyndecals/atlas01.dds" };
+
+		CHECK(w.Exists(ddsPath));
+
+		w.Delete(ddsPath);
+
+		CHECK(!w.Exists(ddsPath));
+
+		auto rf = std::static_pointer_cast<RawFile>(w.Create(ddsPath, RawFile::Type.Id));
+
+		CHECK(w.Exists(ddsPath));
+
+		std::shared_ptr newDDS = std::make_shared<FileStream>("atlas01_custom.dds");
+		auto s = rf->Stream();
+		newDDS->CopyTo(*s);
+
+		std::shared_ptr output = std::make_shared<FileStream>(
+			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\out_atlas_recreated.wad.pc");
 
 		w.Save(*output);
 	}
