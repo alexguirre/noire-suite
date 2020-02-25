@@ -138,6 +138,7 @@ wxEND_EVENT_TABLE();
 				std::shared_ptr f = dev->Open(entry.Path);
 				if (!f->IsLoaded())
 				{
+					auto _ = ShowWaitingCursor(this);
 					f->Load();
 				}
 
