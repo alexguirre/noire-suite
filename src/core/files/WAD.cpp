@@ -1,6 +1,5 @@
 #include "WAD.h"
 #include "Hash.h"
-#include "RawFile.h"
 #include "devices/LocalDevice.h"
 #include "streams/FileStream.h"
 #include "streams/Stream.h"

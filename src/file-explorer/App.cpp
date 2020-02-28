@@ -6,7 +6,7 @@
 #include <IL/il.h>
 #include <core/Common.h>
 #include <core/devices/LocalDevice.h>
-#include <core/files/RawFile.h>
+#include <core/files/File.h>
 #include <core/streams/FileStream.h>
 #include <processthreadsapi.h>
 #include <thread>
