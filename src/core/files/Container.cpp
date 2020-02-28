@@ -9,7 +9,9 @@
 
 namespace noire
 {
-	Container::Container(Device& parent, PathView path) : File(parent, path) {}
+	Container::Container(Device& parent, PathView path, bool created) : File(parent, path, created)
+	{
+	}
 
 	// Device implementation (TODO)
 	bool Container::Exists(PathView path) const
@@ -51,25 +53,23 @@ namespace noire
 		mVFS.Visit(visitDirectory, visitFile, path, recursive);
 	}
 
-	std::shared_ptr<ReadOnlyStream> Container::OpenStream(PathView path)
+	ReadOnlyStream Container::OpenStream(PathView path)
 	{
 		const ContainerEntry& e = GetEntry(path);
 		const bool newEntry = e.Offset() == 0 && e.Size() == 0;
-		return std::make_shared<ReadOnlyStream>(
-			newEntry ? std::static_pointer_cast<Stream>(std::make_shared<EmptyStream>()) :
-					   std::make_shared<SubStream>(Input(), e.Offset(), e.Size()));
+		return newEntry ?
+				   ReadOnlyStream{ std::make_unique<EmptyStream>() } :
+				   ReadOnlyStream{ std::make_unique<SubStream>(Raw(), e.Offset(), e.Size()) };
 	}
 
 	// File implementation
 	void Container::LoadImpl()
 	{
-		std::shared_ptr stream = Input();
-		if (!stream || stream->Size() == 0)
+		Stream& s = Raw();
+		if (s.Size() == 0)
 		{
 			return;
 		}
-
-		Stream& s = *stream;
 
 		s.Seek(0, StreamSeekOrigin::Begin);
 
@@ -97,18 +97,17 @@ namespace noire
 
 			ContainerEntry& e = mEntries.emplace_back(nameHash, unk1, unk2, unk3, unk4);
 
-			Path filePath = Path::Root / HashLookup::Instance().TryGetString(nameHash);
+			const noire::Path filePath = Path::Root / HashLookup::Instance().TryGetString(nameHash);
 			mVFS.RegisterExistingFile(filePath, nameHash);
 
-			SubStream entryStream{ Input(), e.Offset(), e.Size() };
-			e.File = File::New(*this, filePath, File::FindTypeOfStream(entryStream));
+			SubStream entryStream{ Raw(), e.Offset(), e.Size() };
+			e.File = File::New(*this, filePath, false, File::FindTypeOfStream(entryStream));
 		}
 	}
 
-	void Container::Save(Stream& s)
+	void Container::Save()
 	{
 		// TODO: Container::Save
-		(void)s;
 		Expects(false && "Not implemented");
 	}
 
@@ -206,15 +205,15 @@ namespace noire
 		return magic == Container::EntriesHeaderMagic;
 	}
 
-	static std::shared_ptr<File> Creator(Device& parent, PathView path)
+	static std::shared_ptr<File> Creator(Device& parent, PathView path, bool created)
 	{
-		return std::make_shared<Container>(parent, path);
+		return std::make_shared<Container>(parent, path, created);
 	}
 
-	const File::Type Container::Type{ std::hash<std::string_view>{}("Container"),
-									  2,
-									  &Validator,
-									  &Creator };
+	const File::TypeDefinition Container::Type{ std::hash<std::string_view>{}("Container"),
+												2,
+												&Validator,
+												&Creator };
 }
 
 // ifndef because line 'Container& c = *cont;' gets compiler error 'illegal indirection' when
@@ -255,7 +254,7 @@ TEST_SUITE("Container")
 				PathView::Root,
 				true);
 
-		std::cout << "input:  " << d.OpenStream("/vehicles.big.pc")->Size() << std::endl;
+		std::cout << "input:  " << d.OpenStream("/vehicles.big.pc").Size() << std::endl;
 		std::cout << "size(): " << c.Size() << std::endl;
 
 		// CHECK_EQ(input->Size(), c.Size()); // NOTE: Container::Size() doesn't work properly yet

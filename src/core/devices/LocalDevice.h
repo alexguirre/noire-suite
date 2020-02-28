@@ -21,7 +21,8 @@ namespace noire
 				   DeviceVisitCallback visitFile,
 				   PathView path,
 				   bool recursive) override;
-		std::shared_ptr<ReadOnlyStream> OpenStream(PathView path) override;
+		ReadOnlyStream OpenStream(PathView path) override;
+		void Commit() override;
 
 		inline const std::filesystem::path& RootPath() const { return mRootPath; }
 

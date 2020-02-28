@@ -18,8 +18,6 @@ file(GLOB CORE_SOURCES
     "files/Container.h"
     "files/File.cpp"
     "files/File.h"
-    "files/RawFile.cpp"
-    "files/RawFile.h"
     "files/WAD.cpp"
     "files/WAD.h"
     "streams/FileStream.cpp"

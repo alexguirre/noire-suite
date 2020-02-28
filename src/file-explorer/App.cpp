@@ -94,25 +94,25 @@ namespace noire::explorer
 
 	bool App::OpenDDSFile(PathView filePath)
 	{
-		std::shared_ptr file = std::dynamic_pointer_cast<RawFile>(mRootDevice->Open(filePath));
+		std::shared_ptr file = mRootDevice->Open(filePath);
 		if (!file)
 		{
 			return false;
 		}
 
-		std::shared_ptr<Stream> s = file->Stream();
-		s->Seek(0, StreamSeekOrigin::Begin);
+		Stream& s = file->Raw();
+		s.Seek(0, StreamSeekOrigin::Begin);
 
 		constexpr u32 DDSHeaderMagic{ 0x20534444 }; // 'DDS '
-		const u32 headerMagic = s->Read<u32>();
+		const u32 headerMagic = s.Read<u32>();
 
 		if (headerMagic == DDSHeaderMagic)
 		{
-			const size ddsSize = gsl::narrow<size>(s->Size());
+			const size ddsSize = gsl::narrow<size>(s.Size());
 
 			std::unique_ptr buffer = std::make_unique<byte[]>(ddsSize);
-			s->Seek(0, StreamSeekOrigin::Begin);
-			s->Read(buffer.get(), ddsSize);
+			s.Seek(0, StreamSeekOrigin::Begin);
+			s.Read(buffer.get(), ddsSize);
 
 			const wxImage img = CreateImageFromDDS({ buffer.get(), gsl::narrow<ptrdiff>(ddsSize) });
 			ImageWindow* imgWin =

@@ -41,7 +41,7 @@ namespace noire
 			else
 			{
 				FileStream f{ FullPath(path) };
-				file = File::New(*this, path, File::FindTypeOfStream(f));
+				file = File::New(*this, path, false, File::FindTypeOfStream(f));
 				mCachedFiles.try_emplace(h, file);
 			}
 
@@ -59,7 +59,7 @@ namespace noire
 
 		Expects(!Exists(path));
 
-		std::shared_ptr file = File::New(*this, path, fileTypeId);
+		std::shared_ptr file = File::New(*this, path, true, fileTypeId);
 		mCachedFiles.try_emplace(std::hash<PathView>{}(path), file);
 		return file;
 	}
@@ -99,11 +99,24 @@ namespace noire
 					std::for_each(fs::directory_iterator{ fullPath }, {}, cb);
 	}
 
-	std::shared_ptr<ReadOnlyStream> LocalDevice::OpenStream(PathView path)
+	ReadOnlyStream LocalDevice::OpenStream(PathView path)
 	{
 		Expects(path.IsFile() && path.IsAbsolute());
 
-		return std::make_shared<ReadOnlyStream>(std::make_shared<FileStream>(FullPath(path)));
+		return ReadOnlyStream{ std::make_unique<FileStream>(FullPath(path)) };
+	}
+
+	void LocalDevice::Commit()
+	{
+		for (auto& e : mCachedFiles)
+		{
+			if (auto f = e.second; f->HasChanged())
+			{
+				f->Save();
+				FileStream fs{ FullPath(f->Path()) };
+				f->Raw().CopyTo(fs);
+			}
+		}
 	}
 
 	fs::path LocalDevice::FullPath(PathView path) const
@@ -153,22 +166,18 @@ TEST_SUITE("LocalDevice")
 	TEST_CASE("Create" * doctest::skip(true))
 	{
 		LocalDevice d{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\" };
-		std::shared_ptr f = d.Create("/test/my_custom_file.txt", RawFile::Type.Id);
+		std::shared_ptr f = d.Create("/test/my_custom_file.txt", File::Type.Id);
 		CHECK(f != nullptr);
-		std::shared_ptr r = std::dynamic_pointer_cast<RawFile>(f);
+		std::shared_ptr r = std::dynamic_pointer_cast<File>(f);
 		CHECK(r != nullptr);
 
 		r->Load();
 
 		const std::string str{ "hello world" };
-		r->Stream()->Write(str.data(), str.size());
+		r->Raw().Write(str.data(), str.size());
 
-		// TODO: implement a Flush in LocalDevice that saves the files automatically?
-		// the LocalDevice should have to keep track of Open/Create'd files to be able to save them
-		// during the flush
-		FileStream fs{
-			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\my_custom_file.txt"
-		};
-		r->Save(fs);
+		r->Save();
+
+		d.Commit();
 	}
 }

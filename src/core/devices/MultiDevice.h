@@ -28,7 +28,8 @@ namespace noire
 				   DeviceVisitCallback visitFile,
 				   PathView path,
 				   bool recursive) override;
-		std::shared_ptr<ReadOnlyStream> OpenStream(PathView path) override;
+		ReadOnlyStream OpenStream(PathView path) override;
+		void Commit() override;
 
 		void Mount(PathView path, std::shared_ptr<Device> device);
 		/// Gets the device that contains the specified path or null if none exists.

@@ -159,7 +159,7 @@ IMPLEMENT_IUNKNOWN_METHODS(CComFileStream);
 STDMETHODIMP CComFileStream::Read(void* pv, ULONG cb, ULONG* pcbRead)
 {
 	wxLogDebug(__FUNCTION__ "(%p, %lu, %p)", pv, cb, pcbRead);
-	noire::Stream& s = *mFile->Input();
+	noire::Stream& s = mFile->Raw();
 	const noire::u64 toRead = std::min<noire::u64>(cb, s.Size() - s.Tell());
 	noire::u64 read = 0;
 	if (toRead != 0)
@@ -194,7 +194,7 @@ CComFileStream::Seek(LARGE_INTEGER dlibMove, DWORD dwOrigin, ULARGE_INTEGER* pli
 	case STREAM_SEEK_END: orig = noire::StreamSeekOrigin::End; break;
 	}
 
-	const noire::u64 newPos = mFile->Input()->Seek(dlibMove.QuadPart, orig);
+	const noire::u64 newPos = mFile->Raw().Seek(dlibMove.QuadPart, orig);
 	if (plibNewPosition)
 	{
 		plibNewPosition->QuadPart = newPos;
@@ -254,7 +254,7 @@ STDMETHODIMP CComFileStream::Stat(STATSTG* pstatstg, DWORD grfStatFlag)
 		pstatstg->pwcsName = nullptr;
 	}
 	pstatstg->type = STGTY_STREAM;
-	pstatstg->cbSize.QuadPart = mFile->Input()->Size();
+	pstatstg->cbSize.QuadPart = mFile->Raw().Size();
 	GetSystemTimeAsFileTime(&pstatstg->mtime);
 	GetSystemTimeAsFileTime(&pstatstg->ctime);
 	GetSystemTimeAsFileTime(&pstatstg->atime);

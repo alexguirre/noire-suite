@@ -9,24 +9,29 @@ namespace noire
 	class Stream;
 	class ReadOnlyStream;
 
+	// IDEA: remove RawFile and give File a RawStream property
 	class File
 	{
 	public:
-		File(Device& parent, PathView path);
+		File(Device& parent, PathView path, bool created);
 
 		virtual ~File() = default;
 
 		void Load();
 		// default Save() writes the contents of the input stream to the output stream
-		virtual void Save(Stream& output);
+		virtual void Save();
 		// Returns how many bytes will be written when calling Save(). Default Size() gets the size
 		// of the input stream.
 		virtual u64 Size();
 
+		virtual bool HasChanged() const;
+
 		bool IsLoaded() const { return mIsLoaded; }
-		// TODO: File's input stream shouldn't be public, required for now by CComFileStream from
-		// file-explorer
-		std::shared_ptr<ReadOnlyStream> Input();
+		PathView Path() const { return mPath; }
+		Device& Parent() { return mParent; }
+		const Device& Parent() const { return mParent; }
+
+		Stream& Raw();
 
 	protected:
 		// default LoadImpl() does nothing
@@ -34,24 +39,26 @@ namespace noire
 
 	private:
 		Device& mParent;
-		Path mPath;
+		noire::Path mPath;
 		bool mIsLoaded;
-		std::weak_ptr<ReadOnlyStream> mInput;
+		std::unique_ptr<Stream> mRawStream;
 
 	public:
-		struct Type final
+		struct TypeDefinition final
 		{
 			using IsValidFunc = bool (*)(Stream& input);
-			using CreateFunc = std::shared_ptr<File> (*)(Device& parent, PathView path);
+			using CreateFunc = std::shared_ptr<File> (*)(Device& parent,
+														 PathView path,
+														 bool created);
 
-			Type(size id, size priority, IsValidFunc isValidFunc, CreateFunc createFunc);
-			~Type();
+			TypeDefinition(size id, size priority, IsValidFunc isValidFunc, CreateFunc createFunc);
+			~TypeDefinition();
 
-			Type(const Type&) = delete;
-			Type(Type&&) = delete;
+			TypeDefinition(const TypeDefinition&) = delete;
+			TypeDefinition(TypeDefinition&&) = delete;
 
-			Type& operator=(const Type&) = delete;
-			Type& operator=(Type&&) = delete;
+			TypeDefinition& operator=(const TypeDefinition&) = delete;
+			TypeDefinition& operator=(TypeDefinition&&) = delete;
 
 			size Id;
 
@@ -68,8 +75,10 @@ namespace noire
 		};
 
 		static constexpr size InvalidTypeId{ static_cast<size>(-1) };
+		static const TypeDefinition Type;
 
 		static size FindTypeOfStream(Stream& input);
-		static std::shared_ptr<File> New(Device& parent, PathView path, size fileTypeId);
+		static std::shared_ptr<File>
+		New(Device& parent, PathView path, bool created, size fileTypeId);
 	};
 }

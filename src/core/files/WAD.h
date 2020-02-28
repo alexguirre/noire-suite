@@ -17,6 +17,7 @@ namespace noire
 		u32 Offset;
 		u32 Size;
 		std::shared_ptr<File> File;
+		size FileType;
 		u32 NewOffset;
 		u32 NewSize;
 
@@ -26,6 +27,7 @@ namespace noire
 			  Offset{ 0 },
 			  Size{ 0 },
 			  File{ nullptr },
+			  FileType{ File::InvalidTypeId },
 			  NewOffset{ 0 },
 			  NewSize{ 0 }
 		{
@@ -37,6 +39,7 @@ namespace noire
 			  Offset{ offset },
 			  Size{ size },
 			  File{ nullptr },
+			  FileType{ File::InvalidTypeId },
 			  NewOffset{ 0 },
 			  NewSize{ 0 }
 		{
@@ -46,7 +49,7 @@ namespace noire
 	class WAD final : public File, public Device
 	{
 	public:
-		WAD(Device& parent, PathView path);
+		WAD(Device& parent, PathView path, bool created);
 
 		bool Exists(PathView path) const override;
 		std::shared_ptr<File> Open(PathView path) override;
@@ -56,14 +59,15 @@ namespace noire
 				   DeviceVisitCallback visitFile,
 				   PathView path,
 				   bool recursive) override;
-		std::shared_ptr<ReadOnlyStream> OpenStream(PathView path) override;
+		ReadOnlyStream OpenStream(PathView path) override;
 
 	protected:
 		void LoadImpl() override;
 
 	public:
-		void Save(Stream& output) override;
+		void Save() override;
 		u64 Size() override;
+		bool HasChanged() const override;
 
 		size GetEntryIndex(PathView path) const;
 		size GetEntryIndex(size pathHash) const;
@@ -77,9 +81,10 @@ namespace noire
 
 		std::vector<WADEntry> mEntries;
 		VirtualFileSystem mVFS; // VFS entry info refers to PathHash of the WADEntry
+		bool mHasChanged;
 
 	public:
 		static constexpr u32 HeaderMagic{ 0x01444157 }; // WAD\01
-		static const Type Type;
+		static const TypeDefinition Type;
 	};
 }

@@ -46,7 +46,7 @@ namespace noire
 	class Container final : public File, public Device
 	{
 	public:
-		Container(Device& parent, PathView path);
+		Container(Device& parent, PathView path, bool created);
 
 		bool Exists(PathView path) const override;
 		std::shared_ptr<File> Open(PathView path) override;
@@ -56,13 +56,13 @@ namespace noire
 				   DeviceVisitCallback visitFile,
 				   PathView path,
 				   bool recursive) override;
-		std::shared_ptr<ReadOnlyStream> OpenStream(PathView path) override;
+		ReadOnlyStream OpenStream(PathView path) override;
 
 	protected:
 		void LoadImpl() override;
 
 	public:
-		void Save(Stream& output) override;
+		void Save() override;
 		u64 Size() override;
 
 		size GetEntryIndex(PathView path) const;
@@ -76,6 +76,6 @@ namespace noire
 
 	public:
 		static constexpr u32 EntriesHeaderMagic{ 3 }; // WAD\01
-		static const Type Type;
+		static const TypeDefinition Type;
 	};
 }

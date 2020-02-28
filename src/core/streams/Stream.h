@@ -76,7 +76,7 @@ namespace noire
 	class SubStream final : public Stream
 	{
 	public:
-		SubStream(std::shared_ptr<Stream> baseStream, u64 offset, u64 size);
+		SubStream(Stream& baseStream, u64 offset, u64 size);
 
 		u64 Read(void* dstBuffer, u64 count) override;
 		u64 ReadAt(void* dstBuffer, u64 count, u64 offset) override;
@@ -102,7 +102,7 @@ namespace noire
 		u64 Size() override;
 
 	private:
-		std::shared_ptr<Stream> mBaseStream;
+		Stream& mBaseStream;
 		u64 mOffset;
 		u64 mSize;
 		u64 mReadingOffset;
@@ -113,7 +113,7 @@ namespace noire
 	class ReadOnlyStream final : public Stream
 	{
 	public:
-		ReadOnlyStream(std::shared_ptr<Stream> baseStream);
+		ReadOnlyStream(std::unique_ptr<Stream> baseStream);
 
 		u64 Read(void* dstBuffer, u64 count) override;
 		u64 ReadAt(void* dstBuffer, u64 count, u64 offset) override;
@@ -128,7 +128,7 @@ namespace noire
 		u64 Size() override;
 
 	private:
-		std::shared_ptr<Stream> mBaseStream;
+		std::unique_ptr<Stream> mBaseStream;
 	};
 
 	// Streams with size 0 always, that cannot be read or written to.

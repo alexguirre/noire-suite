@@ -44,7 +44,7 @@ namespace noire
 		FileEntryInfo info = cb(path);
 		RegisterExistingFile(path, std::move(info));
 
-		return File::New(parent, path, fileTypeId);
+		return File::New(parent, path, true, fileTypeId);
 	}
 
 	bool VirtualFileSystem::Exists(PathView path) const
