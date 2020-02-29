@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 
 namespace noire
 {
@@ -8,6 +9,8 @@ namespace noire
 namespace noire::atb
 {
 	struct Object;
+	struct Property;
+	struct LinkStorage;
 
 	struct Writer
 	{
@@ -16,6 +19,13 @@ namespace noire::atb
 		void Write(const Object& root);
 
 	private:
+		void WriteCollection(const Object& collection);
+		void WriteCollectionEntry(const Object& entry);
+		void WriteObject(const Object& object);
+		void WritePropertyValue(const Property& prop);
+		void WriteLinks();
+
 		Stream& mStream;
+		std::vector<LinkStorage*> mLinks;
 	};
 }

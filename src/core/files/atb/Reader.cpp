@@ -30,6 +30,8 @@ namespace noire::atb
 
 		ResolveLinks();
 
+		mLinksToResolve.clear();
+
 		return root;
 	}
 
@@ -168,7 +170,7 @@ namespace noire::atb
 			Array arr;
 			arr.ItemType = s.Read<ValueType>();
 			const u16 itemCount = s.Read<u16>();
-			arr.Items.reserve(itemCount); // FIXME
+			arr.Items.reserve(itemCount);
 			for (size i = 0; i < itemCount; i++)
 			{
 				arr.Items.emplace_back(std::move(ReadPropertyValue(0, arr.ItemType)));
@@ -215,8 +217,6 @@ namespace noire::atb
 			Ensures(l != nullptr);
 			l->ScopedNameHashes = linkNames.at(l->Id);
 		}
-
-		mLinksToResolve.clear();
 	}
 
 	// TODO: get possible collections from attributes .xml files
