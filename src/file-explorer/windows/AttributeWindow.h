@@ -2,27 +2,30 @@
 #include <memory>
 #include <wx/frame.h>
 
-// namespace noire
-//{
-//	class CAttributeFile;
-//}
-//
-// class wxPropertyGrid;
-// class wxTreeCtrl;
-// class wxTreeEvent;
-//
-// class CAttributeWindow : public wxFrame
-//{
-// public:
-//	CAttributeWindow(wxWindow* parent,
-//					 wxWindowID id,
-//					 const wxString& title,
-//					 std::unique_ptr<noire::CAttributeFile> file);
-//
-// private:
-//	void OnObjectSelectionChanged(wxTreeEvent& event);
-//
-//	std::unique_ptr<noire::CAttributeFile> mFile;
-//	wxTreeCtrl* mObjectsTree;
-//	wxPropertyGrid* mObjectPropertyGrid;
-//};
+namespace noire
+{
+	class AttributeFile;
+}
+
+class wxPropertyGrid;
+class wxTreeCtrl;
+class wxTreeEvent;
+
+namespace noire::explorer
+{
+	class AttributeWindow : public wxFrame
+	{
+	public:
+		AttributeWindow(wxWindow* parent,
+						wxWindowID id,
+						const wxString& title,
+						std::shared_ptr<noire::AttributeFile> file);
+
+	private:
+		void OnObjectSelectionChanged(wxTreeEvent& event);
+
+		std::shared_ptr<noire::AttributeFile> mFile;
+		wxTreeCtrl* mObjectsTree;
+		wxPropertyGrid* mObjectPropertyGrid;
+	};
+}

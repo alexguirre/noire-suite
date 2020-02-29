@@ -6,6 +6,7 @@
 #include <IL/il.h>
 #include <core/Common.h>
 #include <core/devices/LocalDevice.h>
+#include <core/files/AttributeFile.h>
 #include <core/files/File.h>
 #include <core/streams/FileStream.h>
 #include <processthreadsapi.h>
@@ -143,21 +144,18 @@ namespace noire::explorer
 		return false;
 	}
 
-	bool App::OpenAttributeFile(PathView)
+	bool App::OpenAttributeFile(PathView filePath)
 	{
-		// std::shared_ptr file = mRootDevice->Open(filePath);
+		std::shared_ptr file = mRootDevice->Open(filePath);
 
-		// if (TFileTraits<CAttributeFile>::IsValid(*file))
-		//{
-		//	wxString title =
-		//		"Attribute - " + wxString{ filePath.String().data(), filePath.String().size() };
-		//	CAttributeWindow* atbWin = new CAttributeWindow(mMainWindow,
-		//													wxID_ANY,
-		//													title,
-		//													std::make_unique<CAttributeFile>(*file));
-		//	atbWin->Show();
-		//	return true;
-		//}
+		if (std::shared_ptr atbFile = std::dynamic_pointer_cast<AttributeFile>(file); atbFile)
+		{
+			wxString title =
+				"Attribute - " + wxString{ filePath.String().data(), filePath.String().size() };
+			AttributeWindow* atbWin = new AttributeWindow(mMainWindow, wxID_ANY, title, atbFile);
+			atbWin->Show();
+			return true;
+		}
 
 		return false;
 	}
