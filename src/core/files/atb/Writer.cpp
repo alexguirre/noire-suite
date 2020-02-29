@@ -39,6 +39,7 @@ namespace noire::atb
 			WriteCollectionEntry(c);
 		}
 	}
+
 	void Writer::WriteCollectionEntry(const Object& entry)
 	{
 		Stream& s = mStream;
@@ -202,6 +203,33 @@ TEST_SUITE("atb::Writer")
 		const Object root = Reader{ in }.Read();
 
 		FileStream out{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\root_copy.atb.pc" };
+		Writer{ out }.Write(root);
+
+		CHECK_EQ(in.Size(), out.Size());
+	}
+
+	TEST_CASE("Read/Modify/Write" * doctest::skip(true))
+	{
+		FileStream in{ "E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\root.atb.pc" };
+		Object root = Reader{ in }.Read();
+		Object& polCar =
+			root["global"]["vehicles"]["dynamics"]["services"]["buick_1947_detective_vehicle"];
+		Object& basicProps = *std::get<Structure>(polCar.Get("BasicProperties").Value).Object;
+		Object& advancedProps = *std::get<Structure>(polCar.Get("AdvancedProperties").Value).Object;
+
+		std::get<Float>(basicProps.Get("Footbrake").Value) = 50.0f;
+		std::get<Float>(basicProps.Get("GAMEPLAYGrip").Value) = 15.0f;
+		std::get<Float>(basicProps.Get("GAMEPLAYAcceleration").Value) = 50.0f;
+		std::get<Float>(basicProps.Get("GAMEPLAYMaxSpeed").Value) = 2500.0f;
+		std::get<Float>(basicProps.Get("GAMEPLAYMaxReverseSpeed").Value) = 2500.0f;
+		std::get<Float>(basicProps.Get("GAMEPLAYSuspension").Value) = 5.0f;
+
+		std::get<Float>(advancedProps.Get("TyreWidth").Value) = 0.27f;
+		std::get<Float>(advancedProps.Get("TyreRadius").Value) = 0.5f;
+
+		FileStream out{
+			"E:\\Rockstar Games\\L.A. Noire Complete Edition\\test\\root_buick_modified.atb.pc"
+		};
 		Writer{ out }.Write(root);
 
 		CHECK_EQ(in.Size(), out.Size());

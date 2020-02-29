@@ -54,4 +54,43 @@ namespace noire::atb
 		default: Expects(false);
 		}
 	}
+
+	Property& Object::Get(std::string_view propName)
+	{
+		return const_cast<Property&>(const_cast<const Object*>(this)->Get(propName));
+	}
+
+	const Property& Object::Get(std::string_view propName) const
+	{
+		const u32 propNameHash = crc32Lowercase(propName);
+		for (const Property& prop : Properties)
+		{
+			if (prop.NameHash == propNameHash)
+			{
+				return prop;
+			}
+		}
+
+		Expects(false);
+	}
+
+	Object& Object::operator[](std::string_view objName)
+	{
+		return const_cast<Object&>(const_cast<const Object*>(this)->operator[](objName));
+	}
+
+	const Object& Object::operator[](std::string_view objName) const
+	{
+		Expects(IsCollection);
+
+		for (const Object& obj : Objects)
+		{
+			if (obj.Name == objName)
+			{
+				return obj;
+			}
+		}
+
+		Expects(false);
+	}
 }

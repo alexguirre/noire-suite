@@ -140,5 +140,11 @@ namespace noire::atb
 		std::vector<Property> Properties;
 		bool IsCollection{ false };
 		std::vector<Object> Objects;
+
+		Property& Get(std::string_view propName);
+		const Property& Get(std::string_view propName) const;
+
+		Object& operator[](std::string_view objName);
+		const Object& operator[](std::string_view objName) const;
 	};
 }
