@@ -10,6 +10,8 @@
 
 namespace noire::atb
 {
+	inline constexpr u32 HeaderMagic{ 0x00425441 }; // 'ATB'
+
 	enum class ValueType : u8
 	{
 		Invalid = 0,

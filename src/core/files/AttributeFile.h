@@ -22,18 +22,9 @@ namespace noire
 		const atb::Object& Root() const { return mRoot; }
 
 	private:
-		void ReadCollection(Stream& stream, atb::Object& destCollection);
-		void ReadCollectionEntry(Stream& stream, atb::Object& destCollection);
-		void ReadObject(Stream& stream, atb::Object& destObject);
-		atb::Property ReadPropertyValue(Stream& stream, u32 propNameHash, atb::ValueType propType);
-		void SkipProperty(Stream& stream, atb::ValueType propType);
-		void ResolveLinks(Stream& stream);
-
 		atb::Object mRoot;
-		std::vector<atb::LinkStorage*> mLinksToResolve;
 
 	public:
-		static constexpr u32 HeaderMagic{ 0x00425441 }; // 'ATB'
 		static const TypeDefinition Type;
 	};
 }
