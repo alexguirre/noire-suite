@@ -99,8 +99,8 @@ namespace noire::atb
 
 	struct Array
 	{
-		ValueType ItemType{ ValueType::Invalid };
-		std::vector<Property> Items;
+		ValueType ElementType{ ValueType::Invalid };
+		std::vector<Property> Elements;
 	};
 
 	struct Structure

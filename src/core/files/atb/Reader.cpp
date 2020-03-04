@@ -168,12 +168,12 @@ namespace noire::atb
 		case ValueType::Array:
 		{
 			Array arr;
-			arr.ItemType = s.Read<ValueType>();
+			arr.ElementType = s.Read<ValueType>();
 			const u16 itemCount = s.Read<u16>();
-			arr.Items.reserve(itemCount);
+			arr.Elements.reserve(itemCount);
 			for (size i = 0; i < itemCount; i++)
 			{
-				arr.Items.emplace_back(std::move(ReadPropertyValue(0, arr.ItemType)));
+				arr.Elements.emplace_back(std::move(ReadPropertyValue(0, arr.ElementType)));
 			}
 
 			prop.Value = std::move(arr);

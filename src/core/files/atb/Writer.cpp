@@ -143,9 +143,9 @@ namespace noire::atb
 		case ValueType::Array:
 		{
 			const Array& arr = std::get<Array>(prop.Value);
-			s.Write(arr.ItemType);
-			s.Write(gsl::narrow<u16>(arr.Items.size()));
-			for (const Property& item : arr.Items)
+			s.Write(arr.ElementType);
+			s.Write(gsl::narrow<u16>(arr.Elements.size()));
+			for (const Property& item : arr.Elements)
 			{
 				WritePropertyValue(item);
 			}
