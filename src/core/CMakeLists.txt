@@ -22,12 +22,16 @@ file(GLOB CORE_SOURCES
     "files/File.h"
     "files/WAD.cpp"
     "files/WAD.h"
+    "files/atb/Definition.cpp"
+    "files/atb/Definition.h"
     "files/atb/Types.cpp"
     "files/atb/Types.h"
     "files/atb/Reader.cpp"
     "files/atb/Reader.h"
     "files/atb/Writer.cpp"
     "files/atb/Writer.h"
+    "files/atb/XmlReader.cpp"
+    "files/atb/XmlReader.h"
     "streams/FileStream.cpp"
     "streams/FileStream.h"
     "streams/MemoryStream.cpp"
@@ -56,6 +60,11 @@ if(NOT doctest_FOUND)
     message(FATAL_ERROR "doctest not found")
 endif()
 
+find_package(pugixml CONFIG REQUIRED)
+if(NOT pugixml_FOUND)
+    message(FATAL_ERROR "pugixml not found")
+endif()
+
 target_compile_definitions(noire-core PUBLIC DOCTEST_CONFIG_DISABLE)
 
 
@@ -64,10 +73,12 @@ target_include_directories(noire-core-test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${
 
 target_link_libraries(noire-core PRIVATE
     doctest::doctest
+    pugixml
     d3dcompiler
 )
 
 target_link_libraries(noire-core-test PRIVATE
     doctest::doctest
+    pugixml
     d3dcompiler
 )

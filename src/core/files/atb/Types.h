@@ -33,7 +33,57 @@ namespace noire::atb
 		Structure = 70,
 	};
 
-	std::string_view ValueTypeToString(ValueType type);
+	constexpr std::string_view ValueTypeToString(ValueType type)
+	{
+		using namespace std::string_view_literals;
+
+		switch (type)
+		{
+		case ValueType::Invalid: return "Invalid"sv;
+		case ValueType::Int32: return "Int32"sv;
+		case ValueType::UInt32: return "UInt32"sv;
+		case ValueType::Float: return "Float"sv;
+		case ValueType::Bool: return "Bool"sv;
+		case ValueType::Vec3: return "Vec3"sv;
+		case ValueType::Vec2: return "Vec2"sv;
+		case ValueType::Mat4: return "Mat4"sv;
+		case ValueType::AString: return "AString"sv;
+		case ValueType::UInt64: return "UInt64"sv;
+		case ValueType::Vec4: return "Vec4"sv;
+		case ValueType::UString: return "UString"sv;
+		case ValueType::PolyPtr: return "PolyPtr"sv;
+		case ValueType::Link: return "Link"sv;
+		case ValueType::Bitfield: return "Bitfield"sv;
+		case ValueType::Array: return "Array"sv;
+		case ValueType::Structure: return "Structure"sv;
+		default: Expects(false);
+		}
+	}
+
+	constexpr ValueType ValueTypeFromString(std::string_view typeStr)
+	{
+		// TODO: ValueTypeFromString should be case insentive
+		// clang-format off
+		if (typeStr == ValueTypeToString(ValueType::Invalid)) return ValueType::Invalid;
+		if (typeStr == ValueTypeToString(ValueType::Int32)) return ValueType::Int32;
+		if (typeStr == ValueTypeToString(ValueType::UInt32)) return ValueType::UInt32;
+		if (typeStr == ValueTypeToString(ValueType::Float)) return ValueType::Float;
+		if (typeStr == ValueTypeToString(ValueType::Bool)) return ValueType::Bool;
+		if (typeStr == ValueTypeToString(ValueType::Vec3)) return ValueType::Vec3;
+		if (typeStr == ValueTypeToString(ValueType::Vec2)) return ValueType::Vec2;
+		if (typeStr == ValueTypeToString(ValueType::Mat4)) return ValueType::Mat4;
+		if (typeStr == ValueTypeToString(ValueType::AString)) return ValueType::AString;
+		if (typeStr == ValueTypeToString(ValueType::UInt64)) return ValueType::UInt64;
+		if (typeStr == ValueTypeToString(ValueType::Vec4)) return ValueType::Vec4;
+		if (typeStr == ValueTypeToString(ValueType::UString)) return ValueType::UString;
+		if (typeStr == ValueTypeToString(ValueType::PolyPtr)) return ValueType::PolyPtr;
+		if (typeStr == ValueTypeToString(ValueType::Link)) return ValueType::Link;
+		if (typeStr == ValueTypeToString(ValueType::Bitfield)) return ValueType::Bitfield;
+		if (typeStr == ValueTypeToString(ValueType::Array)) return ValueType::Array;
+		if (typeStr == ValueTypeToString(ValueType::Structure)) return ValueType::Structure;
+		Expects(false);
+		// clang-format off
+	}
 
 	struct Object;
 	struct Property;
@@ -50,6 +100,13 @@ namespace noire::atb
 	using Vec3 = std::array<Float, 3>;
 	using Vec4 = std::array<Float, 4>;
 	using Mat4 = std::array<Float, 16>;
+
+	// clang-format off
+	constexpr Mat4 Mat4Identity{ 1.0f, 0.0f, 0.0f, 0.0f,
+								 0.0f, 1.0f, 0.0f, 0.0f,
+								 0.0f, 0.0f, 1.0f, 0.0f,
+								 0.0f, 0.0f, 0.0f, 1.0f };
+	// clang-format on
 
 	struct AString
 	{
@@ -125,6 +182,8 @@ namespace noire::atb
 									  Link,
 									  Array,
 									  Structure>;
+
+	ValueVariant DefaultValue(ValueType type);
 
 	struct Property
 	{

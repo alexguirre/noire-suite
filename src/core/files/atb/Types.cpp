@@ -29,29 +29,27 @@ namespace noire::atb
 		return str;
 	}
 
-	std::string_view ValueTypeToString(ValueType type)
+	ValueVariant DefaultValue(ValueType type)
 	{
-		using namespace std::string_view_literals;
-
 		switch (type)
 		{
-		case ValueType::Int32: return "Int32"sv;
-		case ValueType::UInt32: return "UInt32"sv;
-		case ValueType::Float: return "Float"sv;
-		case ValueType::Bool: return "Bool"sv;
-		case ValueType::Vec3: return "Vec3"sv;
-		case ValueType::Vec2: return "Vec2"sv;
-		case ValueType::Mat4: return "Mat4"sv;
-		case ValueType::AString: return "AString"sv;
-		case ValueType::UInt64: return "UInt64"sv;
-		case ValueType::Vec4: return "Vec4"sv;
-		case ValueType::UString: return "UString"sv;
-		case ValueType::PolyPtr: return "PolyPtr"sv;
-		case ValueType::Link: return "Link"sv;
-		case ValueType::Bitfield: return "Bitfield"sv;
-		case ValueType::Array: return "Array"sv;
-		case ValueType::Structure: return "Structure"sv;
-		default: Expects(false);
+		case ValueType::Int32: return Int32{};
+		case ValueType::UInt32: return UInt32{};
+		case ValueType::Float: return Float{};
+		case ValueType::Bool: return Bool{};
+		case ValueType::Vec3: return Vec3{};
+		case ValueType::Vec2: return Vec2{};
+		case ValueType::Mat4: return Mat4{};
+		case ValueType::AString: return AString{};
+		case ValueType::UInt64: return UInt64{};
+		case ValueType::Vec4: return Vec4{};
+		case ValueType::UString: return UString{};
+		case ValueType::PolyPtr: return PolyPtr{};
+		case ValueType::Link: return Link{};
+		case ValueType::Bitfield: return Bitfield{};
+		case ValueType::Array: return Array{};
+		case ValueType::Structure: return Structure{};
+		default: return Invalid{};
 		}
 	}
 
