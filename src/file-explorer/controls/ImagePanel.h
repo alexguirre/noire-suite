@@ -23,7 +23,6 @@ namespace noire::explorer
 		void Render(wxDC& dc);
 		void RenderNow();
 		void OnPaint(wxPaintEvent& event);
-		void OnSize(wxSizeEvent& event);
 
 		wxImage mImageOrig;
 		wxBitmap mImageResized;

@@ -1,6 +1,8 @@
 #include "ImagePanel.h"
 #include <algorithm>
+#include <core/Common.h>
 #include <gsl/gsl>
+#include <wx/dcbuffer.h>
 #include <wx/dcclient.h>
 
 namespace noire::explorer
@@ -9,14 +11,20 @@ namespace noire::explorer
 						   const wxWindowID id,
 						   const wxPoint& pos,
 						   const wxSize& size)
-		: wxPanel(parent, id, pos, size, wxTAB_TRAVERSAL | wxBORDER_SIMPLE),
+		: wxPanel(parent,
+				  id,
+				  pos,
+				  size,
+				  wxTAB_TRAVERSAL | wxBORDER_SIMPLE | wxFULL_REPAINT_ON_RESIZE),
 		  mImageOrig{},
 		  mImageResized{},
 		  mResizeQuality{ wxIMAGE_QUALITY_NORMAL },
 		  mForceResize{ false }
 	{
+		SetDoubleBuffered(true);
+		SetBackgroundStyle(wxBG_STYLE_PAINT);
+
 		Bind(wxEVT_PAINT, &ImagePanel::OnPaint, this);
-		Bind(wxEVT_SIZE, &ImagePanel::OnSize, this);
 	}
 
 	void ImagePanel::SetImage(const wxImage& img)
@@ -48,6 +56,29 @@ namespace noire::explorer
 				 std::max(1, static_cast<int>(imgOrigSize.GetHeight() * ratio)) };
 	}
 
+	static void DrawBackground(wxDC& dc)
+	{
+		const auto color1 = std::tie(*wxLIGHT_GREY_BRUSH, *wxLIGHT_GREY_PEN);
+		const auto color2 = std::tie(*wxMEDIUM_GREY_BRUSH, *wxMEDIUM_GREY_PEN);
+
+		constexpr size SquareSize{ 10 };
+
+		const wxSize canvasSize = dc.GetSize();
+		const size wCount = canvasSize.GetWidth() / SquareSize;
+		const size hCount = canvasSize.GetHeight() / SquareSize;
+
+		for (size y = 0; y <= hCount; y++)
+		{
+			for (size x = 0; x <= wCount; x++)
+			{
+				const auto [b, p] = (x + y) % 2 == 0 ? color1 : color2;
+				dc.SetBrush(b);
+				dc.SetPen(p);
+				dc.DrawRectangle(x * SquareSize, y * SquareSize, SquareSize, SquareSize);
+			}
+		}
+	}
+
 	void ImagePanel::Render(wxDC& dc)
 	{
 		if (!mImageResized.IsOk())
@@ -69,20 +100,20 @@ namespace noire::explorer
 		const wxPoint pos{ thisSize.GetWidth() / 2 - imgSize.GetWidth() / 2,
 						   thisSize.GetHeight() / 2 - imgSize.GetHeight() / 2 };
 		dc.Clear();
+		DrawBackground(dc);
 		dc.DrawBitmap(mImageResized, pos);
 	}
 
 	void ImagePanel::RenderNow()
 	{
-		wxClientDC dc{ this };
+		wxClientDC dcClient{ this };
+		wxBufferedDC dc{ &dcClient };
 		Render(dc);
 	}
 
 	void ImagePanel::OnPaint(wxPaintEvent&)
 	{
-		wxPaintDC dc{ this };
+		wxAutoBufferedPaintDC dc{ this };
 		Render(dc);
 	}
-
-	void ImagePanel::OnSize(wxSizeEvent&) { RenderNow(); }
 }
