@@ -40,6 +40,8 @@ file(GLOB FILE_EXPLORER_SOURCES
     "windows/MainWindow.h"
     "windows/ShaderProgramWindow.cpp"
     "windows/ShaderProgramWindow.h"
+    "windows/TrunkWindow.cpp"
+    "windows/TrunkWindow.h"
 )
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${FILE_EXPLORER_SOURCES})
 
@@ -77,6 +79,7 @@ target_compile_definitions(noire-file-explorer PRIVATE
     __WXMSW__
     _CRT_SECURE_NO_WARNINGS
     IL_STATIC_LIB
+    WIN32_LEAN_AND_MEAN
 )
 
 set(VCPKG_LIBS_DEBUG_DIR ${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/debug/lib)

@@ -29,7 +29,7 @@ namespace noire::explorer
 		bool OpenDDSFile(PathView filePath);
 		bool OpenShaderProgramFile(PathView filePath);
 		bool OpenAttributeFile(PathView filePath);
-		bool OpenUniqueTextureVRamFile(PathView filePath);
+		bool OpenTrunkFile(PathView filePath);
 
 		std::unique_ptr<MultiDevice> mRootDevice;
 		MainWindow* mMainWindow;

@@ -83,8 +83,8 @@ namespace noire
 	class HashLookup
 	{
 	public:
-		static constexpr std::string_view HashPrefix{ "?#" };
-		static constexpr std::string_view HashSuffix{ "#?" };
+		static constexpr std::string_view HashPrefix{ "unk_hash_" };
+		static constexpr std::string_view HashSuffix{ "" };
 
 		HashLookup(const std::filesystem::path& path, bool caseSensitive);
 

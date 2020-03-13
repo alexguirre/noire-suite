@@ -3,10 +3,12 @@
 #include "windows/ImageWindow.h"
 #include "windows/MainWindow.h"
 #include "windows/ShaderProgramWindow.h"
+#include "windows/TrunkWindow.h"
 #include <IL/il.h>
 #include <core/Common.h>
 #include <core/devices/LocalDevice.h>
 #include <core/files/File.h>
+#include <core/files/Trunk.h>
 #include <core/streams/FileStream.h>
 #include <processthreadsapi.h>
 #include <thread>
@@ -44,7 +46,7 @@ namespace noire::explorer
 		mMainWindow->OnRootPathChanged();
 	}
 
-	static wxImage CreateImageFromDDS(gsl::span<byte> ddsData)
+	/*static*/ wxImage CreateImageFromDDS(gsl::span<const byte> ddsData)
 	{
 		ILuint imgId = ilGenImage();
 		ilBindImage(imgId);
@@ -162,68 +164,25 @@ namespace noire::explorer
 		return false;
 	}
 
-	bool App::OpenUniqueTextureVRamFile(PathView)
+	bool App::OpenTrunkFile(PathView filePath)
 	{
-		// auto* fs = wxGetApp().FileSystem();
-		// if (filePath.Name() == "uniquetexturevram")
-		//{
-		//	// TODO: move this loading somewhere else, possibly to noire-formats
-		//	// TODO: show all textures in the same window
-		//	SPath mainPath = filePath.Parent() / "uniquetexturemain";
-		//	Expects(fs->FileExists(mainPath)); // TODO: 'uniquetexturemain' may not exist along
-		//									   // with a 'uniquetexturevram' file
-		//	std::unique_ptr<IFileStream> mainStream = fs->OpenFile(mainPath);
-		//	std::unique_ptr<IFileStream> vramStream = fs->OpenFile(filePath);
-		//	const std::size_t vramStreamSize = vramStream->Size();
+		std::shared_ptr file = mRootDevice->Open(filePath);
 
-		//	mainStream->Read<std::uint32_t>(); // these 4 bytes are used by the game at runtime to
-		//									   // indicate if it already loaded the texture, the
-		// file
-		//									   // should always have 0 here
-
-		//	// read entries
-		//	const std::uint32_t textureCount = mainStream->Read<std::uint32_t>();
-		//	struct TextureEntry
-		//	{
-		//		std::uint32_t Offset;
-		//		std::uint32_t UnkZero;
-		//		std::uint32_t NameHash;
-		//	};
-		//	std::vector<TextureEntry> entries{};
-		//	entries.reserve(textureCount);
-		//	for (std::size_t i = 0; i < textureCount; i++)
-		//	{
-		//		entries.emplace_back(mainStream->Read<TextureEntry>());
-		//	}
-
-		//	// open a window for each texture
-		//	for (std::size_t i = 0; i < entries.size(); i++)
-		//	{
-		//		const TextureEntry& e = entries[i];
-		//		// this expects the entries to be sorted by offset, not sure if that is always the
-		// case 		const std::size_t size = (i < (entries.size() - 1)) ?
-		// (entries[i
-		// + 1].Offset - e.Offset) : 									 (vramStreamSize -
-		// e.Offset); std::unique_ptr<std::byte[]> buffer = std::make_unique<std::byte[]>(size);
-		// vramStream->Seek(e.Offset); 		vramStream->Read(buffer.get(), size);
-
-		//		const wxImage img =
-		//			CreateImageFromDDS({ buffer.get(), gsl::narrow<std::ptrdiff_t>(size) });
-
-		//		std::string title = noire::CHashDatabase::Instance().TryGetString(e.NameHash);
-		//		title += " | " + std::string{ filePath.String() };
-		//		CImageWindow* imgWin = new CImageWindow(mMainWindow, wxID_ANY, title, img);
-		//		imgWin->Show();
-		//	}
-		//	return true;
-		//}
+		if (std::shared_ptr trunkFile = std::dynamic_pointer_cast<Trunk>(file); trunkFile)
+		{
+			wxString title =
+				"Trunk - " + wxString{ filePath.String().data(), filePath.String().size() };
+			TrunkWindow* trunkWin = new TrunkWindow(mMainWindow, wxID_ANY, title, trunkFile);
+			trunkWin->Show();
+			return true;
+		}
 
 		return false;
 	}
 
 	bool App::OpenFile(PathView filePath)
 	{
-		return OpenUniqueTextureVRamFile(filePath) || OpenShaderProgramFile(filePath) ||
+		return OpenTrunkFile(filePath) || OpenShaderProgramFile(filePath) ||
 			   OpenAttributeFile(filePath) || OpenDDSFile(filePath);
 	}
 }
