@@ -31,7 +31,7 @@ namespace noire
 
 		TrunkUniqueTexture(Trunk& owner, TrunkSectionHeader main, TrunkSectionHeader vram);
 
-		std::vector<byte> GetTextureData(size textureIndex);
+		std::vector<byte> GetTextureData(size textureIndex) const;
 	};
 
 	class Trunk final : public File

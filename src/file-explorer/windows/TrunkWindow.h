@@ -10,7 +10,7 @@ namespace noire
 class wxPropertyGrid;
 class wxTreeCtrl;
 class wxTreeEvent;
-class wxScrolledWindow;
+class wxSplitterWindow;
 
 namespace noire::explorer
 {
@@ -27,6 +27,6 @@ namespace noire::explorer
 		void OnRawExport(wxCommandEvent&);
 
 		std::shared_ptr<noire::Trunk> mFile;
-		wxScrolledWindow* mRight;
+		wxSplitterWindow* mCenter;
 	};
 }

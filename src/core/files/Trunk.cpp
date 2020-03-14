@@ -28,7 +28,7 @@ namespace noire
 		}
 	}
 
-	std::vector<byte> TrunkUniqueTexture::GetTextureData(size textureIndex)
+	std::vector<byte> TrunkUniqueTexture::GetTextureData(size textureIndex) const
 	{
 		Expects(textureIndex < Textures.size());
 

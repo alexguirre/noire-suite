@@ -6,18 +6,42 @@
 #include <core/streams/FileStream.h>
 #include <filesystem>
 #include <tuple>
+#include <utility>
 #include <vector>
 #include <wx/button.h>
+#include <wx/combobox.h>
 #include <wx/dirdlg.h>
 #include <wx/listbox.h>
 #include <wx/panel.h>
-#include <wx/scrolwin.h>
 #include <wx/sizer.h>
 #include <wx/splitter.h>
-#include <wx/stattext.h>
+#include <wx/toolbar.h>
+#include <wx/wupdlock.h>
 
 namespace noire::explorer
 {
+	enum class Section : uptr
+	{
+		UniqueTexture = 1,
+	};
+
+	static constexpr const char* SectionToString(Section s)
+	{
+		switch (s)
+		{
+		case Section::UniqueTexture: return "Unique Texture";
+		default: return "Unknown";
+		}
+	}
+
+	static void* SectionToClientData(Section s) { return reinterpret_cast<void*>(s); }
+
+	static Section SectionFromClientData(void* d)
+	{
+		return static_cast<Section>(reinterpret_cast<uptr>(d));
+	}
+
+	// defined in App.cpp
 	wxImage CreateImageFromDDS(gsl::span<const byte> ddsData);
 
 	TrunkWindow::TrunkWindow(wxWindow* parent,
@@ -28,127 +52,123 @@ namespace noire::explorer
 	{
 		Expects(mFile != nullptr);
 
-		wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
-		wxSplitterWindow* splitter = new wxSplitterWindow(this,
-														  wxID_ANY,
-														  wxDefaultPosition,
-														  wxDefaultSize,
-														  wxSP_LIVE_UPDATE);
-		SetBackgroundColour(splitter->GetBackgroundColour());
-		splitter->SetSashGravity(0.0);
-		splitter->SetMinimumPaneSize(50);
-		mainSizer->Add(splitter, 1, wxEXPAND | wxALL, 6);
-
-		wxPanel* left = new wxPanel(splitter);
-
-		wxPanel* leftTop = new wxPanel(left);
-		{
-			wxStaticText* sectionsTitle = new wxStaticText(leftTop, wxID_ANY, "Sections:");
-			wxButton* rawExportBtn = new wxButton(leftTop, wxID_ANY, "Raw export");
-			rawExportBtn->Bind(wxEVT_BUTTON, &TrunkWindow::OnRawExport, this);
-
-			wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
-			sizer->Add(sectionsTitle, 0, wxSHRINK | wxALIGN_BOTTOM);
-			sizer->AddStretchSpacer();
-			sizer->Add(rawExportBtn, 0, wxSHRINK | wxALIGN_CENTER_VERTICAL);
-
-			leftTop->SetSizer(sizer);
-		}
-		wxListBox* sectionsList = new wxListBox(left, wxID_ANY);
-		sectionsList->SetWindowStyle(wxLB_SINGLE | wxLB_SORT);
-
-		wxBoxSizer* leftSizer = new wxBoxSizer(wxVERTICAL);
-		leftSizer->Add(leftTop, 0, wxEXPAND);
-		leftSizer->Add(sectionsList, 1, wxEXPAND);
-
-		left->SetSizer(leftSizer);
-
-		mRight = new wxScrolledWindow(splitter); // new wxPanel(splitter);
-		mRight->SetScrollRate(5, 5);
-		splitter->SplitVertically(left, mRight);
-
-		SetSizer(mainSizer);
-
-		SetSize(800, 500);
-
 		if (!mFile->IsLoaded())
 		{
 			mFile->Load();
 		}
 
-		std::vector<std::tuple<wxString, void*>> sections{};
-		for (auto& section : mFile->Sections())
+		wxToolBar* tb = CreateToolBar();
 		{
-			void* data = reinterpret_cast<void*>(section.NameHash);
-			sections.emplace_back(HashLookup::Instance(false).TryGetString(section.NameHash), data);
+			wxComboBox* sectionsCombo = new wxComboBox(tb,
+													   wxID_ANY,
+													   wxEmptyString,
+													   wxDefaultPosition,
+													   wxDefaultSize,
+													   0,
+													   nullptr,
+													   wxCB_READONLY | wxCB_DROPDOWN);
+			tb->AddControl(sectionsCombo, "Sections:");
+
+			if (mFile->HasUniqueTexture())
+			{
+				sectionsCombo->Append(SectionToString(Section::UniqueTexture),
+									  SectionToClientData(Section::UniqueTexture));
+			}
+
+			sectionsCombo->Bind(wxEVT_COMBOBOX, &TrunkWindow::OnSectionSelected, this);
+
+			wxButton* rawExportBtn = new wxButton(tb, wxID_ANY, "Raw export");
+			tb->AddControl(rawExportBtn);
+
+			rawExportBtn->Bind(wxEVT_BUTTON, &TrunkWindow::OnRawExport, this);
+
+			tb->Realize();
 		}
 
-		std::sort(sections.begin(), sections.end(), [](auto& a, auto& b) {
-			return std::get<0>(a).CmpNoCase(std::get<0>(b)) < 0;
-		});
+		wxBoxSizer* mainSizer = new wxBoxSizer(wxVERTICAL);
 
-		for (auto& sectionTuple : sections)
-		{
-			sectionsList->Append(std::get<0>(sectionTuple), std::get<1>(sectionTuple));
-		}
+		mCenter = new wxSplitterWindow(this,
+									   wxID_ANY,
+									   wxDefaultPosition,
+									   wxDefaultSize,
+									   wxSP_LIVE_UPDATE);
+		mCenter->SetSashGravity(0.0);
+		mCenter->SetMinimumPaneSize(50);
 
-		sectionsList->Bind(wxEVT_LISTBOX, &TrunkWindow::OnSectionSelected, this);
+		mainSizer->Add(mCenter, 1, wxEXPAND);
+
+		SetSizer(mainSizer);
+
+		SetSize(800, 500);
+
+		auto e = wxCommandEvent{};
+		OnSectionSelected(e);
 	}
 
 	void TrunkWindow::OnSectionSelected(wxCommandEvent& e)
 	{
-		mRight->DestroyChildren();
-		const u32 sectionNameHash = reinterpret_cast<u32>(e.GetClientData());
-		if (sectionNameHash == crc32("uniquetexturemain") ||
-			sectionNameHash == crc32("uniquetexturevram"))
+		mCenter->Unsplit();
+		mCenter->DestroyChildren();
+
+		switch (SectionFromClientData(e.GetClientData()))
+		{
+		case Section::UniqueTexture:
 		{
 			if (auto uniqueTexture = mFile->GetUniqueTexture(); uniqueTexture)
 			{
-				Freeze();
+				wxWindowUpdateLocker lock{ this };
 
-				wxBoxSizer* rightSizer = new wxBoxSizer(wxVERTICAL);
-				wxStaticText* countText = new wxStaticText(
-					mRight,
-					wxID_ANY,
-					wxString::Format("Count: %zu", uniqueTexture->Textures.size()));
-				rightSizer->Add(countText, 0, wxEXPAND | wxBOTTOM, 12);
+				wxListBox* left = new wxListBox(mCenter,
+												wxID_ANY,
+												wxDefaultPosition,
+												wxDefaultSize,
+												0,
+												nullptr,
+												wxLB_SINGLE | wxBORDER_THEME);
+				wxWindow* right = new wxWindow(mCenter,
+											   wxID_ANY,
+											   wxDefaultPosition,
+											   wxDefaultSize,
+											   wxBORDER_THEME);
+
+				left->SetBackgroundColour(*wxWHITE);
+				right->SetBackgroundColour(*wxWHITE);
+				right->SetSizer(new wxBoxSizer(wxVERTICAL));
 
 				size i = 0;
 				for (auto& t : uniqueTexture->Textures)
 				{
-					wxStaticText* nameText = new wxStaticText(
-						mRight,
-						wxID_ANY,
+					const wxString imgName =
 						wxString::Format("%s (offset:0x%08X)",
 										 HashLookup::Instance(false).TryGetString(t.NameHash),
-										 t.Offset));
-					rightSizer->Add(nameText, 0, wxSHRINK);
-
-					const std::vector<byte> imgData = uniqueTexture->GetTextureData(i);
-					const wxImage img = CreateImageFromDDS(imgData);
-					ImagePanel* imgPanel =
-						new ImagePanel(mRight, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-					imgPanel->SetImage(img);
-					imgPanel->SetBackgroundColour(wxColour{ 255, 0, 0 });
-					imgPanel->SetSizeHints(64, 64, 256 + 128, 256 + 128);
-
-					rightSizer->Add(imgPanel, 1, wxEXPAND | wxBOTTOM, 12);
+										 t.Offset);
+					left->Append(imgName, reinterpret_cast<void*>(i));
 
 					i++;
 				}
 
-				mRight->SetSizer(rightSizer);
-				mRight->Layout();
-				rightSizer->Fit(mRight);
+				mCenter->SplitVertically(left, right);
 
-				Thaw();
+				left->Bind(
+					wxEVT_LISTBOX,
+					[this, right, uniqueTexture{ std::move(uniqueTexture) }](wxCommandEvent& e) {
+						right->DestroyChildren();
+
+						size texIndex = reinterpret_cast<size>(e.GetClientData());
+						const std::vector<byte> imgData = uniqueTexture->GetTextureData(texIndex);
+						const wxImage img = CreateImageFromDDS(imgData);
+						ImagePanel* imgPanel =
+							new ImagePanel(right, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+						imgPanel->SetImage(img);
+
+						right->GetSizer()->Add(imgPanel, 1, wxEXPAND);
+						right->Layout();
+						right->Refresh();
+					});
 			}
+			break;
 		}
-		else
-		{
 		}
-		Layout();
-		Refresh();
 	}
 
 	void TrunkWindow::OnRawExport(wxCommandEvent&)
