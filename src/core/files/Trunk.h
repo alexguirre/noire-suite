@@ -2,38 +2,14 @@
 #include "Common.h"
 #include "File.h"
 #include "streams/Stream.h"
+#include "trunk/Graphics.h"
+#include "trunk/Section.h"
+#include "trunk/UniqueTexture.h"
 #include <optional>
 #include <vector>
 
 namespace noire
 {
-	class Trunk;
-
-	struct TrunkSectionHeader
-	{
-		u32 NameHash;
-		u32 Size;
-		u32 Offset;
-	};
-
-	struct TrunkUniqueTexture
-	{
-		struct Entry
-		{
-			u32 Offset;
-			u32 NameHash;
-		};
-
-		Trunk& Owner;
-		TrunkSectionHeader Main;
-		TrunkSectionHeader VRAM;
-		std::vector<Entry> Textures;
-
-		TrunkUniqueTexture(Trunk& owner, TrunkSectionHeader main, TrunkSectionHeader vram);
-
-		std::vector<byte> GetTextureData(size textureIndex) const;
-	};
-
 	class Trunk final : public File
 	{
 	public:
@@ -47,14 +23,16 @@ namespace noire
 		u64 Size() override;
 		bool HasChanged() const override;
 
-		const std::vector<TrunkSectionHeader>& Sections() const { return mSections; }
+		const std::vector<trunk::Section>& Sections() const { return mSections; }
 		u64 GetDataOffset(u32 offset) const;
 		bool HasSection(u32 nameHash) const;
-		std::optional<TrunkSectionHeader> GetSection(u32 nameHash) const;
-		std::optional<SubStream> GetSectionDataStream(u32 nameHash);
+		std::optional<trunk::Section> GetSection(u32 nameHash) const;
 
 		bool HasUniqueTexture() const;
-		std::optional<TrunkUniqueTexture> GetUniqueTexture();
+		std::optional<trunk::UniqueTexture> GetUniqueTexture();
+
+		bool HasGraphics() const;
+		std::optional<trunk::Graphics> GetGraphics();
 
 	private:
 		bool mHasChanged;
@@ -62,7 +40,7 @@ namespace noire
 		u64 mPrimaryDataSize;
 		u64 mSecondaryDataPos;
 		u64 mSecondaryDataSize;
-		std::vector<TrunkSectionHeader> mSections;
+		std::vector<trunk::Section> mSections;
 
 	public:
 		static constexpr size HeaderSize{ 20 };

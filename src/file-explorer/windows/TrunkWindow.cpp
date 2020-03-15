@@ -20,25 +20,21 @@
 
 namespace noire::explorer
 {
-	enum class Section : uptr
-	{
-		UniqueTexture = 1,
-	};
-
-	static constexpr const char* SectionToString(Section s)
+	static constexpr const char* SectionToString(TrunkWindow::Section s)
 	{
 		switch (s)
 		{
-		case Section::UniqueTexture: return "Unique Texture";
+		case TrunkWindow::Section::Graphics: return "Graphics";
+		case TrunkWindow::Section::UniqueTexture: return "Unique Texture";
 		default: return "Unknown";
 		}
 	}
 
-	static void* SectionToClientData(Section s) { return reinterpret_cast<void*>(s); }
+	static void* SectionToClientData(TrunkWindow::Section s) { return reinterpret_cast<void*>(s); }
 
-	static Section SectionFromClientData(void* d)
+	static TrunkWindow::Section SectionFromClientData(void* d)
 	{
-		return static_cast<Section>(reinterpret_cast<uptr>(d));
+		return static_cast<TrunkWindow::Section>(reinterpret_cast<uptr>(d));
 	}
 
 	// defined in App.cpp
@@ -48,7 +44,10 @@ namespace noire::explorer
 							 wxWindowID id,
 							 const wxString& title,
 							 std::shared_ptr<Trunk> file)
-		: wxFrame(parent, id, title), mFile{ file }
+		: wxFrame(parent, id, title),
+		  mFile{ file },
+		  mCenter{ nullptr },
+		  mCurrentSection{ Section::None }
 	{
 		Expects(mFile != nullptr);
 
@@ -68,6 +67,12 @@ namespace noire::explorer
 													   nullptr,
 													   wxCB_READONLY | wxCB_DROPDOWN);
 			tb->AddControl(sectionsCombo, "Sections:");
+
+			if (mFile->HasGraphics())
+			{
+				sectionsCombo->Append(SectionToString(Section::Graphics),
+									  SectionToClientData(Section::Graphics));
+			}
 
 			if (mFile->HasUniqueTexture())
 			{
@@ -107,78 +112,25 @@ namespace noire::explorer
 
 	void TrunkWindow::OnSectionSelected(wxCommandEvent& e)
 	{
-		mCenter->Unsplit();
-		mCenter->DestroyChildren();
-
-		switch (SectionFromClientData(e.GetClientData()))
+		const Section newSection = SectionFromClientData(e.GetClientData());
+		if (mCurrentSection == newSection)
 		{
+			return;
+		}
+
+		mCenter->DestroyChildren();
+		mCenter->Initialize(nullptr);
+
+		switch (newSection)
+		{
+		case Section::Graphics:
+		{
+			ShowGraphics();
+			break;
+		}
 		case Section::UniqueTexture:
 		{
-			if (auto uniqueTexture = mFile->GetUniqueTexture(); uniqueTexture)
-			{
-				wxWindowUpdateLocker lock{ this };
-
-				wxListBox* left = new wxListBox(mCenter,
-												wxID_ANY,
-												wxDefaultPosition,
-												wxDefaultSize,
-												0,
-												nullptr,
-												wxLB_SINGLE | wxBORDER_THEME);
-				wxWindow* right = new wxWindow(mCenter,
-											   wxID_ANY,
-											   wxDefaultPosition,
-											   wxDefaultSize,
-											   wxBORDER_THEME);
-
-				left->SetBackgroundColour(*wxWHITE);
-				right->SetBackgroundColour(*wxWHITE);
-				right->SetSizer(new wxBoxSizer(wxVERTICAL));
-
-				size i = 0;
-				for (auto& t : uniqueTexture->Textures)
-				{
-					const wxString imgName =
-						wxString::Format("%s (offset:0x%08X)",
-										 HashLookup::Instance(false).TryGetString(t.NameHash),
-										 t.Offset);
-					left->Append(imgName, reinterpret_cast<void*>(i));
-
-					i++;
-				}
-
-				mCenter->SplitVertically(left, right);
-
-				ImagePanel* imgPanel =
-					new ImagePanel(right, wxID_ANY, wxDefaultPosition, wxDefaultSize);
-
-				right->GetSizer()->Add(imgPanel, 1, wxEXPAND);
-
-				right->Layout();
-				right->Refresh();
-
-				const bool hasTextures = uniqueTexture->Textures.size() > 0;
-
-				left->Bind(
-					wxEVT_LISTBOX,
-					[this, imgPanel, uniqueTexture{ std::move(uniqueTexture) }](wxCommandEvent& e) {
-						size texIndex = reinterpret_cast<size>(e.GetClientData());
-						const std::vector<byte> imgData = uniqueTexture->GetTextureData(texIndex);
-						const wxImage img = CreateImageFromDDS(imgData);
-						imgPanel->SetImage(img);
-
-						imgPanel->Refresh();
-					});
-
-				if (hasTextures)
-				{
-					left->SetSelection(0, true);
-
-					wxCommandEvent evt{ wxEVT_LISTBOX };
-					evt.SetClientData(reinterpret_cast<void*>(0));
-					left->Command(evt);
-				}
-			}
+			ShowUniqueTexture();
 			break;
 		}
 		}
@@ -208,7 +160,80 @@ namespace noire::explorer
 				path / HashLookup::Instance(false).TryGetString(s.NameHash);
 
 			FileStream f{ filePath };
-			mFile->GetSectionDataStream(s.NameHash)->CopyTo(f);
+			s.GetDataStream(*mFile).CopyTo(f);
+		}
+	}
+
+	void TrunkWindow::ShowGraphics()
+	{
+		if (auto graphics = mFile->GetGraphics(); graphics)
+		{
+		}
+	}
+
+	void TrunkWindow::ShowUniqueTexture()
+	{
+		if (auto uniqueTexture = mFile->GetUniqueTexture(); uniqueTexture)
+		{
+			wxWindowUpdateLocker lock{ this };
+
+			wxListBox* left = new wxListBox(mCenter,
+											wxID_ANY,
+											wxDefaultPosition,
+											wxDefaultSize,
+											0,
+											nullptr,
+											wxLB_SINGLE | wxBORDER_THEME);
+			wxWindow* right =
+				new wxWindow(mCenter, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxBORDER_THEME);
+
+			left->SetBackgroundColour(*wxWHITE);
+			right->SetBackgroundColour(*wxWHITE);
+			right->SetSizer(new wxBoxSizer(wxVERTICAL));
+
+			size i = 0;
+			for (auto& t : uniqueTexture->Textures)
+			{
+				const wxString imgName =
+					wxString::Format("%s (offset:0x%08X)",
+									 HashLookup::Instance(false).TryGetString(t.NameHash),
+									 t.Offset);
+				left->Append(imgName, reinterpret_cast<void*>(i));
+
+				i++;
+			}
+
+			mCenter->SplitVertically(left, right);
+
+			ImagePanel* imgPanel =
+				new ImagePanel(right, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+
+			right->GetSizer()->Add(imgPanel, 1, wxEXPAND);
+
+			right->Layout();
+			right->Refresh();
+
+			const bool hasTextures = uniqueTexture->Textures.size() > 0;
+
+			left->Bind(
+				wxEVT_LISTBOX,
+				[this, imgPanel, uniqueTexture{ std::move(uniqueTexture) }](wxCommandEvent& e) {
+					size texIndex = reinterpret_cast<size>(e.GetClientData());
+					const std::vector<byte> imgData = uniqueTexture->GetTextureData(texIndex);
+					const wxImage img = CreateImageFromDDS(imgData);
+					imgPanel->SetImage(img);
+
+					imgPanel->Refresh();
+				});
+
+			if (hasTextures)
+			{
+				left->SetSelection(0, true);
+
+				wxCommandEvent evt{ wxEVT_LISTBOX };
+				evt.SetClientData(reinterpret_cast<void*>(0));
+				left->Command(evt);
+			}
 		}
 	}
 }

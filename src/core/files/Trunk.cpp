@@ -5,50 +5,6 @@
 
 namespace noire
 {
-	TrunkUniqueTexture::TrunkUniqueTexture(Trunk& owner,
-										   TrunkSectionHeader main,
-										   TrunkSectionHeader vram)
-		: Owner{ owner }, Main{ main }, VRAM{ vram }, Textures{}
-	{
-		std::optional<SubStream> mainStream = Owner.GetSectionDataStream(Main.NameHash);
-		Stream& m = *mainStream;
-
-		// these 4 bytes are used by the game at runtime indicate if it already loaded the texture,
-		// the file should always have 0 here
-		Expects(m.Read<u32>() == 0);
-
-		const u32 textureCount = m.Read<u32>();
-		Textures.reserve(textureCount);
-		for (size i = 0; i < textureCount; i++)
-		{
-			Entry& e = Textures.emplace_back();
-			e.Offset = m.Read<u32>();
-			Expects(m.Read<u32>() == 0); // unknown, should be always zero
-			e.NameHash = m.Read<u32>();
-		}
-	}
-
-	std::vector<byte> TrunkUniqueTexture::GetTextureData(size textureIndex) const
-	{
-		Expects(textureIndex < Textures.size());
-
-		std::optional<SubStream> vramStream = Owner.GetSectionDataStream(VRAM.NameHash);
-		Stream& v = *vramStream;
-
-		const Entry& e = Textures[textureIndex];
-		// this expects the entries to be sorted by offset, not sure if that is always the case
-		const size dataSize = ((textureIndex < (Textures.size() - 1)) ?
-								   (Textures[textureIndex + 1].Offset - e.Offset) :
-								   (gsl::narrow<size>(v.Size()) - e.Offset));
-
-		std::vector<byte> buffer{};
-		buffer.resize(dataSize);
-		vramStream->Seek(e.Offset, StreamSeekOrigin::Begin);
-		vramStream->Read(buffer.data(), dataSize);
-
-		return buffer;
-	}
-
 	Trunk::Trunk(Device& parent, PathView path, bool created)
 		: File(parent, path, created),
 		  mHasChanged{ created },
@@ -91,7 +47,7 @@ namespace noire
 		mSections.reserve(sectionCount);
 		for (size i = 0; i < sectionCount; i++)
 		{
-			TrunkSectionHeader& section = mSections.emplace_back();
+			trunk::Section& section = mSections.emplace_back();
 			section.NameHash = s.Read<u32>();
 			section.Size = s.Read<u32>();
 			section.Offset = s.Read<u32>();
@@ -128,24 +84,13 @@ namespace noire
 		});
 	}
 
-	std::optional<TrunkSectionHeader> Trunk::GetSection(u32 nameHash) const
+	std::optional<trunk::Section> Trunk::GetSection(u32 nameHash) const
 	{
 		auto it = std::find_if(mSections.begin(), mSections.end(), [nameHash](auto& s) {
 			return s.NameHash == nameHash;
 		});
 
 		return it != mSections.end() ? std::make_optional(*it) : std::nullopt;
-	}
-
-	std::optional<SubStream> Trunk::GetSectionDataStream(u32 nameHash)
-	{
-		auto section = GetSection(nameHash);
-		if (!section)
-		{
-			return std::nullopt;
-		}
-
-		return SubStream{ Raw(), GetDataOffset(section->Offset), section->Size };
 	}
 
 	constexpr u32 hash_uniquetexturemain{ crc32("uniquetexturemain") };
@@ -156,7 +101,7 @@ namespace noire
 		return HasSection(hash_uniquetexturemain) && HasSection(hash_uniquetexturevram);
 	}
 
-	std::optional<TrunkUniqueTexture> Trunk::GetUniqueTexture()
+	std::optional<trunk::UniqueTexture> Trunk::GetUniqueTexture()
 	{
 		auto main = GetSection(hash_uniquetexturemain);
 		if (!main)
@@ -170,7 +115,32 @@ namespace noire
 			return std::nullopt;
 		}
 
-		return TrunkUniqueTexture{ *this, *main, *vram };
+		return trunk::UniqueTexture{ *this, *main, *vram };
+	}
+
+	constexpr u32 hash_graphicsmain{ crc32("graphicsmain") };
+	constexpr u32 hash_graphicsvram{ crc32("graphicsvram") };
+
+	bool Trunk::HasGraphics() const
+	{
+		return HasSection(hash_graphicsmain) && HasSection(hash_graphicsvram);
+	}
+
+	std::optional<trunk::Graphics> Trunk::GetGraphics()
+	{
+		auto main = GetSection(hash_graphicsmain);
+		if (!main)
+		{
+			return std::nullopt;
+		}
+
+		auto vram = GetSection(hash_graphicsvram);
+		if (!vram)
+		{
+			return std::nullopt;
+		}
+
+		return trunk::Graphics{ *this, *main, *vram };
 	}
 
 	static bool Validator(Stream& input)

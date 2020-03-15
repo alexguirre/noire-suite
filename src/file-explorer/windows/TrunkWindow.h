@@ -1,4 +1,5 @@
 #pragma once
+#include <core/Common.h>
 #include <memory>
 #include <wx/frame.h>
 
@@ -17,6 +18,13 @@ namespace noire::explorer
 	class TrunkWindow : public wxFrame
 	{
 	public:
+		enum class Section : uptr
+		{
+			None = 0,
+			Graphics = 1,
+			UniqueTexture = 2,
+		};
+
 		TrunkWindow(wxWindow* parent,
 					wxWindowID id,
 					const wxString& title,
@@ -26,7 +34,11 @@ namespace noire::explorer
 		void OnSectionSelected(wxCommandEvent&);
 		void OnRawExport(wxCommandEvent&);
 
+		void ShowGraphics();
+		void ShowUniqueTexture();
+
 		std::shared_ptr<noire::Trunk> mFile;
 		wxSplitterWindow* mCenter;
+		Section mCurrentSection;
 	};
 }
