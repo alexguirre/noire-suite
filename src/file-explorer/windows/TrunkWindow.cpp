@@ -15,6 +15,7 @@
 #include <wx/panel.h>
 #include <wx/sizer.h>
 #include <wx/splitter.h>
+#include <wx/stattext.h>
 #include <wx/toolbar.h>
 #include <wx/wupdlock.h>
 
@@ -168,6 +169,28 @@ namespace noire::explorer
 	{
 		if (auto graphics = mFile->GetGraphics(); graphics)
 		{
+			trunk::Drawable& d = graphics->Drawable();
+
+			wxString str{};
+
+			str += wxString::Format("VertexBufferSize: %zu\n", graphics->VertexBufferSize);
+			str += wxString::Format("IndexBufferSize:  %zu\n", graphics->IndexBufferSize);
+			str += wxString::Format("Drawable:\n");
+			str += wxString::Format("\tfield_8:     0x%08X\n", d.field_8);
+			str += wxString::Format("\tfield_C:     0x%08X\n", d.field_C);
+			str += wxString::Format("\tTextureUnk1: 0x%08X\n", d.TextureUnk1);
+			str += wxString::Format("\tTextureUnk2: 0x%08X\n", d.TextureUnk2);
+			str += wxString::Format("\tModel Count: %zu\n", d.ModelCount());
+			for (size i = 0; i < d.ModelCount(); i++)
+			{
+				trunk::Model& m = *d.Models[i];
+
+				str += wxString::Format("\t#%zu\n", i);
+				str += wxString::Format("\t  Geometry Count: %zu\n", m.GeometryCount);
+			}
+
+			wxStaticText* t = new wxStaticText(mCenter, wxID_ANY, str);
+			mCenter->Initialize(t);
 		}
 	}
 
