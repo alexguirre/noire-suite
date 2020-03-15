@@ -149,22 +149,35 @@ namespace noire::explorer
 
 				mCenter->SplitVertically(left, right);
 
+				ImagePanel* imgPanel =
+					new ImagePanel(right, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+
+				right->GetSizer()->Add(imgPanel, 1, wxEXPAND);
+
+				right->Layout();
+				right->Refresh();
+
+				const bool hasTextures = uniqueTexture->Textures.size() > 0;
+
 				left->Bind(
 					wxEVT_LISTBOX,
-					[this, right, uniqueTexture{ std::move(uniqueTexture) }](wxCommandEvent& e) {
-						right->DestroyChildren();
-
+					[this, imgPanel, uniqueTexture{ std::move(uniqueTexture) }](wxCommandEvent& e) {
 						size texIndex = reinterpret_cast<size>(e.GetClientData());
 						const std::vector<byte> imgData = uniqueTexture->GetTextureData(texIndex);
 						const wxImage img = CreateImageFromDDS(imgData);
-						ImagePanel* imgPanel =
-							new ImagePanel(right, wxID_ANY, wxDefaultPosition, wxDefaultSize);
 						imgPanel->SetImage(img);
 
-						right->GetSizer()->Add(imgPanel, 1, wxEXPAND);
-						right->Layout();
-						right->Refresh();
+						imgPanel->Refresh();
 					});
+
+				if (hasTextures)
+				{
+					left->SetSelection(0, true);
+
+					wxCommandEvent evt{ wxEVT_LISTBOX };
+					evt.SetClientData(reinterpret_cast<void*>(0));
+					left->Command(evt);
+				}
 			}
 			break;
 		}
