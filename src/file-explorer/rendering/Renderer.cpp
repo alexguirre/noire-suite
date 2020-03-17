@@ -10,7 +10,6 @@
 
 namespace noire::explorer
 {
-	using Microsoft::WRL::ComPtr;
 	using namespace DirectX;
 
 	struct VSConstantBuffer
@@ -19,35 +18,37 @@ namespace noire::explorer
 	};
 
 	constexpr std::string_view Shader =
-		"cbuffer VSConstantBuffer : register(b0)"
-		"{"
-		"	float4x4 mWorldViewProj;"
-		"};"
-		""
-		"struct VSInput"
-		"{"
-		"	float3 position : POSITION;"
-		"	float4 color : COLOR;"
-		"};"
-		""
-		"struct VSOutput"
-		"{"
-		"	float4 position : SV_POSITION;"
-		"	float4 color : COLOR;"
-		"};"
-		""
-		"VSOutput VSMain(VSInput input)"
-		"{"
-		"	VSOutput output = (VSOutput)0;"
-		"	output.position = mul(float4(input.position, 1.0), mWorldViewProj);"
-		"	output.color = input.color;"
-		"	return output;"
-		"}"
-		""
-		"float4 PSMain(VSOutput input) : SV_TARGET"
-		"{"
-		"	return input.color;"
-		"}";
+		R"(
+		cbuffer VSConstantBuffer : register(b0)
+		{
+			float4x4 mWorldViewProj;
+		};
+		
+		struct VSInput
+		{
+			float3 position : POSITION;
+			float4 color : COLOR;
+		};
+		
+		struct VSOutput
+		{
+			float4 position : SV_POSITION;
+			float4 color : COLOR;
+		};
+		
+		VSOutput VSMain(VSInput input)
+		{
+			VSOutput output = (VSOutput)0;
+			output.position = mul(float4(input.position, 1.0), mWorldViewProj);
+			output.color = input.color;
+			return output;
+		}
+		
+		float4 PSMain(VSOutput input) : SV_TARGET
+		{
+			return input.color + float4(0.0, 0.0, 0.0, 0.0);
+		}
+		)";
 
 	Renderer::Renderer(HWND hwnd, RenderCallback renderCB)
 		: mHWND{ hwnd }, mHasDeviceResources{ false }, mRenderCallback{ std::move(renderCB) }
@@ -59,7 +60,7 @@ namespace noire::explorer
 	void Renderer::Clear(float r, float g, float b)
 	{
 		const FLOAT color[4]{ r, g, b, 1.0f };
-		mDeviceContext->ClearRenderTargetView(mBackBuffer.Get(), color);
+		mDeviceContext->ClearRenderTargetView(mBackBuffer.get(), color);
 	}
 
 	static constexpr UINT VertexCount = 323;
@@ -93,51 +94,55 @@ namespace noire::explorer
 													gsl::narrow_cast<UINT>(FeatureLevels.size()),
 													D3D11_SDK_VERSION,
 													&swapChainDesc,
-													&mSwapChain,
-													&mDevice,
+													mSwapChain.put(),
+													mDevice.put(),
 													nullptr,
-													&mDeviceContext)));
+													mDeviceContext.put())));
+
+		mVertDecls.Init(mDevice);
 
 		{
-			ComPtr<ID3D11Texture2D> backBuffer;
-			Expects(SUCCEEDED(mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer)));
+			winrt::com_ptr<ID3D11Texture2D> backBuffer;
 			Expects(SUCCEEDED(
-				mDevice->CreateRenderTargetView(backBuffer.Get(), nullptr, &mBackBuffer)));
-			mDeviceContext->OMSetRenderTargets(1, mBackBuffer.GetAddressOf(), nullptr);
+				mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), backBuffer.put_void())));
+			Expects(SUCCEEDED(
+				mDevice->CreateRenderTargetView(backBuffer.get(), nullptr, mBackBuffer.put())));
+			ID3D11RenderTargetView* const rtv = mBackBuffer.get();
+			mDeviceContext->OMSetRenderTargets(1, &rtv, nullptr);
 		}
 
 		// create shaders
 		{
-			ComPtr<ID3DBlob> vertexShaderBlob;
-			ComPtr<ID3DBlob> pixelShaderBlob;
-			if (ComPtr<ID3DBlob> errorBlob; FAILED(D3DCompile(Shader.data(),
-															  Shader.size(),
-															  "Builtin",
-															  nullptr,
-															  nullptr,
-															  "VSMain",
-															  "vs_4_0",
-															  D3DCOMPILE_DEBUG,
-															  0,
-															  &vertexShaderBlob,
-															  &errorBlob)))
+			winrt::com_ptr<ID3DBlob> vertexShaderBlob;
+			winrt::com_ptr<ID3DBlob> pixelShaderBlob;
+			if (winrt::com_ptr<ID3DBlob> errorBlob; FAILED(D3DCompile(Shader.data(),
+																	  Shader.size(),
+																	  "Builtin",
+																	  nullptr,
+																	  nullptr,
+																	  "VSMain",
+																	  "vs_4_0",
+																	  D3DCOMPILE_DEBUG,
+																	  0,
+																	  vertexShaderBlob.put(),
+																	  errorBlob.put())))
 			{
 				OutputDebugStringA("Vertex shader compilation failed:\n");
 				OutputDebugStringA(reinterpret_cast<const char*>(errorBlob->GetBufferPointer()));
 				return;
 			}
 
-			if (ComPtr<ID3DBlob> errorBlob; FAILED(D3DCompile(Shader.data(),
-															  Shader.size(),
-															  "Builtin",
-															  nullptr,
-															  nullptr,
-															  "PSMain",
-															  "ps_4_0",
-															  D3DCOMPILE_DEBUG,
-															  0,
-															  &pixelShaderBlob,
-															  &errorBlob)))
+			if (winrt::com_ptr<ID3DBlob> errorBlob; FAILED(D3DCompile(Shader.data(),
+																	  Shader.size(),
+																	  "Builtin",
+																	  nullptr,
+																	  nullptr,
+																	  "PSMain",
+																	  "ps_4_0",
+																	  D3DCOMPILE_DEBUG,
+																	  0,
+																	  pixelShaderBlob.put(),
+																	  errorBlob.put())))
 			{
 				OutputDebugStringA("Pixel shader compilation failed:\n");
 				OutputDebugStringA(reinterpret_cast<const char*>(errorBlob->GetBufferPointer()));
@@ -147,35 +152,12 @@ namespace noire::explorer
 			Expects(SUCCEEDED(mDevice->CreateVertexShader(vertexShaderBlob->GetBufferPointer(),
 														  vertexShaderBlob->GetBufferSize(),
 														  nullptr,
-														  &mVertexShader)));
+														  mVertexShader.put())));
 
 			Expects(SUCCEEDED(mDevice->CreatePixelShader(pixelShaderBlob->GetBufferPointer(),
 														 pixelShaderBlob->GetBufferSize(),
 														 nullptr,
-														 &mPixelShader)));
-
-			const std::array<D3D11_INPUT_ELEMENT_DESC, 2> inputLayoutDesc{
-				{ { "POSITION",
-					0,
-					DXGI_FORMAT_R32G32B32_FLOAT,
-					0,
-					0,
-					D3D11_INPUT_PER_VERTEX_DATA,
-					0 },
-				  { "COLOR",
-					0,
-					DXGI_FORMAT_R32G32B32A32_FLOAT,
-					0,
-					3 * sizeof(float),
-					D3D11_INPUT_PER_VERTEX_DATA,
-					0 } }
-			};
-
-			Expects(SUCCEEDED(mDevice->CreateInputLayout(inputLayoutDesc.data(),
-														 inputLayoutDesc.size(),
-														 vertexShaderBlob->GetBufferPointer(),
-														 vertexShaderBlob->GetBufferSize(),
-														 &mInputLayout)));
+														 mPixelShader.put())));
 		}
 
 		// create vertex buffer
@@ -518,7 +500,7 @@ namespace noire::explorer
 			desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 			D3D11_SUBRESOURCE_DATA data = { 0 };
 			data.pSysMem = vertices.data();
-			Expects(SUCCEEDED(mDevice->CreateBuffer(&desc, &data, &mVertexBuffer)));
+			Expects(SUCCEEDED(mDevice->CreateBuffer(&desc, &data, mVertexBuffer.put())));
 		}
 
 		// create index buffer
@@ -993,7 +975,7 @@ namespace noire::explorer
 			desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 			D3D11_SUBRESOURCE_DATA data = { 0 };
 			data.pSysMem = indices.data();
-			Expects(SUCCEEDED(mDevice->CreateBuffer(&desc, &data, &mIndexBuffer)));
+			Expects(SUCCEEDED(mDevice->CreateBuffer(&desc, &data, mIndexBuffer.put())));
 		}
 
 		// create constant buffer
@@ -1008,7 +990,7 @@ namespace noire::explorer
 			desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 			D3D11_SUBRESOURCE_DATA data = { 0 };
 			data.pSysMem = &initData;
-			Expects(SUCCEEDED(mDevice->CreateBuffer(&desc, &data, &mConstantBuffer)));
+			Expects(SUCCEEDED(mDevice->CreateBuffer(&desc, &data, mConstantBuffer.put())));
 		}
 
 		mRenderingThreadRunning = true;
@@ -1030,16 +1012,17 @@ namespace noire::explorer
 			return;
 		}
 
-		mConstantBuffer.Reset();
-		mVertexBuffer.Reset();
-		mIndexBuffer.Reset();
-		mVertexShader.Reset();
-		mPixelShader.Reset();
-		mInputLayout.Reset();
-		mBackBuffer.Reset();
-		mSwapChain.Reset();
-		mDeviceContext.Reset();
-		mDevice.Reset();
+		mVertDecls.Init(nullptr);
+
+		mConstantBuffer = nullptr;
+		mVertexBuffer = nullptr;
+		mIndexBuffer = nullptr;
+		mVertexShader = nullptr;
+		mPixelShader = nullptr;
+		mBackBuffer = nullptr;
+		mSwapChain = nullptr;
+		mDeviceContext = nullptr;
+		mDevice = nullptr;
 
 		mHasDeviceResources = false;
 	}
@@ -1136,12 +1119,12 @@ namespace noire::explorer
 	{
 		D3D11_MAPPED_SUBRESOURCE m = { 0 };
 		Expects(SUCCEEDED(
-			mDeviceContext->Map(mConstantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &m)));
+			mDeviceContext->Map(mConstantBuffer.get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &m)));
 
 		XMStoreFloat4x4(&reinterpret_cast<VSConstantBuffer*>(m.pData)->mWorldViewProj,
 						(world * mCam.ViewProjection()).Transpose());
 
-		mDeviceContext->Unmap(mConstantBuffer.Get(), 0);
+		mDeviceContext->Unmap(mConstantBuffer.get(), 0);
 	}
 
 	void Renderer::WorldDefault() { WorldMtx(Matrix::Identity); }
@@ -1172,15 +1155,17 @@ namespace noire::explorer
 					clientRect = currClientRect;
 
 					mDeviceContext->OMSetRenderTargets(0, nullptr, nullptr);
-					mBackBuffer.Reset();
+					mBackBuffer = nullptr;
 
 					Expects(SUCCEEDED(mSwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0)));
 
-					ComPtr<ID3D11Texture2D> backBuffer;
-					Expects(SUCCEEDED(
-						mSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), &backBuffer)));
-					Expects(SUCCEEDED(
-						mDevice->CreateRenderTargetView(backBuffer.Get(), nullptr, &mBackBuffer)));
+					winrt::com_ptr<ID3D11Texture2D> backBuffer;
+					Expects(SUCCEEDED(mSwapChain->GetBuffer(0,
+															__uuidof(ID3D11Texture2D),
+															backBuffer.put_void())));
+					Expects(SUCCEEDED(mDevice->CreateRenderTargetView(backBuffer.get(),
+																	  nullptr,
+																	  mBackBuffer.put())));
 
 					mCam.Resize(static_cast<size_t>(newW), static_cast<size_t>(newH));
 
@@ -1205,20 +1190,19 @@ namespace noire::explorer
 				mDeviceContext->RSSetViewports(1, &viewport);
 			}
 
-			mDeviceContext->OMSetRenderTargets(1, mBackBuffer.GetAddressOf(), nullptr);
+			ID3D11RenderTargetView* const rtv = mBackBuffer.get();
+			mDeviceContext->OMSetRenderTargets(1, &rtv, nullptr);
 
 			mDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			mDeviceContext->IASetInputLayout(mInputLayout.Get());
-			mDeviceContext->IASetVertexBuffers(0,
-											   1,
-											   mVertexBuffer.GetAddressOf(),
-											   &VertexStride,
-											   &VertexOffset);
-			mDeviceContext->IASetIndexBuffer(mIndexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
+			mDeviceContext->IASetInputLayout(mVertDecls.Get(0xAAAAAAAA).InputLayout.get());
+			ID3D11Buffer* const vb = mVertexBuffer.get();
+			mDeviceContext->IASetVertexBuffers(0, 1, &vb, &VertexStride, &VertexOffset);
+			mDeviceContext->IASetIndexBuffer(mIndexBuffer.get(), DXGI_FORMAT_R16_UINT, 0);
 
-			mDeviceContext->VSSetConstantBuffers(0, 1, mConstantBuffer.GetAddressOf());
-			mDeviceContext->VSSetShader(mVertexShader.Get(), nullptr, 0);
-			mDeviceContext->PSSetShader(mPixelShader.Get(), nullptr, 0);
+			ID3D11Buffer* const cb = mConstantBuffer.get();
+			mDeviceContext->VSSetConstantBuffers(0, 1, &cb);
+			mDeviceContext->VSSetShader(mVertexShader.get(), nullptr, 0);
+			mDeviceContext->PSSetShader(mPixelShader.get(), nullptr, 0);
 
 			static Matrix objMatrix{ Matrix::Identity };
 			objMatrix *= Matrix::CreateFromAxisAngle(Vector3::Up, frameTime);

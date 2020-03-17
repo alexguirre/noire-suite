@@ -28,6 +28,8 @@ file(GLOB CORE_SOURCES
     "files/trunk/Section.h"
     "files/trunk/UniqueTexture.cpp"
     "files/trunk/UniqueTexture.h"
+    "files/trunk/VertexDeclaration.cpp"
+    "files/trunk/VertexDeclaration.h"
     "streams/FileStream.cpp"
     "streams/FileStream.h"
     "streams/MemoryStream.cpp"

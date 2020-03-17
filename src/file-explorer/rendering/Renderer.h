@@ -2,11 +2,12 @@
 #include "Camera.h"
 #include <Windows.h>
 #include <atomic>
+#include <core/files/trunk/VertexDeclaration.h>
 #include <d3d11.h>
 #include <dxgi.h>
 #include <functional>
 #include <thread>
-#include <wrl.h>
+#include <winrt/base.h>
 
 namespace noire::explorer
 {
@@ -34,16 +35,16 @@ namespace noire::explorer
 
 		HWND mHWND;
 		bool mHasDeviceResources;
-		Microsoft::WRL::ComPtr<IDXGISwapChain> mSwapChain;
-		Microsoft::WRL::ComPtr<ID3D11Device> mDevice;
-		Microsoft::WRL::ComPtr<ID3D11DeviceContext> mDeviceContext;
-		Microsoft::WRL::ComPtr<ID3D11RenderTargetView> mBackBuffer;
-		Microsoft::WRL::ComPtr<ID3D11VertexShader> mVertexShader;
-		Microsoft::WRL::ComPtr<ID3D11PixelShader> mPixelShader;
-		Microsoft::WRL::ComPtr<ID3D11InputLayout> mInputLayout;
-		Microsoft::WRL::ComPtr<ID3D11Buffer> mVertexBuffer;
-		Microsoft::WRL::ComPtr<ID3D11Buffer> mIndexBuffer;
-		Microsoft::WRL::ComPtr<ID3D11Buffer> mConstantBuffer;
+		winrt::com_ptr<IDXGISwapChain> mSwapChain;
+		winrt::com_ptr<ID3D11Device> mDevice;
+		winrt::com_ptr<ID3D11DeviceContext> mDeviceContext;
+		winrt::com_ptr<ID3D11RenderTargetView> mBackBuffer;
+		winrt::com_ptr<ID3D11VertexShader> mVertexShader;
+		winrt::com_ptr<ID3D11PixelShader> mPixelShader;
+		winrt::com_ptr<ID3D11Buffer> mVertexBuffer;
+		winrt::com_ptr<ID3D11Buffer> mIndexBuffer;
+		winrt::com_ptr<ID3D11Buffer> mConstantBuffer;
+		trunk::VertexDeclarationManager mVertDecls;
 		std::thread mRenderingThread;
 		std::atomic_bool mRenderingThreadRunning;
 		RenderCallback mRenderCallback;
