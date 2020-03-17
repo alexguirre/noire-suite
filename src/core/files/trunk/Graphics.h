@@ -79,6 +79,7 @@ namespace noire::trunk
 		u32 TextureUnk2;
 
 		size ModelCount() const;
+		void CalculateBufferSizes(u32& totalVertexDataSize, u32& totalIndexDataSize);
 	};
 
 	struct Graphics
@@ -88,8 +89,6 @@ namespace noire::trunk
 		Section VRAM;
 		std::vector<byte> MainData;
 		std::vector<byte> VRAMData;
-		u32 VertexBufferSize;
-		u32 IndexBufferSize;
 
 		Graphics(Trunk& owner, Section main, Section vram);
 

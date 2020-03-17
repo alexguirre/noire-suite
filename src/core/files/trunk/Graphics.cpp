@@ -1,20 +1,37 @@
 #include "Graphics.h"
+#include <Windows.h>
 #include <unordered_map>
 
 namespace noire::trunk
 {
-	static void Load(byte* mainData, byte* vramData, u32& vertexBufferSize, u32& indexBufferSize);
+	static void Load(byte* mainData, byte* vramData);
 
 	size Drawable::ModelCount() const { return ModelsLast - Models; }
 
+	void Drawable::CalculateBufferSizes(u32& totalVertexDataSize, u32& totalIndexDataSize)
+	{
+		totalVertexDataSize = 0;
+		totalIndexDataSize = 0;
+
+		const size modelCount = ModelCount();
+		for (size i = 0; i < modelCount; i++)
+		{
+			const Model& model = *Models[i];
+			for (size j = 0; j < model.GeometryCount; j++)
+			{
+				const Geometry& geom = model.Geometries[j];
+				totalVertexDataSize += geom.VertexDataSize;
+				totalIndexDataSize += geom.IndexDataSize;
+			}
+
+			totalVertexDataSize += model.field_20;
+			Expects(model.field_20 == 0); // the meaning of this field is unknown, all the files I
+										  // tried so far have its value equal to 0
+		}
+	}
+
 	Graphics::Graphics(Trunk& owner, Section main, Section vram)
-		: Owner{ owner },
-		  Main{ main },
-		  VRAM{ vram },
-		  MainData{},
-		  VRAMData{},
-		  VertexBufferSize{ 0 },
-		  IndexBufferSize{ 0 }
+		: Owner{ owner }, Main{ main }, VRAM{ vram }, MainData{}, VRAMData{}
 	{
 		SubStream m = Main.GetDataStream(owner);
 		MainData.resize(gsl::narrow<size>(m.Size()));
@@ -24,7 +41,7 @@ namespace noire::trunk
 		VRAMData.resize(gsl::narrow<size>(v.Size()));
 		v.Read(VRAMData.data(), VRAMData.size());
 
-		Load(MainData.data(), VRAMData.data(), VertexBufferSize, IndexBufferSize);
+		Load(MainData.data(), VRAMData.data());
 	}
 
 	Drawable& Graphics::Drawable()
@@ -112,69 +129,10 @@ namespace noire::trunk
 		RemoveData(s, 0);
 	}
 
-	static void Load(byte* mainData, byte* vramData, u32& vertexBufferSize, u32& indexBufferSize)
+	static void Load(byte* mainData, byte* vramData)
 	{
 		DataStorage s{};
 		StoreData(s, vramData, 1);
 		Fixup(s, mainData, (mainData + ((*(u32*)(mainData + 8) + 15) & 0xFFFFFFF0)));
-
-		byte* v5 = (mainData + ((*(u32*)(mainData + 8) + 15) & 0xFFFFFFF0));
-		u32 v8 = *(u32*)(v5 + 4);
-		u32 v9 = *(u32*)v5;
-		u32 modelCount = (v8 - v9) >> 2;
-
-		indexBufferSize = 0;
-		vertexBufferSize = 0;
-		u32 v33 = 0;
-		if (modelCount)
-		{
-			u32 _v9 = v9;
-			u32 v36 = modelCount;
-			do
-			{
-				u32 v12 = *(u32*)v9;
-				u32 v37 = v12;
-				u16 v13 = *(u16*)(v12 + 18);
-				u32 v14 = 0;
-				u32 v15 = 0;
-				u32 v16 = 0;
-				u32 v17 = 0;
-				u32 v18 = 0;
-				u16 v38 = v13;
-				if (v13 >= 2)
-				{
-					u32* v19 = (u32*)(v37 + 96);
-					u32 v20 = ((u32)(v13 - 2) >> 1) + 1;
-					v18 = 2 * v20;
-					do
-					{
-						v16 += *(v19 - 2);
-						v14 += *v19;
-						v17 += v19[30];
-						v15 += v19[32];
-						v19 += 64;
-						--v20;
-					} while (v20);
-					v13 = v38;
-					v9 = _v9;
-				}
-				u32 v22 = 0;
-				if (v18 >= v13)
-				{
-					v22 = v33;
-				}
-				else
-				{
-					auto v21 = *(u32*)v9 + (v18 << 7);
-					vertexBufferSize += *(u32*)(v21 + 88);
-					v22 = *(u32*)(v21 + 96) + v33;
-				}
-				indexBufferSize = v15 + v14 + v22;
-				vertexBufferSize += v17 + v16 + *(u32*)(*(u32*)v9 + 32);
-				v9 += 4;
-				v33 = indexBufferSize;
-				_v9 = v9;
-			} while (!(v36-- == 1));
-		}
 	}
 }

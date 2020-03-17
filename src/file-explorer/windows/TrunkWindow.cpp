@@ -1,5 +1,6 @@
 #include "TrunkWindow.h"
 #include "controls/ImagePanel.h"
+#include "rendering/Renderer.h"
 #include <algorithm>
 #include <core/Hash.h>
 #include <core/files/Trunk.h>
@@ -169,17 +170,38 @@ namespace noire::explorer
 	{
 		if (auto graphics = mFile->GetGraphics(); graphics)
 		{
+			class RendererPanel : public wxPanel
+			{
+			public:
+				RendererPanel(wxWindow* parent)
+					: wxPanel(parent,
+							  wxID_ANY,
+							  wxDefaultPosition,
+							  wxDefaultSize,
+							  wxTAB_TRAVERSAL | wxBORDER_THEME)
+				{
+					mRenderer = std::make_unique<Renderer>(GetHWND(), [](Renderer& r, float) {
+						r.Clear(0.2f, 0.2f, 0.7f);
+					});
+				}
+
+				std::unique_ptr<Renderer> mRenderer;
+			};
+
 			trunk::Drawable& d = graphics->Drawable();
+
+			u32 vertexTotalSize, indexTotalSize;
+			d.CalculateBufferSizes(vertexTotalSize, indexTotalSize);
 
 			wxString str{};
 
-			str += wxString::Format("VertexBufferSize: %zu\n", graphics->VertexBufferSize);
-			str += wxString::Format("IndexBufferSize:  %zu\n", graphics->IndexBufferSize);
 			str += wxString::Format("Drawable:\n");
 			str += wxString::Format("\tfield_8:     0x%08X\n", d.field_8);
 			str += wxString::Format("\tfield_C:     0x%08X\n", d.field_C);
 			str += wxString::Format("\tTextureUnk1: 0x%08X\n", d.TextureUnk1);
-			str += wxString::Format("\tTextureUnk2: 0x%08X\n", d.TextureUnk2);
+			str += wxString::Format("\tTextureUnk2: 0x%08X\n", d.TextureUnk2);			
+			str += wxString::Format("\tTotal Vertex Data Size: %u\n", vertexTotalSize);
+			str += wxString::Format("\tTotal Index Data Size:  %u\n", indexTotalSize);
 			str += wxString::Format("\tModel Count: %zu\n", d.ModelCount());
 			for (size i = 0; i < d.ModelCount(); i++)
 			{
@@ -189,8 +211,14 @@ namespace noire::explorer
 				str += wxString::Format("\t  Geometry Count: %zu\n", m.GeometryCount);
 			}
 
-			wxStaticText* t = new wxStaticText(mCenter, wxID_ANY, str);
-			mCenter->Initialize(t);
+			wxStaticText* left = new wxStaticText(mCenter,
+												  wxID_ANY,
+												  str,
+												  wxDefaultPosition,
+												  wxDefaultSize,
+												  wxBORDER_THEME);
+			wxPanel* right = new RendererPanel(mCenter);
+			mCenter->SplitVertically(left, right);
 		}
 	}
 
