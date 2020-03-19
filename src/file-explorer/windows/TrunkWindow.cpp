@@ -199,7 +199,7 @@ namespace noire::explorer
 			str += wxString::Format("\tfield_8:     0x%08X\n", d.field_8);
 			str += wxString::Format("\tfield_C:     0x%08X\n", d.field_C);
 			str += wxString::Format("\tTextureUnk1: 0x%08X\n", d.TextureUnk1);
-			str += wxString::Format("\tTextureUnk2: 0x%08X\n", d.TextureUnk2);			
+			str += wxString::Format("\tTextureUnk2: 0x%08X\n", d.TextureUnk2);
 			str += wxString::Format("\tTotal Vertex Data Size: %u\n", vertexTotalSize);
 			str += wxString::Format("\tTotal Index Data Size:  %u\n", indexTotalSize);
 			str += wxString::Format("\tModel Count: %zu\n", d.ModelCount());
@@ -217,7 +217,11 @@ namespace noire::explorer
 												  wxDefaultPosition,
 												  wxDefaultSize,
 												  wxBORDER_THEME);
-			wxPanel* right = new RendererPanel(mCenter);
+			RendererPanel* right = new RendererPanel(mCenter);
+			const trunk::Geometry& g = d.Models[0]->Geometries[0];
+			right->mRenderer->SetModelData({ g.VertexData, gsl::narrow<ptrdiff>(g.VertexDataSize) },
+										   { g.IndexData, gsl::narrow<ptrdiff>(g.IndexDataSize) },
+										   d.Models[0]->VertDeclsHashes[0]);
 			mCenter->SplitVertically(left, right);
 		}
 	}

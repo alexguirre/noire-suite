@@ -38,6 +38,8 @@ namespace noire::trunk
 	{
 		std::vector<VertexElement> Elements{};
 		winrt::com_ptr<ID3D11InputLayout> InputLayout{ nullptr };
+
+		u32 VertexSize() const;
 	};
 
 	class VertexDeclarationManager

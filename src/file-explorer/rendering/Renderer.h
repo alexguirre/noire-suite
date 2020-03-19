@@ -2,6 +2,7 @@
 #include "Camera.h"
 #include <Windows.h>
 #include <atomic>
+#include <core/Common.h>
 #include <core/files/trunk/VertexDeclaration.h>
 #include <d3d11.h>
 #include <dxgi.h>
@@ -25,6 +26,9 @@ namespace noire::explorer
 		Renderer& operator=(Renderer&&) = delete;
 
 		void Clear(float r, float g, float b);
+		void SetModelData(gsl::span<const byte> vertexData,
+						  gsl::span<const byte> indexData,
+						  u32 vertexDeclId);
 
 	private:
 		void CreateDeviceResources();
@@ -44,8 +48,12 @@ namespace noire::explorer
 		winrt::com_ptr<ID3D11Buffer> mVertexBuffer;
 		winrt::com_ptr<ID3D11Buffer> mIndexBuffer;
 		winrt::com_ptr<ID3D11Buffer> mConstantBuffer;
+		u32 mVertDeclId;
+		u32 mVertStride;
+		u32 mIndexCount;
 		trunk::VertexDeclarationManager mVertDecls;
 		std::thread mRenderingThread;
+		std::mutex mRenderingMutex;
 		std::atomic_bool mRenderingThreadRunning;
 		RenderCallback mRenderCallback;
 		Camera mCam;
